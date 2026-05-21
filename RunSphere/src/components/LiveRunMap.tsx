@@ -1,18 +1,6 @@
-import React, {useEffect, useRef} from 'react';
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import {
-  Camera,
-  CameraRef,
-  GeoJSONSource,
-  Layer,
-  Map,
-  Marker,
-} from '@maplibre/maplibre-react-native';
+import React, {useEffect, useMemo, useRef} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import MapView, {Marker, Polyline, Region} from 'react-native-maps';
 import {Colors} from '../theme/colors';
 import {
   RunCoordinate,
@@ -21,7 +9,6 @@ import {
   formatClock,
   formatPace,
 } from '../utils/runMetrics';
-import {useThrottledRouteGeoJSON} from '../hooks/useThrottledRouteGeoJSON';
 
 interface LiveRunMapProps {
   route: RunCoordinate[];
@@ -36,8 +23,6 @@ interface LiveRunMapProps {
   onCancel: () => void;
 }
 
-const mapStyle = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-
 const LiveRunMap = ({
   route,
   elapsedSeconds,
@@ -50,100 +35,70 @@ const LiveRunMap = ({
   onFinish,
   onCancel,
 }: LiveRunMapProps) => {
-  const cameraRef = useRef<CameraRef>(null);
-  const {line, points, latest} = useThrottledRouteGeoJSON(route, 1000);
+  const mapRef = useRef<MapView>(null);
   const isPaused = status === 'paused';
   const hasRouteLine = route.length >= 2;
   const currentPace = calculatePaceMinutesPerKm(distanceKm, elapsedSeconds);
   const caloriesBurned = calories ?? estimateCalories(distanceKm);
+  const latest = route[route.length - 1] || null;
+  const start = route[0] || null;
+
+  const routeCoordinates = useMemo(
+    () => route.map(point => ({latitude: point.latitude, longitude: point.longitude})),
+    [route],
+  );
+
+  const initialRegion: Region = {
+    latitude: latest?.latitude ?? 20.5937,
+    longitude: latest?.longitude ?? 78.9629,
+    latitudeDelta: latest ? 0.008 : 18,
+    longitudeDelta: latest ? 0.008 : 18,
+  };
 
   useEffect(() => {
-    if (!latest) {
+    if (!latest || !mapRef.current) {
       return;
     }
 
-    cameraRef.current?.easeTo({
-      center: [latest.longitude, latest.latitude],
-      zoom: 16.5,
-      pitch: 0,
-      bearing: 0,
-      duration: 900,
-    });
+    mapRef.current.animateCamera(
+      {
+        center: {latitude: latest.latitude, longitude: latest.longitude},
+        zoom: 16.5,
+        pitch: 0,
+        heading: 0,
+      },
+      {duration: 900},
+    );
   }, [latest]);
 
   return (
     <View style={styles.container}>
       <View style={styles.mapPanel}>
-        <Map
-          mapStyle={mapStyle}
+        <MapView
+          ref={mapRef}
           style={styles.map}
-          attribution={false}
-          logo={false}
-          compass={false}
-          scaleBar={false}
-          touchPitch={false}
-          touchRotate={false}>
-          <Camera
-            ref={cameraRef}
-            initialViewState={{
-              center: latest
-                ? [latest.longitude, latest.latitude]
-                : [78.9629, 20.5937],
-              zoom: latest ? 16.5 : 4,
-            }}
-            minZoom={3}
-            maxZoom={20}
-          />
-
+          initialRegion={initialRegion}
+          showsCompass={false}
+          showsMyLocationButton={false}
+          showsUserLocation={false}
+          toolbarEnabled={false}
+          loadingEnabled>
           {hasRouteLine ? (
-            <GeoJSONSource id="route-source" data={line} lineMetrics>
-              <Layer
-                id="route-glow"
-                type="line"
-                layout={{
-                  'line-cap': 'round',
-                  'line-join': 'round',
-                }}
-                paint={{
-                  'line-color': Colors.primary,
-                  'line-width': 10,
-                  'line-opacity': 0.12,
-                }}
-              />
-              <Layer
-                id="route-line"
-                type="line"
-                layout={{
-                  'line-cap': 'round',
-                  'line-join': 'round',
-                }}
-                paint={{
-                  'line-color': Colors.primaryContainer,
-                  'line-width': 5,
-                }}
-              />
-            </GeoJSONSource>
+            <Polyline
+              coordinates={routeCoordinates}
+              strokeColor={Colors.primaryContainer}
+              strokeWidth={5}
+            />
           ) : null}
 
-          <GeoJSONSource id="route-points-source" data={points}>
-            <Layer
-              id="start-point"
-              type="circle"
-              filter={['==', ['get', 'kind'], 'start']}
-              paint={{
-                'circle-color': Colors.secondary,
-                'circle-radius': 7,
-                'circle-stroke-color': Colors.onSurface,
-                'circle-stroke-width': 3,
-              }}
-            />
-          </GeoJSONSource>
+          {start ? (
+            <Marker coordinate={start} anchor={{x: 0.5, y: 0.5}}>
+              <View style={styles.startMarker} />
+            </Marker>
+          ) : null}
 
           {latest ? (
-            <Marker
-              id="current-location-marker"
-              lngLat={[latest.longitude, latest.latitude]}
-              anchor="center">
+            <Marker coordinate={latest} anchor={{x: 0.5, y: 0.5}}>
               <View style={styles.locationMarker}>
                 <View style={styles.markerHalo} />
                 <View style={styles.markerCore}>
@@ -153,7 +108,7 @@ const LiveRunMap = ({
               </View>
             </Marker>
           ) : null}
-        </Map>
+        </MapView>
       </View>
 
       <View style={styles.statsPanel}>
@@ -219,6 +174,14 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  startMarker: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.secondary,
+    borderWidth: 3,
+    borderColor: Colors.onSurface,
   },
   locationMarker: {
     width: 54,

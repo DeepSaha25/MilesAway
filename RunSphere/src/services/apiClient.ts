@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Keychain from 'react-native-keychain';
+import * as SecureStore from 'expo-secure-store';
 import {API_BASE_URL} from '../config/api';
 import {GUEST_TOKEN} from './guestSession';
 
@@ -12,20 +12,19 @@ class ApiClient {
 
   static async init() {
     try {
-      const storedToken = await Keychain.getGenericPassword({service: TOKEN_KEY});
-      this.token = storedToken ? storedToken.password : null;
+      this.token = (await SecureStore.getItemAsync(TOKEN_KEY)) || null;
     } catch {}
   }
 
   static async setAuth(token: string, user: any) {
     this.token = token;
-    await Keychain.setGenericPassword('runsphere', token, {service: TOKEN_KEY});
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
   static async clearAuth() {
     this.token = null;
-    await Keychain.resetGenericPassword({service: TOKEN_KEY});
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
   }
 

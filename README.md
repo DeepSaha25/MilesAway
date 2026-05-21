@@ -36,8 +36,14 @@ Frontend (mobile app):
 ```bash
 cd RunSphere
 npm install
-# run the app with your preferred platform tooling (Expo / React Native CLI)
-npm run android # or `npm run ios` / `npm start`
+# start Expo and scan the QR code with Expo Go on your phone
+npm start -- --tunnel
+```
+
+If you need a shareable build, use EAS from the `RunSphere` folder:
+
+```bash
+npm run eas:build
 ```
 
 ## Important files

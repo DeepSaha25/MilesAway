@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import LinearGradient from 'react-native-linear-gradient';
+import {LinearGradient} from 'expo-linear-gradient';
 import AppHeader from '../components/AppHeader';
 import { useLeaderboardStore } from '../store/leaderboardStore';
 import { useUserStore } from '../store/userStore';

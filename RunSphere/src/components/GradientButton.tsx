@@ -6,8 +6,8 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import {LinearGradient} from 'expo-linear-gradient';
 import {Colors} from '../theme/colors';
-import LinearGradient from 'react-native-linear-gradient';
 
 interface GradientButtonProps {
   title: string;

@@ -1,4 +1,30 @@
 {
-  "name": "RunSphere",
-  "displayName": "RunSphere"
+  "expo": {
+    "name": "RunSphere",
+    "slug": "runsphere",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "runsphere",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "jsEngine": "hermes",
+    "android": {
+      "package": "com.runsphere.app",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "ios": {
+      "bundleIdentifier": "com.runsphere.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RunSphere uses your location to track outdoor runs and show your route."
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "RunSphere uses your location to track outdoor runs and show your route."
+        }
+      ]
+    ]
+  }
 }
