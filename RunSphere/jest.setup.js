@@ -17,66 +17,54 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-jest.mock('react-native-keychain', () => ({
-  getGenericPassword: jest.fn(async () => false),
-  setGenericPassword: jest.fn(async () => true),
-  resetGenericPassword: jest.fn(async () => true),
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(async () => null),
+  setItemAsync: jest.fn(async () => undefined),
+  deleteItemAsync: jest.fn(async () => undefined),
 }));
 
-jest.mock('react-native-permissions', () => ({
-  PERMISSIONS: {
-    ANDROID: {
-      ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
-      ACCESS_BACKGROUND_LOCATION: 'android.permission.ACCESS_BACKGROUND_LOCATION',
+jest.mock('expo-location', () => ({
+  Accuracy: {Highest: 6},
+  getForegroundPermissionsAsync: jest.fn(async () => ({status: 'granted'})),
+  requestForegroundPermissionsAsync: jest.fn(async () => ({
+    status: 'granted',
+    canAskAgain: true,
+  })),
+  getCurrentPositionAsync: jest.fn(async () => ({
+    coords: {
+      latitude: 0,
+      longitude: 0,
+      altitude: null,
+      accuracy: null,
+      speed: null,
+      heading: null,
     },
-    IOS: {
-      LOCATION_ALWAYS: 'ios.permission.LOCATION_ALWAYS',
-      LOCATION_WHEN_IN_USE: 'ios.permission.LOCATION_WHEN_IN_USE',
-    },
-  },
-  RESULTS: {
-    GRANTED: 'granted',
-    BLOCKED: 'blocked',
-    DENIED: 'denied',
-  },
-  check: jest.fn(async () => 'granted'),
-  request: jest.fn(async () => 'granted'),
-  openSettings: jest.fn(async () => undefined),
+    timestamp: Date.now(),
+  })),
+  watchPositionAsync: jest.fn(async () => ({remove: jest.fn()})),
 }));
 
-jest.mock('react-native-background-geolocation', () => ({
-  __esModule: true,
-  default: {
-    DesiredAccuracy: {High: -1},
-    ActivityType: {Fitness: 3},
-    ready: jest.fn(async () => ({enabled: false})),
-    start: jest.fn(async () => ({enabled: true})),
-    stop: jest.fn(async () => ({enabled: false})),
-    getCurrentPosition: jest.fn(),
-    onLocation: jest.fn(() => ({remove: jest.fn()})),
-  },
-}));
-
-jest.mock('@maplibre/maplibre-react-native', () => {
+jest.mock('react-native-maps', () => {
   const React = require('react');
   const {View} = require('react-native');
   const Component = ({children}) =>
     React.createElement(View, null, children);
 
   return {
-    Map: Component,
-    Camera: React.forwardRef((props, ref) => React.createElement(View, null)),
-    GeoJSONSource: Component,
-    Layer: Component,
+    __esModule: true,
+    default: React.forwardRef((props, ref) => React.createElement(View, null)),
     Marker: Component,
+    Polyline: Component,
   };
 });
 
-jest.mock('react-native-linear-gradient', () => {
+jest.mock('expo-linear-gradient', () => {
   const React = require('react');
   const {View} = require('react-native');
-  return ({children, ...props}) =>
-    React.createElement(View, props, children);
+  return {
+    LinearGradient: ({children, ...props}) =>
+      React.createElement(View, props, children),
+  };
 });
 
 jest.mock('react-native-toast-message', () => {

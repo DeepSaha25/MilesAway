@@ -1,7 +1,7 @@
 module.exports = {
-  preset: '@react-native/jest-preset',
+  preset: 'jest-expo',
   setupFiles: ['./jest.setup.js'],
   transformIgnorePatterns: [
-    'node_modules/(?!(@react-native|react-native|@react-navigation|react-native-background-geolocation|react-native-keychain|@maplibre)/)',
+    'node_modules/(?!(@react-native|react-native|@react-navigation|expo|@expo|react-native-maps)/)',
   ],
 };
