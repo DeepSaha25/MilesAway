@@ -44,6 +44,21 @@ jest.mock('expo-location', () => ({
   watchPositionAsync: jest.fn(async () => ({remove: jest.fn()})),
 }));
 
+jest.mock('expo-font', () => ({
+  useFonts: jest.fn(() => [true]),
+}));
+
+jest.mock('@expo-google-fonts/inter', () => ({
+  Inter_400Regular: {},
+  Inter_500Medium: {},
+  Inter_700Bold: {},
+}));
+
+jest.mock('@expo-google-fonts/lexend', () => ({
+  Lexend_700Bold: {},
+  Lexend_900Black: {},
+}));
+
 jest.mock('react-native-maps', () => {
   const React = require('react');
   const {View} = require('react-native');

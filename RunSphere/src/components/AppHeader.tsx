@@ -1,8 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../theme/colors';
+
+const HEADER_AVATAR = {
+  uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDN3VfEa7BLl4_KkLsg3BZAoRyRAsa_wQ-qQ5FK-kQio7zfMkleavIgrC5keZxDw3PkDkH1z1fFIO0jQqmEv6-y2tIHxNlmgLngsNZAgM5DVE1KcrvOcdjKCtsx-7aesqMBZDIJxQlwx5-hs_OvwlfbvwjvvrUtxmpLDRY6lAYD0HGv-1yktXInbbn6t__Jazr2a6iUb73pDhwW9Q0P1LdMJaqUch48anjybfZ-8RwRW74HngHoVSHG2BYv6imweJLGacAlUoenzJ9R',
+};
 
 interface AppHeaderProps {
   showStreak?: boolean;
@@ -25,8 +30,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 16) }]}>
       <View style={styles.leftCluster}>
+        <TouchableOpacity activeOpacity={0.76} style={styles.iconButton}>
+          <Ionicons name="menu" size={26} color={Colors.primary} />
+        </TouchableOpacity>
         <Text numberOfLines={1} adjustsFontSizeToFit style={styles.logoText}>
-          RunSphere
+          RUNSPHERE
         </Text>
       </View>
 
@@ -42,8 +50,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             activeOpacity={0.76}
             onPress={openProfile}
             style={styles.avatar}
+            accessibilityLabel="Open profile"
           >
-            <Text style={styles.avatarText}>RS</Text>
+            <Image source={HEADER_AVATAR} style={styles.avatarImage} />
           </TouchableOpacity>
         </View>
       )}
@@ -53,30 +62,24 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
 const styles = StyleSheet.create({
   header: {
-    paddingBottom: 10,
-    paddingHorizontal: 16,
+    minHeight: 74,
+    paddingBottom: 14,
+    paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceContainerLow + 'F2',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 12,
+    backgroundColor: Colors.surface + 'F0',
   },
   leftCluster: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
     marginRight: 12,
   },
   logoText: {
-    fontFamily: 'Lexend-Bold',
-    fontSize: 21,
+    fontFamily: 'Lexend-Black',
+    fontSize: 23,
     fontWeight: '900',
     fontStyle: 'italic',
     color: Colors.primary,
@@ -86,21 +89,28 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
-  avatar: {
-    width: 38,
+  iconButton: {
+    width: 28,
     height: 38,
+    borderRadius: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.transparent,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.surfaceContainerHigh,
     borderWidth: 2,
     borderColor: Colors.primary + '33',
+    overflow: 'hidden',
   },
-  avatarText: {
-    color: Colors.primary,
-    fontFamily: 'Lexend-Bold',
-    fontSize: 12,
-    fontWeight: '900',
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   rightCluster: {
     flexDirection: 'row',

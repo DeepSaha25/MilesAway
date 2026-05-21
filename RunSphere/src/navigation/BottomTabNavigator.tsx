@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
@@ -12,18 +13,21 @@ import { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const TAB_CONFIG: Record<keyof MainTabParamList, { label: string }> = {
-  Home: { label: 'Home' },
-  Leaderboards: { label: 'Leaderboard' },
-  History: { label: 'History' },
-  Community: { label: 'Community' },
-  Profile: { label: 'Profile' },
+const TAB_CONFIG: Record<
+  keyof MainTabParamList,
+  { label: string; icon: keyof typeof Ionicons.glyphMap }
+> = {
+  Home: { label: 'Home', icon: 'home' },
+  Leaderboards: { label: 'Ranks', icon: 'bar-chart' },
+  History: { label: 'Run', icon: 'speedometer' },
+  Community: { label: 'Social', icon: 'people' },
+  Profile: { label: 'Me', icon: 'person' },
 };
 
 const VISIBLE_TABS: Array<keyof MainTabParamList> = [
   'Home',
   'Leaderboards',
-  'History',
+  'Community',
   'Profile',
 ];
 
@@ -37,9 +41,11 @@ const BottomTabNavigator = ({ navigation }: any) => {
         headerShown: false,
         tabBarStyle: styles.hiddenTabBar,
       }}
+      // React Navigation's custom tabBar API is intentionally render-prop based.
+      // eslint-disable-next-line react/no-unstable-nested-components
       tabBar={({ state, navigation: tabNavigation }) => (
-        <View style={[styles.tabShell, { bottom: bottomInset + 8 }]}>
-          <View style={styles.tabBar}>
+        <View style={styles.tabShell}>
+          <View style={[styles.tabBar, {paddingBottom: bottomInset + 6}]}>
             {state.routes
               .filter(route =>
                 VISIBLE_TABS.includes(route.name as keyof MainTabParamList),
@@ -53,13 +59,19 @@ const BottomTabNavigator = ({ navigation }: any) => {
 
                 return (
                   <React.Fragment key={route.key}>
-                    {visibleIndex === 2 ? (
+                    {visibleIndex === 1 ? (
                       <TouchableOpacity
-                        style={styles.runTabItem}
+                        style={styles.tabItem}
                         onPress={() => navigation.navigate('RunTracking')}
                         activeOpacity={0.86}
+                        accessibilityLabel="Start run"
                       >
-                        <Text style={styles.runTabLabel}>Run</Text>
+                        <Ionicons
+                          name="speedometer"
+                          size={21}
+                          color={Colors.slateInactive}
+                        />
+                        <Text style={styles.tabLabel}>Run</Text>
                       </TouchableOpacity>
                     ) : null}
                     <TouchableOpacity
@@ -71,7 +83,13 @@ const BottomTabNavigator = ({ navigation }: any) => {
                         tabNavigation.navigate(route.name as never)
                       }
                       activeOpacity={0.78}
+                      accessibilityLabel={config.label}
                     >
+                      <Ionicons
+                        name={config.icon}
+                        size={21}
+                        color={isFocused ? Colors.primary : Colors.slateInactive}
+                      />
                       <Text
                         numberOfLines={1}
                         adjustsFontSizeToFit
@@ -105,21 +123,26 @@ const styles = StyleSheet.create({
   },
   tabShell: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
   },
   tabBar: {
     width: '100%',
-    minHeight: 58,
-    paddingHorizontal: 6,
-    paddingVertical: 7,
-    borderRadius: 22,
+    minHeight: 84,
+    paddingHorizontal: 20,
+    paddingTop: 13,
+    paddingBottom: 16,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surfaceContainer + 'F2',
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: Colors.outlineVariant + '44',
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.14,
@@ -128,41 +151,22 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
-    height: 42,
-    borderRadius: 16,
+    height: 52,
+    borderRadius: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
     color: Colors.slateInactive,
     fontFamily: 'Lexend-Bold',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0,
+    marginTop: 5,
+    textTransform: 'uppercase',
   },
   activeTabItem: {
-    backgroundColor: Colors.primary + '18',
-  },
-  runTabItem: {
-    width: 66,
-    height: 42,
-    borderRadius: 21,
-    marginHorizontal: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 12,
-  },
-  runTabLabel: {
-    color: Colors.onPrimaryFixed,
-    fontFamily: 'Lexend-Bold',
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0,
+    backgroundColor: Colors.transparent,
   },
   activeText: {
     color: Colors.primary,
