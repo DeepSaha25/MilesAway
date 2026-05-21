@@ -60,11 +60,3 @@ Detailed architecture docs live in `docs/architecture`:
 
 - [docs/architecture/frontend.md](docs/architecture/frontend.md)
 - [docs/architecture/backend.md](docs/architecture/backend.md)
-
-## Contributing
-
-If you want changes to documentation or architecture diagrams, open a PR with updated content in `docs/`.
-
-## License
-
-Specify your project license here.
