@@ -1,4 +1,25 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.exclusions": [
+        "**/node_modules/**",
+        "**/.expo/**",
+        "**/android/.gradle/**",
+        "**/android/build/**",
+        "**/android/app/build/**"
+    ],
+    "java.project.resourceFilters": [
+        "node_modules",
+        ".expo",
+        "android/.gradle",
+        "android/build",
+        "android/app/build"
+    ],
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/.expo/**": true,
+        "**/android/.gradle/**": true,
+        "**/android/build/**": true,
+        "**/android/app/build/**": true
+    }
 }

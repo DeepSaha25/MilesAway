@@ -18,14 +18,24 @@ class ApiClient {
 
   static async setAuth(token: string, user: any) {
     this.token = token;
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+    try {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+    } catch {}
+
+    try {
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+    } catch {}
   }
 
   static async clearAuth() {
     this.token = null;
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_KEY);
+    try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    } catch {}
+
+    try {
+      await AsyncStorage.removeItem(USER_KEY);
+    } catch {}
   }
 
   static setUnauthorizedHandler(handler: (() => void | Promise<void>) | null) {

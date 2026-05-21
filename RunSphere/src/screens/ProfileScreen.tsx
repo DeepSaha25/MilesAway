@@ -1,7 +1,6 @@
 import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -13,7 +12,6 @@ import {
 import {useFocusEffect} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import AppHeader from '../components/AppHeader';
-import {useAuthStore} from '../store/authStore';
 import {useUserStore} from '../store/userStore';
 import {Colors} from '../theme/colors';
 import {getCurrentLocation, requestLocationPermission} from '../utils/location';
@@ -27,7 +25,6 @@ const ProfileScreen = () => {
   const isLoading = useUserStore(state => state.isLoading);
   const refreshDashboard = useUserStore(state => state.refreshDashboard);
   const updateBackendLocation = useUserStore(state => state.updateBackendLocation);
-  const logout = useAuthStore(state => state.logout);
   const [refreshing, setRefreshing] = useState(false);
   const [syncingLocation, setSyncingLocation] = useState(false);
 
@@ -48,19 +45,6 @@ const ProfileScreen = () => {
     } finally {
       setRefreshing(false);
     }
-  };
-
-  const handleLogout = () => {
-    Alert.alert('Log out?', 'You can sign back in any time.', [
-      {text: 'Cancel', style: 'cancel'},
-      {
-        text: 'Log out',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
   };
 
   const handleSyncLocation = async () => {
@@ -115,13 +99,7 @@ const ProfileScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.surface} />
-      <AppHeader
-        rightElement={
-          <TouchableOpacity onPress={handleLogout}>
-            <Text style={styles.logoutText}>LOG OUT</Text>
-          </TouchableOpacity>
-        }
-      />
+      <AppHeader />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -235,13 +213,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   content: {paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24},
-  logoutText: {
-    color: Colors.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-  },
   profileHero: {
     flexDirection: 'row',
     alignItems: 'center',

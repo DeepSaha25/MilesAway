@@ -7,6 +7,7 @@ import AuthService, {
   SignupPayload,
   AuthResponse,
 } from '../services/authService';
+import {GUEST_TOKEN, guestUser} from '../services/guestSession';
 
 type AuthUser = Record<string, any> | null;
 
@@ -30,14 +31,33 @@ export const useAuthStore = create<AuthState>()(
         user: null,
         hydrated: false,
         bootstrap: async () => {
-          await ApiClient.init();
-          const user = await ApiClient.getStoredUser();
+          try {
+            await ApiClient.init();
+            const storedUser = await ApiClient.getStoredUser();
 
-          set({
-            token: ApiClient.token,
-            user,
-            hydrated: true,
-          });
+            if (!storedUser) {
+              const guestResponse = await AuthService.loginAsGuest();
+              set({
+                token: guestResponse.token,
+                user: guestResponse.user,
+                hydrated: true,
+              });
+              return;
+            }
+
+            set({
+              token: ApiClient.token || GUEST_TOKEN,
+              user: storedUser,
+              hydrated: true,
+            });
+          } catch {
+            ApiClient.token = GUEST_TOKEN;
+            set({
+              token: GUEST_TOKEN,
+              user: guestUser,
+              hydrated: true,
+            });
+          }
         },
         login: async payload => {
           const response = await AuthService.login(payload);
@@ -62,9 +82,10 @@ export const useAuthStore = create<AuthState>()(
         },
         logout: async () => {
           await AuthService.logout();
+          const guestResponse = await AuthService.loginAsGuest();
           set({
-            token: null,
-            user: null,
+            token: guestResponse.token,
+            user: guestResponse.user,
             hydrated: true,
           });
         },
