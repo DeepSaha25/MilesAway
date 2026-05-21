@@ -3,8 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 import {API_BASE_URL} from '../config/api';
 import {GUEST_TOKEN} from './guestSession';
 
-const TOKEN_KEY = '@runsphere_token';
-const USER_KEY = '@runsphere_user';
+const TOKEN_KEY = '@milesaway_token';
+const USER_KEY = '@milesaway_user';
 
 class ApiClient {
   static token: string | null = null;

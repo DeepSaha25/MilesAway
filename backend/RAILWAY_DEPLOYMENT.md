@@ -57,7 +57,7 @@ For a React Native mobile app, requests often do not include a browser `Origin` 
 2. Add a database user and password.
 3. In Network Access, allow Railway to connect. The simplest setting is `0.0.0.0/0`; use tighter network controls if your Atlas plan supports them.
 4. Copy the connection string into `DATABASE_URL`.
-5. Make sure the URI includes your database name, for example `/runsphere`.
+5. Make sure the URI includes your database name, for example `/milesaway`.
 
 ## Deploy procedure
 
@@ -84,5 +84,5 @@ The response should show `status: "OK"`.
 After Railway gives you the public URL, configure the mobile app with:
 
 ```env
-RUNSPHERE_API_URL=https://your-service.up.railway.app/api
+MILESAWAY_API_URL=https://your-service.up.railway.app/api
 ```

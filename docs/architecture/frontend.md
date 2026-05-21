@@ -2,7 +2,7 @@
 
 Overview
 
-The RunSphere frontend is a React Native TypeScript application located in the `RunSphere/` folder. It is structured to be modular and testable with clear separation between presentation, navigation, and business logic.
+The MilesAway frontend is a React Native TypeScript application located in the `MilesAway/` folder. It is structured to be modular and testable with clear separation between presentation, navigation, and business logic.
 
 Key folders
 
@@ -21,9 +21,9 @@ Data flow
 
 Important files
 
-- App entry: [RunSphere/App.tsx](../../RunSphere/App.tsx)
-- API config: [RunSphere/src/config/api.ts](../../RunSphere/src/config/api.ts)
-- Example component: [RunSphere/src/components/Avatar.tsx](../../RunSphere/src/components/Avatar.tsx)
+- App entry: [MilesAway/App.tsx](../../MilesAway/App.tsx)
+- API config: [MilesAway/src/config/api.ts](../../MilesAway/src/config/api.ts)
+- Example component: [MilesAway/src/components/Avatar.tsx](../../MilesAway/src/components/Avatar.tsx)
 
 Offline and location
 
@@ -31,4 +31,4 @@ The app collects location data during run tracking; location handling and permis
 
 Testing and CI
 
-Unit tests live under `RunSphere/__tests__` and use Jest. Native integration can be validated via platform tooling or CI pipelines that include Android/iOS emulators or Expo.
+Unit tests live under `MilesAway/__tests__` and use Jest. Native integration can be validated via platform tooling or CI pipelines that include Android/iOS emulators or Expo.

@@ -1,7 +1,7 @@
 const config = require('../config/env');
 
 const errorHandler = (err, req, res, next) => {
-  console.error(`[RunSphere] Error: ${err.message}`);
+  console.error(`[MilesAway] Error: ${err.message}`);
 
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';

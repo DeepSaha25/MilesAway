@@ -1,4 +1,4 @@
-package com.runsphere
+package com.milesaway
 
 import android.app.Application
 import com.facebook.react.PackageList

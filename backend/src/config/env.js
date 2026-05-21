@@ -31,7 +31,7 @@ if (JWT_SECRET.length < 32 || PLACEHOLDER_SECRETS.has(JWT_SECRET)) {
 
 const CORS_ORIGINS = parseCsv(process.env.CORS_ORIGINS);
 if (isProduction && CORS_ORIGINS.length === 0) {
-  console.warn('[RunSphere] CORS_ORIGINS is empty; browser clients with an Origin header will be blocked');
+  console.warn('[MilesAway] CORS_ORIGINS is empty; browser clients with an Origin header will be blocked');
 }
 
 module.exports = {

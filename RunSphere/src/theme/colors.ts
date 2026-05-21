@@ -1,4 +1,4 @@
-// RunSphere Design Tokens — "Kinetic Performance Engine"
+// MilesAway Design Tokens — "Kinetic Performance Engine"
 // Extracted from DESIGN.md & Stitch code.html files
 
 export const Colors = {

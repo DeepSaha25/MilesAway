@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "RunSphere",
-    "slug": "runsphere",
+    "name": "MilesAway",
+    "slug": "milesaway",
     "version": "0.0.1",
     "orientation": "portrait",
-    "scheme": "runsphere",
+    "scheme": "milesaway",
     "userInterfaceStyle": "automatic",
     "platforms": ["ios", "android"],
     "jsEngine": "hermes",
     "android": {
-      "package": "com.runsphere.app",
+      "package": "com.milesaway.app",
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
     },
     "ios": {
-      "bundleIdentifier": "com.runsphere.app",
+      "bundleIdentifier": "com.milesaway.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "RunSphere uses your location to track outdoor runs and show your route."
+        "NSLocationWhenInUseUsageDescription": "MilesAway uses your location to track outdoor runs and show your route."
       }
     },
     "plugins": [
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "RunSphere uses your location to track outdoor runs and show your route."
+          "locationWhenInUsePermission": "MilesAway uses your location to track outdoor runs and show your route."
         }
       ]
     ]

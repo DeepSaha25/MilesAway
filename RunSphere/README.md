@@ -1,4 +1,4 @@
-RunSphere is an [**Expo**](https://expo.dev) React Native app. The project is configured to run in Expo Go for mobile preview, while EAS is available for cloud builds and future standalone releases.
+MilesAway is an [**Expo**](https://expo.dev) React Native app. The project is configured to run in Expo Go for mobile preview, while EAS is available for cloud builds and future standalone releases.
 
 # Getting Started
 

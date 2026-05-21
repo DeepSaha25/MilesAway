@@ -1,6 +1,6 @@
-# RunSphere
+# MilesAway
 
-RunSphere is a full-stack running-social application consisting of a React Native TypeScript frontend and a Node.js/Express backend. It lets users track runs, share activity to a community feed, and view leaderboards and aggregated metrics.
+MilesAway is a full-stack running-social application consisting of a React Native TypeScript frontend and a Node.js/Express backend. It lets users track runs, share activity to a community feed, and view leaderboards and aggregated metrics.
 
 ## Core concepts
 
@@ -11,7 +11,7 @@ RunSphere is a full-stack running-social application consisting of a React Nativ
 - **Leaderboard**: ranking system derived from aggregates and run data.
 - **Auth**: authentication using token-based (JWT) flows and session handling.
 
-These concepts map to the backend models in `backend/src/models` and to frontend screens and services in `RunSphere/src`.
+These concepts map to the backend models in `backend/src/models` and to frontend screens and services in `MilesAway/src`.
 
 ## Architecture overview
 
@@ -34,13 +34,13 @@ npm run start # or `node server.js`
 Frontend (mobile app):
 
 ```bash
-cd RunSphere
+cd MilesAway
 npm install
 # start Expo and scan the QR code with Expo Go on your phone
 npm start -- --tunnel
 ```
 
-If you need a shareable build, use EAS from the `RunSphere` folder:
+If you need a shareable build, use EAS from the `MilesAway` folder:
 
 ```bash
 npm run eas:build
@@ -51,8 +51,8 @@ npm run eas:build
 - Backend entry: [backend/app.js](backend/app.js)
 - Backend server: [backend/server.js](backend/server.js)
 - Backend config: [backend/src/config/database.js](backend/src/config/database.js)
-- Frontend entry: [RunSphere/index.js](RunSphere/index.js)
-- Frontend app: [RunSphere/App.tsx](RunSphere/App.tsx)
+- Frontend entry: [MilesAway/index.js](MilesAway/index.js)
+- Frontend app: [MilesAway/App.tsx](MilesAway/App.tsx)
 
 ## Docs
 

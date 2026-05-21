@@ -83,10 +83,10 @@ if (localPropertiesFile.exists()) {
 def googleMapsApiKey = localProperties
     .getProperty("GOOGLE_MAPS_API_KEY", "")
     .replace("\"", "")
-def releaseStoreFile = localProperties.getProperty("RUNSPHERE_RELEASE_STORE_FILE", System.getenv("RUNSPHERE_RELEASE_STORE_FILE") ?: "")
-def releaseStorePassword = localProperties.getProperty("RUNSPHERE_RELEASE_STORE_PASSWORD", System.getenv("RUNSPHERE_RELEASE_STORE_PASSWORD") ?: "")
-def releaseKeyAlias = localProperties.getProperty("RUNSPHERE_RELEASE_KEY_ALIAS", System.getenv("RUNSPHERE_RELEASE_KEY_ALIAS") ?: "")
-def releaseKeyPassword = localProperties.getProperty("RUNSPHERE_RELEASE_KEY_PASSWORD", System.getenv("RUNSPHERE_RELEASE_KEY_PASSWORD") ?: "")
+def releaseStoreFile = localProperties.getProperty("MILESAWAY_RELEASE_STORE_FILE", System.getenv("MILESAWAY_RELEASE_STORE_FILE") ?: "")
+def releaseStorePassword = localProperties.getProperty("MILESAWAY_RELEASE_STORE_PASSWORD", System.getenv("MILESAWAY_RELEASE_STORE_PASSWORD") ?: "")
+def releaseKeyAlias = localProperties.getProperty("MILESAWAY_RELEASE_KEY_ALIAS", System.getenv("MILESAWAY_RELEASE_KEY_ALIAS") ?: "")
+def releaseKeyPassword = localProperties.getProperty("MILESAWAY_RELEASE_KEY_PASSWORD", System.getenv("MILESAWAY_RELEASE_KEY_PASSWORD") ?: "")
 def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
 
 android {
@@ -99,9 +99,9 @@ android {
         }
     }
 
-    namespace "com.runsphere"
+    namespace "com.milesaway"
     defaultConfig {
-        applicationId "com.runsphere"
+        applicationId "com.milesaway"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

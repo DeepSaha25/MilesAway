@@ -324,7 +324,7 @@ const CommunityFeedScreen = () => {
           <Ionicons name="analytics" size={34} color={Colors.primary} />
           <Text style={styles.proTitle}>UPGRADE YOUR PERFORMANCE</Text>
           <Text style={styles.proCopy}>
-            Unlock deeper route, stride, and recovery insights with RunSphere Pro.
+            Unlock deeper route, stride, and recovery insights with MilesAway Pro.
           </Text>
           <LinearGradient
             colors={[Colors.primary, Colors.primaryContainer]}

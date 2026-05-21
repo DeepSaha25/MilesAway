@@ -105,7 +105,7 @@ const isCommonPassword = (password) => {
     'password123',
     'qwerty123',
     'admin123',
-    'runsphere',
+    'milesaway',
     '1234567890'
   ].includes(normalized);
 };

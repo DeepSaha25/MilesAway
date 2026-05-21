@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
-    message: 'RunSphere backend is running',
+    message: 'MilesAway backend is running',
     timestamp: new Date().toISOString()
   });
 });

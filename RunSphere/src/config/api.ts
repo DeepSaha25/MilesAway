@@ -4,15 +4,15 @@ declare const __DEV__: boolean;
 declare const process:
   | {
       env?: {
-        RUNSPHERE_API_URL?: string;
+        MILESAWAY_API_URL?: string;
       };
     }
   | undefined;
 
 const getConfiguredUrl = () => {
-  const globalUrl = (globalThis as any).RUNSPHERE_API_URL;
+  const globalUrl = (globalThis as any).MILESAWAY_API_URL;
   const envUrl =
-    typeof process !== 'undefined' ? process?.env?.RUNSPHERE_API_URL : undefined;
+    typeof process !== 'undefined' ? process?.env?.MILESAWAY_API_URL : undefined;
 
   return (envUrl || globalUrl || '').trim();
 };
@@ -25,9 +25,9 @@ const getLocalUrl = () =>
 export const API_BASE_URL = getConfiguredUrl() || (__DEV__ ? getLocalUrl() : '');
 
 if (!API_BASE_URL) {
-  throw new Error('RUNSPHERE_API_URL must be configured for release builds');
+  throw new Error('MILESAWAY_API_URL must be configured for release builds');
 }
 
 if (!__DEV__ && !API_BASE_URL.startsWith('https://')) {
-  throw new Error('RUNSPHERE_API_URL must use HTTPS outside local debug builds');
+  throw new Error('MILESAWAY_API_URL must use HTTPS outside local debug builds');
 }

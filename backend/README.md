@@ -1,6 +1,6 @@
-# RunSphere Backend - Production Ready Setup
+# MilesAway Backend - Production Ready Setup
 
-A robust, scalable Node.js/Express backend for **RunSphere**, a community-based running and fitness tracking application with multi-level geographic leaderboards.
+A robust, scalable Node.js/Express backend for **MilesAway**, a community-based running and fitness tracking application with multi-level geographic leaderboards.
 
 ## 📋 Table of Contents
 - [Features](#features)
@@ -75,7 +75,7 @@ Before starting, ensure you have:
 ### Step 1: Clone/Navigate to Project
 
 ```bash
-cd c:\Users\Deep Saha\Desktop\Runshphere\backend
+cd c:\Users\Deep Saha\Desktop\MilesAway\backend
 ```
 
 ### Step 2: Install Dependencies
@@ -160,7 +160,7 @@ Expected output:
 ```
 📍 [timestamp] | GET /api/health
 ✅ MongoDB connected successfully
-✅ RunSphere backend running on port 5000
+✅ MilesAway backend running on port 5000
 📍 Timezone: Asia/Kolkata
 🔧 Environment: development
 ```
@@ -183,7 +183,7 @@ Response:
 ```json
 {
   "status": "OK",
-  "message": "RunSphere backend is running",
+  "message": "MilesAway backend is running",
   "timestamp": "2026-04-13T10:30:00.000Z"
 }
 ```

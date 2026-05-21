@@ -62,7 +62,7 @@ const LoginScreen = ({navigation}: any) => {
       <View style={styles.glowBottom} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.brand}>RUNSPHERE</Text>
+        <Text style={styles.brand}>MILESAWAY</Text>
         <Text style={styles.hero}>Welcome{'\n'}Back</Text>
 
         <View style={styles.form}>
@@ -121,7 +121,7 @@ const LoginScreen = ({navigation}: any) => {
           ) : (
             <>
               <Text style={styles.guestButtonText}>CONTINUE AS GUEST</Text>
-              <Text style={styles.guestButtonMeta}>Try RunSphere with demo stats and local saves</Text>
+              <Text style={styles.guestButtonMeta}>Try MilesAway with demo stats and local saves</Text>
             </>
           )}
         </TouchableOpacity>

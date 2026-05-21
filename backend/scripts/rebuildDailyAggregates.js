@@ -21,12 +21,12 @@ const rebuild = async () => {
     rebuilt += 1;
   }
 
-  console.log(`[RunSphere] Rebuilt daily aggregates for ${rebuilt} runs`);
+  console.log(`[MilesAway] Rebuilt daily aggregates for ${rebuilt} runs`);
 };
 
 rebuild()
   .catch((error) => {
-    console.error('[RunSphere] Aggregate rebuild failed:', error);
+    console.error('[MilesAway] Aggregate rebuild failed:', error);
     process.exitCode = 1;
   })
   .finally(async () => {

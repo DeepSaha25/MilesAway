@@ -1,9 +1,9 @@
-export const GUEST_TOKEN = 'runsphere-guest-session';
+export const GUEST_TOKEN = 'milesaway-guest-session';
 
 export const guestUser = {
   _id: 'guest-runner',
   name: 'Guest Runner',
-  email: 'guest@runsphere.local',
+  email: 'guest@milesaway.local',
   city: 'Demo City',
   district: 'Demo District',
   state: 'Demo State',

@@ -1,7 +1,7 @@
 {
-  "name": "runshphere-backend",
+  "name": "milesaway-backend",
   "version": "1.0.0",
-  "description": "Production-ready backend for RunSphere - community-based running app",
+  "description": "Production-ready backend for MilesAway - community-based running app",
   "main": "server.js",
   "engines": {
     "node": ">=20.19.0"
@@ -13,7 +13,7 @@
     "rebuild:aggregates": "node scripts/rebuildDailyAggregates.js"
   },
   "keywords": [
-    "runshphere",
+    "milesaway",
     "running",
     "fitness",
     "leaderboard"

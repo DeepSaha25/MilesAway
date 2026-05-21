@@ -82,7 +82,7 @@ const SignupScreen = ({navigation}: any) => {
       <View style={styles.glowBottom} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.brand}>RUNSPHERE</Text>
+        <Text style={styles.brand}>MILESAWAY</Text>
         <Text style={styles.hero}>
           JOIN THE <Text style={styles.heroAccent}>PULSE</Text>
         </Text>
@@ -112,7 +112,7 @@ const SignupScreen = ({navigation}: any) => {
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="link@runsphere.core"
+            placeholder="link@milesaway.core"
             placeholderTextColor={Colors.outline}
             keyboardType="email-address"
             autoCapitalize="none"

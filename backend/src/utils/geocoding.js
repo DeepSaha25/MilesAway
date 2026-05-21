@@ -82,7 +82,7 @@ const fetchNominatimGeocode = async (latitude, longitude) => {
 
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'RunSphere/1.0 (contact: local-dev)',
+      'User-Agent': 'MilesAway/1.0 (contact: local-dev)',
       Accept: 'application/json'
     }
   });

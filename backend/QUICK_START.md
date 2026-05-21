@@ -1,4 +1,4 @@
-# RunSphere Backend - Quick Start Guide
+# MilesAway Backend - Quick Start Guide
 
 ## ✅ Completion Status
 
@@ -33,7 +33,7 @@ All 10 implementation phases are complete! Here's what has been built:
 
 ### Step 2: Update `.env` File
 
-Edit `c:\Users\Deep Saha\Desktop\Runshphere\backend\.env`:
+Edit `c:\Users\Deep Saha\Desktop\MilesAway\backend\.env`:
 
 ```env
 # Paste your MongoDB connection string here (copied directly from Atlas)
@@ -57,13 +57,13 @@ TIMEZONE=Asia/Kolkata
 ### Step 3: Start the Server
 
 ```bash
-cd "c:\Users\Deep Saha\Desktop\Runshphere\backend"
+cd "c:\Users\Deep Saha\Desktop\MilesAway\backend"
 npm run dev
 ```
 
 Expected output:
 ```
-✅ RunSphere backend running on port 5000
+✅ MilesAway backend running on port 5000
 ✅ MongoDB connected successfully
 ```
 
@@ -331,8 +331,8 @@ After testing backend:
 
 1. **Create React Native project**:
    ```bash
-   npx react-native init RunSphereApp
-   cd RunSphereApp
+   npx react-native init MilesAwayApp
+   cd MilesAwayApp
    ```
 
 2. **Install dependencies**:

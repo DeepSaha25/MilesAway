@@ -106,10 +106,10 @@ export const useRunStore = create<RunState>()(
           }),
         resetRun: () => set(initialState),
       }),
-      {name: 'runsphere-run-store'},
+      {name: 'milesaway-run-store'},
     ),
     {
-      name: 'runsphere-active-run',
+      name: 'milesaway-active-run',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: state => ({
         status: state.status,

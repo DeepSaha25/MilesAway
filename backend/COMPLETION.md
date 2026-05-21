@@ -1,4 +1,4 @@
-# RunSphere Backend - Implementation Complete ✅
+# MilesAway Backend - Implementation Complete ✅
 
 **Date**: April 13, 2026  
 **Status**: PRODUCTION READY  
@@ -518,12 +518,12 @@ Phase 10: Documentation & README ............ ✅ COMPLETE
 
 Backend is located at:
 ```
-c:\Users\Deep Saha\Desktop\Runshphere\backend
+c:\Users\Deep Saha\Desktop\MilesAway\backend
 ```
 
 To start immediately after adding MongoDB credentials to `.env`:
 ```bash
-cd "c:\Users\Deep Saha\Desktop\Runshphere\backend"
+cd "c:\Users\Deep Saha\Desktop\MilesAway\backend"
 npm run dev
 ```
 

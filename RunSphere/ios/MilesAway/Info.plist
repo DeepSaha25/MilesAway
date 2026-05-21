@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>RunSphere</string>
+	<string>MilesAway</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -35,11 +35,11 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>RunSphere uses your location to track outdoor runs, calculate distance, and place verified runs on local leaderboards.</string>
+	<string>MilesAway uses your location to track outdoor runs, calculate distance, and place verified runs on local leaderboards.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>RunSphere needs background location while a run is active so tracking continues when your phone is locked.</string>
+	<string>MilesAway needs background location while a run is active so tracking continues when your phone is locked.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>RunSphere needs background location while a run is active so tracking continues when your phone is locked.</string>
+	<string>MilesAway needs background location while a run is active so tracking continues when your phone is locked.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

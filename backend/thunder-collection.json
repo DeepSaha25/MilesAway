@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "runshphere-backend-collection",
-    "name": "RunSphere Backend API",
-    "description": "Complete API testing collection for RunSphere backend with all endpoints",
+    "_postman_id": "milesaway-backend-collection",
+    "name": "MilesAway Backend API",
+    "description": "Complete API testing collection for MilesAway backend with all endpoints",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [

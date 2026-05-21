@@ -97,10 +97,10 @@ export const useAuthStore = create<AuthState>()(
           set({user});
         },
       }),
-      {name: 'runsphere-auth-store'},
+      {name: 'milesaway-auth-store'},
     ),
     {
-      name: 'runsphere-auth-store',
+      name: 'milesaway-auth-store',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: state => ({
         token: state.token,

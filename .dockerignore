@@ -4,6 +4,6 @@
 **/.env
 **/.env.*
 **/*.log
-RunSphere/android
-RunSphere/ios
-stitch_runsphere_app_ui_ux
+MilesAway/android
+MilesAway/ios
+stitch_milesaway_app_ui_ux
