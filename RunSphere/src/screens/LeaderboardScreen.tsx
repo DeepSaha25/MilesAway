@@ -26,6 +26,7 @@ const LeaderboardScreen = () => {
   const period: TimePeriod = 'weekly';
   const loadLeaderboard = useLeaderboardStore(state => state.loadLeaderboard);
   const entriesState = useLeaderboardStore(state => state.entries);
+  const ranksState = useLeaderboardStore(state => state.ranks);
   const loadingState = useLeaderboardStore(state => state.loading);
   const errorsState = useLeaderboardStore(state => state.errors);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,6 +38,7 @@ const LeaderboardScreen = () => {
   );
   const loading = loadingState[currentKey];
   const error = errorsState[currentKey];
+  const currentRank = ranksState[currentKey];
 
   const loadCurrent = useCallback(async () => {
     await loadLeaderboard(scope, period, 30);
@@ -71,6 +73,33 @@ const LeaderboardScreen = () => {
     }));
   }, [entries]);
 
+  const motivationCopy = useMemo(() => {
+    if (!currentRank) {
+      return 'Complete a verified run to join the local board.';
+    }
+
+    const yourEntry = entries.find(
+      (entry: any) => entry.you || Number(entry.rank) === Number(currentRank),
+    );
+    const runnerAhead = entries.find(
+      (entry: any) => Number(entry.rank) === Number(currentRank) - 1,
+    );
+
+    if (yourEntry && runnerAhead) {
+      const gap =
+        Number(runnerAhead.totalDistance || 0) -
+        Number(yourEntry.totalDistance || 0);
+
+      if (gap > 0) {
+        return `Run ${gap.toFixed(1)} km to catch ${runnerAhead.name}.`;
+      }
+    }
+
+    return currentRank === 1
+      ? 'You are leading this board. Keep the streak alive.'
+      : 'Complete another run to climb.';
+  }, [currentRank, entries]);
+
   if (loading && entries.length === 0) {
     return (
       <View style={styles.loadingState}>
@@ -95,8 +124,8 @@ const LeaderboardScreen = () => {
         }>
         <View style={styles.headingWrap}>
           <Text style={styles.ghostTitle}>RANKS</Text>
-          <Text style={styles.title}>THE ELITE</Text>
-          <Text style={styles.subtitle}>GLOBAL STANDING / CYCLE 24</Text>
+          <Text style={styles.title}>Leaderboard</Text>
+          <Text style={styles.subtitle}>See how you rank near you this week</Text>
         </View>
 
         <View style={styles.tabs}>
@@ -110,6 +139,13 @@ const LeaderboardScreen = () => {
               </Text>
             </TouchableOpacity>
           ))}
+        </View>
+
+        <View style={styles.motivationCard}>
+          <Text style={styles.motivationLabel}>
+            {currentRank ? `Your rank: #${currentRank}` : 'Your rank'}
+          </Text>
+          <Text style={styles.motivationText}>{motivationCopy}</Text>
         </View>
 
         {error ? (
@@ -144,7 +180,7 @@ const LeaderboardScreen = () => {
                   {item.name}
                 </Text>
                 <Text style={[styles.podiumDistance, isWinner && styles.podiumDistanceWinner]}>
-                  {Number(item.totalDistance || 0).toFixed(1)} <Text style={styles.unitText}>KM</Text>
+                  {Number(item.totalDistance || 0).toFixed(1)} <Text style={styles.unitText}>km</Text>
                 </Text>
               </View>
             );
@@ -166,15 +202,15 @@ const LeaderboardScreen = () => {
                     {entry.name} {entry.you ? <Text style={styles.youBadge}>YOU</Text> : null}
                   </Text>
                   <Text style={[styles.rowMeta, entry.you && styles.youText]}>
-                    {entry.you ? 'RISING STAR' : 'PRO LEAGUE'}
+                    {entry.you ? 'Your position' : 'Runner'}
                   </Text>
                 </View>
               </View>
               <View style={styles.rowRight}>
                 <Text style={[styles.rowDistance, entry.you && styles.youText]}>
-                  {Number(entry.totalDistance || 0).toFixed(1)} <Text style={styles.unitText}>KM</Text>
+                  {Number(entry.totalDistance || 0).toFixed(1)} <Text style={styles.unitText}>km</Text>
                 </Text>
-                <Text style={styles.rowRuns}>{entry.totalRuns || 0} RUNS</Text>
+                <Text style={styles.rowRuns}>{entry.totalRuns || 0} runs</Text>
               </View>
             </View>
           ))}
@@ -202,7 +238,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   headingWrap: {
-    minHeight: 110,
+    minHeight: 96,
     justifyContent: 'flex-end',
     marginBottom: 18,
   },
@@ -212,25 +248,22 @@ const styles = StyleSheet.create({
     top: 2,
     color: Colors.onSurface + '12',
     fontFamily: 'Lexend-Bold',
-    fontSize: 80,
+    fontSize: 60,
     fontWeight: '900',
     fontStyle: 'italic',
   },
   title: {
     color: Colors.onSurface,
     fontFamily: 'Lexend-Bold',
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: '900',
     fontStyle: 'italic',
-    textTransform: 'uppercase',
   },
   subtitle: {
     marginTop: 4,
     color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    fontSize: 13,
+    fontWeight: '800',
   },
   tabs: {
     flexDirection: 'row',
@@ -238,7 +271,7 @@ const styles = StyleSheet.create({
     padding: 4,
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: 28,
-    marginBottom: 46,
+    marginBottom: 14,
   },
   tab: {
     flex: 1,
@@ -258,6 +291,26 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: Colors.primary,
+  },
+  motivationCard: {
+    borderRadius: 20,
+    padding: 18,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '22',
+    marginBottom: 30,
+  },
+  motivationLabel: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+  motivationText: {
+    color: Colors.onSurface,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '700',
   },
   podium: {
     flexDirection: 'row',

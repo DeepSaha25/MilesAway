@@ -1,8 +1,10 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   StatusBar,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -25,8 +27,18 @@ import {
   formatPace,
 } from '../utils/runMetrics';
 
+type SavedRunResult = {
+  distanceKm: number;
+  elapsedSeconds: number;
+  averagePace: number;
+  rank: number | null;
+  streak: number;
+  weeklyDistance: number;
+};
+
 const RunSummaryScreen = ({navigation}: any) => {
   const [saving, setSaving] = useState(false);
+  const [savedRun, setSavedRun] = useState<SavedRunResult | null>(null);
   const authUser = useAuthStore(state => state.user);
   const profile = useUserStore(state => state.profile);
   const refreshDashboard = useUserStore(state => state.refreshDashboard);
@@ -60,6 +72,39 @@ const RunSummaryScreen = ({navigation}: any) => {
     });
   };
 
+  const goHome = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Main', params: {screen: 'Home'}}],
+    });
+  };
+
+  const viewLeaderboard = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Main', params: {screen: 'Leaderboards'}}],
+    });
+  };
+
+  useEffect(() => {
+    if (!savedRun) {
+      return undefined;
+    }
+
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        navigation.reset({
+          index: 0,
+          routes: [{name: 'Main', params: {screen: 'Home'}}],
+        });
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [navigation, savedRun]);
+
   const saveRun = async () => {
     if (coordinates.length === 0 || distanceKm < 0.2) {
       Toast.show({
@@ -85,6 +130,18 @@ const RunSummaryScreen = ({navigation}: any) => {
         loadLeaderboard('city', 'weekly', 6),
       ]);
 
+      const userState = useUserStore.getState();
+      const leaderboardState = useLeaderboardStore.getState();
+
+      setSavedRun({
+        distanceKm: summary.distanceKm,
+        elapsedSeconds: summary.elapsedSeconds,
+        averagePace: summary.averagePace,
+        rank: leaderboardState.ranks['local:today'] ?? null,
+        streak: userState.profile?.streak || profile?.streak || 0,
+        weeklyDistance: Number(userState.weeklyStats?.totalDistance || 0),
+      });
+
       resetRun();
 
       Toast.show({
@@ -93,11 +150,6 @@ const RunSummaryScreen = ({navigation}: any) => {
         text2: isGuestUser(authUser)
           ? 'Guest mode keeps this run on your device for this demo.'
           : 'Your stats and leaderboards have been updated.',
-      });
-
-      navigation.reset({
-        index: 0,
-        routes: [{name: 'Main'}],
       });
     } catch (error: any) {
       Toast.show({
@@ -110,6 +162,81 @@ const RunSummaryScreen = ({navigation}: any) => {
     }
   };
 
+  if (savedRun) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.surfaceDim} />
+
+        <ScrollView
+          contentContainerStyle={styles.savedState}
+          showsVerticalScrollIndicator={false}>
+          <Text style={styles.savedEyebrow}>Run saved</Text>
+          <Text style={styles.savedTitle}>Nice work today</Text>
+          <Text style={styles.savedSubtitle}>
+            Your run is logged. Check your rank or head back home for the next
+            goal.
+          </Text>
+
+          <View style={styles.savedHeroCard}>
+            <Text style={styles.savedDistance}>
+              {savedRun.distanceKm.toFixed(2)}
+            </Text>
+            <Text style={styles.savedDistanceLabel}>km completed</Text>
+          </View>
+
+          <View style={styles.savedGrid}>
+            <View style={styles.savedMetricCard}>
+              <Text style={styles.savedMetricLabel}>Time</Text>
+              <Text style={styles.savedMetricValue}>
+                {formatClock(savedRun.elapsedSeconds)}
+              </Text>
+            </View>
+            <View style={styles.savedMetricCard}>
+              <Text style={styles.savedMetricLabel}>Pace</Text>
+              <Text style={styles.savedMetricValue}>
+                {formatPace(savedRun.averagePace)}
+              </Text>
+            </View>
+            <View style={styles.savedMetricCard}>
+              <Text style={styles.savedMetricLabel}>Local rank</Text>
+              <Text style={styles.savedMetricValue}>
+                {savedRun.rank ? `#${savedRun.rank}` : '--'}
+              </Text>
+            </View>
+            <View style={styles.savedMetricCard}>
+              <Text style={styles.savedMetricLabel}>This week</Text>
+              <Text style={styles.savedMetricValue}>
+                {savedRun.weeklyDistance.toFixed(1)} km
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.streakCard}>
+            <Text style={styles.streakTitle}>
+              {savedRun.streak > 0
+                ? `${savedRun.streak}-day streak active`
+                : 'First streak starts here'}
+            </Text>
+            <Text style={styles.streakText}>
+              Come back tomorrow to keep your momentum going.
+            </Text>
+          </View>
+
+          <View style={styles.actions}>
+            <GradientButton
+              title="View Leaderboard"
+              onPress={viewLeaderboard}
+              style={styles.saveButton}
+            />
+            <TouchableOpacity style={styles.secondaryButton} onPress={goHome}>
+              <Text style={styles.secondaryButtonText}>Back Home</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.surfaceDim} />
@@ -117,7 +244,7 @@ const RunSummaryScreen = ({navigation}: any) => {
       <View style={styles.header}>
         <View>
           <Text style={styles.eyebrow}>Run Summary</Text>
-          <Text style={styles.title}>OWNED THE CITY</Text>
+          <Text style={styles.title}>Run Summary</Text>
         </View>
         <TouchableOpacity
           onPress={() =>
@@ -185,6 +312,94 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     paddingHorizontal: 20,
     paddingTop: 52,
+  },
+  savedState: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 28,
+  },
+  savedEyebrow: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  savedTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 38,
+    lineHeight: 44,
+    fontWeight: '900',
+  },
+  savedSubtitle: {
+    marginTop: 10,
+    color: Colors.onSurfaceVariant,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  savedHeroCard: {
+    marginTop: 28,
+    borderRadius: 28,
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '22',
+  },
+  savedDistance: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 76,
+    lineHeight: 82,
+    fontWeight: '900',
+  },
+  savedDistanceLabel: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  savedGrid: {
+    marginTop: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  savedMetricCard: {
+    width: '47.8%',
+    borderRadius: 18,
+    padding: 16,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  savedMetricLabel: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  savedMetricValue: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  streakCard: {
+    marginTop: 16,
+    borderRadius: 20,
+    padding: 18,
+    backgroundColor: Colors.primary + '12',
+    borderWidth: 1,
+    borderColor: Colors.primary + '33',
+  },
+  streakTitle: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  streakText: {
+    marginTop: 6,
+    color: Colors.onSurfaceVariant,
+    fontSize: 13,
+    lineHeight: 20,
   },
   header: {
     flexDirection: 'row',

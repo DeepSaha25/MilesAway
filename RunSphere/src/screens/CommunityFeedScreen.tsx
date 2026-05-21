@@ -88,7 +88,7 @@ const CommunityFeedScreen = () => {
           />
         }
       >
-        <Text style={styles.kicker}>GLOBAL NETWORK</Text>
+        <Text style={styles.kicker}>Community</Text>
         <Text style={styles.title}>COMMUNITY</Text>
 
         <View style={styles.filterRow}>
@@ -295,12 +295,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   feedImage: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
   },
   imageOverlay: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: Colors.surfaceContainerHigh + '55',
   },
   routeLine: {

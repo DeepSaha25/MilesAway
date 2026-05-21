@@ -42,6 +42,9 @@ const LiveRunMap = ({
   const caloriesBurned = calories ?? estimateCalories(distanceKm);
   const latest = route[route.length - 1] || null;
   const start = route[0] || null;
+  const gpsNeedsAttention = /acquiring|search|waiting|weak|required|could/i.test(
+    gpsStatus || '',
+  );
 
   const routeCoordinates = useMemo(
     () => route.map(point => ({latitude: point.latitude, longitude: point.longitude})),
@@ -113,20 +116,25 @@ const LiveRunMap = ({
 
       <View style={styles.statsPanel}>
         <View style={styles.heroCard}>
-          <Text style={styles.gpsStatus}>{gpsStatus || 'GPS ready'}</Text>
-          <Text style={styles.timer}>{formatClock(elapsedSeconds)}</Text>
+          <Text
+            style={[
+              styles.gpsStatus,
+              gpsNeedsAttention && styles.gpsStatusWarning,
+            ]}>
+            {gpsStatus || 'GPS ready'}
+          </Text>
           <View style={styles.distanceRow}>
             <Text style={styles.primaryValue}>{distanceKm.toFixed(2)}</Text>
             <Text style={styles.primaryLabel}>km</Text>
           </View>
+          <Text style={styles.timer}>{formatClock(elapsedSeconds)}</Text>
+          <View style={styles.pacePanel}>
+            <Text style={styles.paceLabel}>Pace</Text>
+            <Text style={styles.paceValue}>{formatPace(currentPace)}</Text>
+          </View>
         </View>
 
         <View style={styles.statGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Pace</Text>
-            <Text style={styles.statValue}>{formatPace(currentPace).replace(' /km', '')}</Text>
-            <Text style={styles.statUnit}>/km</Text>
-          </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Calories</Text>
             <Text style={styles.statValue}>{Math.round(caloriesBurned)}</Text>
@@ -139,21 +147,36 @@ const LiveRunMap = ({
           </View>
         </View>
 
-        <View style={styles.bottomControls}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={onCancel}>
-            <Text style={styles.secondaryButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.primaryButton, isPaused && styles.resumeButton]}
-            onPress={onPauseResume}>
-            <Text style={styles.primaryButtonText}>
-              {isPaused ? 'Resume' : 'Pause'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.stopButton} onPress={onFinish}>
-            <Text style={styles.stopButtonText}>Stop</Text>
-          </TouchableOpacity>
-        </View>
+        {isPaused ? (
+          <View style={styles.pausedControls}>
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                styles.resumeButton,
+                styles.fullWidthButton,
+              ]}
+              onPress={onPauseResume}>
+              <Text style={styles.primaryButtonText}>Resume</Text>
+            </TouchableOpacity>
+            <View style={styles.pausedSecondaryRow}>
+              <TouchableOpacity style={styles.finishButton} onPress={onFinish}>
+                <Text style={styles.finishButtonText}>Finish Run</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.discardButton} onPress={onCancel}>
+                <Text style={styles.discardButtonText}>Discard Run</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.bottomControls}>
+            <TouchableOpacity style={styles.primaryButton} onPress={onPauseResume}>
+              <Text style={styles.primaryButtonText}>Pause</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.finishButton} onPress={onFinish}>
+              <Text style={styles.finishButtonText}>Finish</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -165,8 +188,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   mapPanel: {
-    flex: 1,
-    minHeight: 260,
+    flex: 0.75,
+    minHeight: 220,
     borderBottomLeftRadius: 26,
     borderBottomRightRadius: 26,
     overflow: 'hidden',
@@ -235,7 +258,7 @@ const styles = StyleSheet.create({
   statsPanel: {
     flexShrink: 0,
     paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: 20,
     justifyContent: 'flex-start',
   },
@@ -253,8 +276,8 @@ const styles = StyleSheet.create({
   },
   timer: {
     color: Colors.onSurface,
-    fontSize: 40,
-    lineHeight: 46,
+    fontSize: 32,
+    lineHeight: 38,
     fontWeight: '900',
     textAlign: 'center',
   },
@@ -266,6 +289,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 4,
   },
+  gpsStatusWarning: {
+    color: Colors.tertiary,
+  },
   distanceRow: {
     marginTop: 6,
     flexDirection: 'row',
@@ -274,8 +300,8 @@ const styles = StyleSheet.create({
   },
   primaryValue: {
     color: Colors.onSurface,
-    fontSize: 48,
-    lineHeight: 52,
+    fontSize: 66,
+    lineHeight: 70,
     fontWeight: '900',
     textAlign: 'center',
   },
@@ -283,6 +309,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     color: Colors.onSurfaceVariant,
     fontSize: 18,
+    fontWeight: '900',
+  },
+  pacePanel: {
+    marginTop: 10,
+    width: '100%',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: Colors.surfaceContainerHigh,
+    alignItems: 'center',
+  },
+  paceLabel: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  paceValue: {
+    marginTop: 4,
+    color: Colors.primary,
+    fontSize: 28,
     fontWeight: '900',
   },
   statGrid: {
@@ -345,7 +391,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   primaryButton: {
-    flex: 1.2,
+    flex: 1.45,
     height: 54,
     borderRadius: 19,
     backgroundColor: Colors.primary,
@@ -355,13 +401,47 @@ const styles = StyleSheet.create({
   resumeButton: {
     backgroundColor: Colors.secondary,
   },
+  fullWidthButton: {
+    width: '100%',
+    flex: 0,
+  },
   primaryButtonText: {
     color: Colors.onPrimaryFixed,
     fontSize: 15,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  stopButton: {
+  finishButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 17,
+    backgroundColor: Colors.surfaceContainerHighest,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  finishButtonText: {
+    color: Colors.onSurface,
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  pausedControls: {
+    marginTop: 18,
+    borderRadius: 28,
+    backgroundColor: Colors.surfaceContainerHigh,
+    gap: 12,
+    padding: 12,
+    shadowColor: '#000000',
+    shadowOffset: {width: 0, height: 12},
+    shadowOpacity: 0.14,
+    shadowRadius: 26,
+    elevation: 14,
+  },
+  pausedSecondaryRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  discardButton: {
     flex: 1,
     height: 50,
     borderRadius: 17,
@@ -369,9 +449,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stopButtonText: {
+  discardButtonText: {
     color: Colors.onErrorContainer,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
   },

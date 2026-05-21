@@ -66,7 +66,7 @@ const LoginScreen = ({navigation}: any) => {
         <Text style={styles.hero}>Welcome{'\n'}Back</Text>
 
         <View style={styles.form}>
-          <Text style={styles.fieldLabel}>CREDENTIALS</Text>
+          <Text style={styles.fieldLabel}>EMAIL</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -78,7 +78,7 @@ const LoginScreen = ({navigation}: any) => {
           />
 
           <View style={styles.passwordHeader}>
-            <Text style={styles.fieldLabel}>ACCESS KEY</Text>
+            <Text style={styles.fieldLabel}>PASSWORD</Text>
             <Text style={styles.linkText}>FORGOT?</Text>
           </View>
           <TextInput
@@ -105,7 +105,7 @@ const LoginScreen = ({navigation}: any) => {
               onPress={handleLogin}
               disabled={loading !== null}>
               <LinearGradient colors={[Colors.primary, Colors.primaryContainer]} style={styles.primaryButton}>
-                <Text style={styles.primaryButtonText}>ENTER SPHERE</Text>
+                <Text style={styles.primaryButtonText}>LOG IN</Text>
               </LinearGradient>
             </TouchableOpacity>
           )}
@@ -128,7 +128,7 @@ const LoginScreen = ({navigation}: any) => {
 
         <View style={styles.dividerRow}>
           <View style={styles.divider} />
-          <Text style={styles.dividerText}>OR INITIALIZE VIA</Text>
+          <Text style={styles.dividerText}>OTHER OPTIONS</Text>
           <View style={styles.divider} />
         </View>
 
@@ -148,7 +148,7 @@ const LoginScreen = ({navigation}: any) => {
             <Text style={styles.systemLabel}>SYSTEM STATUS</Text>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.statusText}>ACTIVE_ENGINE</Text>
+              <Text style={styles.statusText}>Ready</Text>
             </View>
           </View>
           <Text style={styles.versionText}>v4.2.0-STABLE</Text>

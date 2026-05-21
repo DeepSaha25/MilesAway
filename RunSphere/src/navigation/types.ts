@@ -1,3 +1,5 @@
+import {NavigatorScreenParams} from '@react-navigation/native';
+
 export type MainTabParamList = {
   Home: undefined;
   Leaderboards: undefined;
@@ -9,7 +11,7 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainTabParamList> | undefined;
   RunTracking: undefined;
   RunSummary: undefined;
 };

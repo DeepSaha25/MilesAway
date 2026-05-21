@@ -14,17 +14,17 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const TAB_CONFIG: Record<keyof MainTabParamList, { label: string }> = {
   Home: { label: 'Home' },
-  Leaderboards: { label: 'Ranks' },
-  History: { label: 'Runs' },
-  Community: { label: 'Social' },
-  Profile: { label: 'Me' },
+  Leaderboards: { label: 'Leaderboard' },
+  History: { label: 'History' },
+  Community: { label: 'Community' },
+  Profile: { label: 'Profile' },
 };
 
 const VISIBLE_TABS: Array<keyof MainTabParamList> = [
   'Home',
   'Leaderboards',
   'History',
-  'Community',
+  'Profile',
 ];
 
 const BottomTabNavigator = ({ navigation }: any) => {
@@ -73,6 +73,8 @@ const BottomTabNavigator = ({ navigation }: any) => {
                       activeOpacity={0.78}
                     >
                       <Text
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                         style={[
                           styles.tabLabel,
                           isFocused && styles.activeText,
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   tabBar: {
     width: '100%',
     minHeight: 58,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 7,
     borderRadius: 22,
     flexDirection: 'row',
@@ -134,7 +136,7 @@ const styles = StyleSheet.create({
   tabLabel: {
     color: Colors.slateInactive,
     fontFamily: 'Lexend-Bold',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0,
   },
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary + '18',
   },
   runTabItem: {
-    width: 70,
+    width: 66,
     height: 42,
     borderRadius: 21,
     marginHorizontal: 3,

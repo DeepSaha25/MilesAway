@@ -1,8 +1,7 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -103,36 +102,7 @@ const ProfileScreen = () => {
   const totalDistance = Number(stats?.totalDistance || profile?.totalDistance || 0);
   const totalRuns = Number(stats?.totalRuns || 0);
   const weeklyDistance = Number(weeklyStats?.totalDistance || 0);
-  const bestPace = recentRuns.reduce((best, run) => {
-    const current = run.averagePace || (run.avgSpeed ? 60 / run.avgSpeed : 0);
-    if (!best || (current && current < best)) {
-      return current;
-    }
-    return best;
-  }, 0);
-  const weeklyBars = useMemo(() => {
-    const bars = Array(7).fill(0);
-    const today = new Date();
-    const start = new Date(today);
-    start.setDate(today.getDate() - 6);
-    start.setHours(0, 0, 0, 0);
-
-    recentRuns.forEach(run => {
-      const runDate = new Date(run.date);
-      if (Number.isNaN(runDate.getTime()) || runDate < start) {
-        return;
-      }
-
-      const index = Math.min(
-        6,
-        Math.max(0, Math.floor((runDate.getTime() - start.getTime()) / 86400000)),
-      );
-      bars[index] += Number(run.distance || 0);
-    });
-
-    return bars;
-  }, [recentRuns]);
-  const maxBar = Math.max(1, ...weeklyBars);
+  const runnerInitial = (profile?.name || 'Runner').slice(0, 1).toUpperCase();
 
   if (isLoading && !profile) {
     return (
@@ -162,27 +132,23 @@ const ProfileScreen = () => {
             tintColor={Colors.primaryContainer}
           />
         }>
-        <View style={styles.heroSection}>
-          <View style={styles.avatarShell}>
-            <View style={styles.avatarInner}>
-              <Image
-                source={{uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDw_zpHZ2KnGIz5vADzzvKqgSwBNlMb_80kQgwpfJ4Wlg5JJfgY6mKT1803P7OdQoQYfrJ8inPARgQBxDfkeHnmb_aUAanvP8kJOmfVRaUVFI1VTO-oWeq3_lcfXr9gu8vtLLU9qIV8CNCjpxHSEphKIHYbHod8mhwEZGNJlYZRyNA0pOvsmyh0_5ckZd3W9hFTfDCmiz3b6ufYPlBXxnH6ytQ6Qf6OfMqo7ErhgEx6U7l-en9ApVOwwUJun1tUeqPQhzSFmzoWUPdj'}}
-                style={styles.avatarImage}
-              />
-            </View>
-            <View style={styles.statusBolt} />
+        <View style={styles.profileHero}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>{runnerInitial}</Text>
           </View>
-
-          <View style={styles.heroCopy}>
-            <Text style={styles.tierChip}>ELITE TIER</Text>
-            <Text style={styles.nameText}>{profile?.name || 'Runner'}</Text>
-            <Text style={styles.heroMeta}>
+          <View style={styles.profileIntro}>
+            <Text style={styles.profileLabel}>Runner profile</Text>
+            <Text style={styles.profileName}>{profile?.name || 'Runner'}</Text>
+            <Text style={styles.profileMeta}>
               {profile?.location?.city
                 ? `${profile.location.city}, ${profile.location.state || ''}`
                 : 'Location not synced'}
             </Text>
-            <Text style={styles.heroMeta}>
-              Joined {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'recently'}
+            <Text style={styles.profileMeta}>
+              Joined{' '}
+              {profile?.createdAt
+                ? new Date(profile.createdAt).toLocaleDateString()
+                : 'recently'}
             </Text>
           </View>
         </View>
@@ -196,86 +162,36 @@ const ProfileScreen = () => {
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.statsGrid}>
-          <View style={styles.heroStat}>
-            <Text style={styles.statKicker}>LIFETIME DISTANCE</Text>
-            <Text style={styles.heroStatValue}>
-              {totalDistance.toFixed(0)} <Text style={styles.heroStatUnit}>KM</Text>
+        <View style={styles.profileStatsGrid}>
+          <View style={styles.profileStatCardWide}>
+            <Text style={styles.profileStatLabel}>Lifetime distance</Text>
+            <Text style={styles.profileStatValue}>
+              {totalDistance.toFixed(0)} <Text style={styles.profileStatUnit}>km</Text>
             </Text>
-            <Text style={styles.statTrend}>{weeklyDistance.toFixed(1)} km this week</Text>
+            <Text style={styles.profileStatMeta}>
+              {weeklyDistance.toFixed(1)} km this week
+            </Text>
           </View>
 
-          <View style={styles.miniGrid}>
-            <View style={styles.miniCard}>
-              <Text style={styles.miniLabel}>FASTEST 5K</Text>
-              <Text style={styles.miniValue}>
-                {bestPace ? formatPace(bestPace) : '--'}
-              </Text>
-              <Text style={styles.miniHint}>BEST PACE</Text>
-            </View>
-            <View style={styles.miniCard}>
-              <Text style={styles.miniLabel}>STREAK</Text>
-              <Text style={styles.miniValue}>{profile?.streak || 0} DAYS</Text>
-              <Text style={styles.miniHint}>CURRENT RUN</Text>
-            </View>
-            <View style={styles.miniCard}>
-              <Text style={styles.miniLabel}>AVG PACE</Text>
-              <Text style={styles.miniValue}>
-                {stats?.averagePace ? formatPace(stats.averagePace) : '--'}
-              </Text>
-              <Text style={styles.miniHint}>STEADY CLIMB</Text>
-            </View>
-            <View style={styles.miniCard}>
-              <Text style={styles.miniLabel}>RUNS</Text>
-              <Text style={styles.miniValue}>{totalRuns}</Text>
-              <Text style={styles.miniHint}>TOTAL SESSIONS</Text>
-            </View>
+          <View style={styles.profileStatCard}>
+            <Text style={styles.profileStatLabel}>Runs</Text>
+            <Text style={styles.profileStatValue}>{totalRuns}</Text>
           </View>
-        </View>
-
-        <View style={styles.chartCard}>
-          <Text style={styles.chartKicker}>PERFORMANCE VIEW</Text>
-          <Text style={styles.chartTitle}>Weekly Volume</Text>
-          <View style={styles.barRow}>
-            {weeklyBars.map((value, index) => (
-              <View key={index} style={styles.barColumn}>
-                <View
-                  style={[
-                    styles.bar,
-                    {
-                      height: `${Math.max(12, (value / maxBar) * 100)}%`,
-                      backgroundColor: index === 3 ? Colors.primary : Colors.primary + '33',
-                    },
-                  ]}
-                />
-                <Text style={[styles.barLabel, index === 3 && styles.barLabelActive]}>
-                  {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][index]}
-                </Text>
-              </View>
-            ))}
+          <View style={styles.profileStatCard}>
+            <Text style={styles.profileStatLabel}>Streak</Text>
+            <Text style={styles.profileStatValue}>{profile?.streak || 0}</Text>
+            <Text style={styles.profileStatMeta}>days</Text>
           </View>
-        </View>
-
-        <View style={styles.achievementsCard}>
-          <Text style={styles.chartTitle}>Kinetic Achievements</Text>
-          <View style={styles.achievementGrid}>
-            {[
-              ['CENTURY CLUB', '100 runs completed'],
-              ['SONIC BOOM', 'Sub 4:00 pace 5K'],
-              ['APEX HUNTER', '10,000m elevation'],
-              ['MARATHONER', 'Locked: 42.2K run'],
-            ].map(([title, desc]) => (
-              <View key={title} style={styles.achievementItem}>
-                <View style={styles.achievementOrb} />
-                <Text style={styles.achievementTitle}>{title}</Text>
-                <Text style={styles.achievementDesc}>{desc}</Text>
-              </View>
-            ))}
+          <View style={styles.profileStatCard}>
+            <Text style={styles.profileStatLabel}>Avg pace</Text>
+            <Text style={styles.profileStatValueSmall}>
+              {stats?.averagePace ? formatPace(stats.averagePace) : '--'}
+            </Text>
           </View>
         </View>
 
         <View style={styles.runsSection}>
-          <Text style={styles.chartTitle}>Recent Runs</Text>
+          <Text style={styles.profileSectionTitle}>Recent runs</Text>
           {recentRuns.length === 0 ? (
             <View style={styles.emptySection}>
               <Text style={styles.emptySectionText}>
@@ -325,6 +241,111 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
+  },
+  profileHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 18,
+    padding: 18,
+    borderRadius: 24,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '22',
+  },
+  profileAvatar: {
+    width: 74,
+    height: 74,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+  },
+  profileAvatarText: {
+    color: Colors.onPrimaryFixed,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 28,
+    fontWeight: '900',
+  },
+  profileIntro: {
+    flex: 1,
+  },
+  profileLabel: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  profileName: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '900',
+  },
+  profileMeta: {
+    marginTop: 5,
+    color: Colors.onSurfaceVariant,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  profileStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+  },
+  profileStatCardWide: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 20,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '22',
+  },
+  profileStatCard: {
+    width: '47.8%',
+    minHeight: 124,
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: Colors.surfaceContainerHigh,
+    justifyContent: 'space-between',
+  },
+  profileStatLabel: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  profileStatValue: {
+    marginTop: 10,
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 34,
+    fontWeight: '900',
+  },
+  profileStatValueSmall: {
+    marginTop: 10,
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  profileStatUnit: {
+    color: Colors.primary,
+    fontSize: 16,
+  },
+  profileStatMeta: {
+    marginTop: 8,
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  profileSectionTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 26,
+    fontWeight: '900',
+    marginBottom: 14,
   },
   heroSection: {
     gap: 20,

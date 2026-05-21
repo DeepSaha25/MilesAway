@@ -59,12 +59,14 @@ const HomeScreen = ({ navigation }: any) => {
 
   const lastRun = recentRuns[0];
   const localToday = leaderboardEntries['local:today'] || [];
-  const cityWeekly = leaderboardEntries['city:weekly'] || [];
   const localRank = leaderboardRanks['local:today'];
+  const dailyGoalKm = 2;
+  const dailyDistance = Number(dailyStats?.totalDistance || 0);
   const weeklyDistance = Number(weeklyStats?.totalDistance || 0);
   const totalDistance = Number(
     stats?.totalDistance || profile?.totalDistance || 0,
   );
+  const firstName = profile?.name ? String(profile.name).split(' ')[0] : 'Runner';
 
   const location = profile?.location;
   const locationLabel =
@@ -77,7 +79,8 @@ const HomeScreen = ({ navigation }: any) => {
       ? 'Location synced'
       : 'Location not synced';
 
-  const activeProgress = Math.max(8, Math.min(100, (weeklyDistance / 6) * 100));
+  const dailyProgress = Math.min(100, (dailyDistance / dailyGoalKm) * 100);
+  const remainingGoal = Math.max(0, dailyGoalKm - dailyDistance);
 
   if (isLoading && !profile) {
     return (
@@ -105,140 +108,129 @@ const HomeScreen = ({ navigation }: any) => {
           />
         }
       >
-        <Text style={styles.kicker}>TODAY'S DISTANCE</Text>
-        <View style={styles.heroRow}>
-          <Text style={styles.heroValue}>
-            {Number(dailyStats?.totalDistance || 0).toFixed(1)}
-          </Text>
-          <Text style={styles.heroUnit}>KM</Text>
+        <View style={styles.commandPanel}>
+          <Text style={styles.kicker}>Hi {firstName}</Text>
+          <Text style={styles.heroTitle}>Ready for today's run?</Text>
+          <Text style={styles.locationText}>{locationLabel}</Text>
+
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => navigation.navigate('RunTracking')}
+            style={styles.startActionWrap}
+          >
+            <LinearGradient
+              colors={[Colors.primary, Colors.primaryContainer]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.startAction}
+            >
+              <View>
+                <Text style={styles.startActionText}>Start Run</Text>
+                <Text style={styles.startActionMeta}>GPS tracking</Text>
+              </View>
+              <Text style={styles.startActionArrow}>GO</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.92}
-          onPress={() => navigation.navigate('RunTracking')}
-          style={styles.startActionWrap}
-        >
-          <LinearGradient
-            colors={[Colors.primary, Colors.primaryContainer]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.startAction}
-          >
-            <Text style={styles.startActionText}>START RUN</Text>
-            <Text style={styles.startActionArrow}>NOW</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <View style={styles.bentoGrid}>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>LAST PERFORMANCE</Text>
-            <Text style={styles.cardTitle}>
-              {lastRun
-                ? `${Number(lastRun.distance || 0).toFixed(2)} KM`
-                : 'NO RUN YET'}
-            </Text>
-            <Text style={styles.cardMeta}>
-              {lastRun
-                ? formatRelativeRunDate(lastRun.date)
-                : 'Start a tracked run to build the dashboard.'}
-            </Text>
-            {lastRun ? (
-              <View style={styles.metricRow}>
-                <View>
-                  <Text style={styles.metricValue}>
-                    {formatPace(
-                      lastRun.averagePace ||
-                        (lastRun.avgSpeed ? 60 / lastRun.avgSpeed : 0),
-                    )}
-                  </Text>
-                  <Text style={styles.metricCaption}>PACE</Text>
-                </View>
-                <View>
-                  <Text style={styles.metricValue}>
-                    {formatClock(lastRun.duration || 0)}
-                  </Text>
-                  <Text style={styles.metricCaption}>TIME</Text>
-                </View>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={[styles.card, styles.cardLow]}>
-            <Text style={styles.cardLabel}>ACTIVE TIME / WEEK</Text>
-            <Text style={styles.highlightValue}>
-              {weeklyDistance.toFixed(1)}{' '}
-              <Text style={styles.highlightUnit}>KM</Text>
-            </Text>
-            <View style={styles.progressTrack}>
-              <View
-                style={[styles.progressFill, { width: `${activeProgress}%` }]}
-              />
+        <View style={styles.goalCard}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>Daily goal</Text>
+              <Text style={styles.sectionTitle}>
+                {dailyDistance.toFixed(1)} / {dailyGoalKm.toFixed(1)} km
+              </Text>
             </View>
-            <Text style={styles.cardMeta}>
-              {(weeklyStats?.totalRuns || 0).toString()} runs synced this week
-            </Text>
+            <Text style={styles.goalPercent}>{Math.round(dailyProgress)}%</Text>
           </View>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${dailyProgress}%` }]} />
+          </View>
+          <Text style={styles.goalCopy}>
+            {remainingGoal > 0
+              ? `Run ${remainingGoal.toFixed(1)} km more to finish today's goal.`
+              : 'Goal complete. Nice work keeping the rhythm alive.'}
+          </Text>
+          <Text style={styles.streakCopy}>
+            {(profile?.streak || 0) > 0
+              ? `${profile?.streak || 0}-day streak active. Run today to keep it going.`
+              : 'Start today to build your first streak.'}
+          </Text>
+        </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>LOCAL SQUAD RANK</Text>
-            <Text style={styles.rankValue}>
+        <View style={styles.compactGrid}>
+          <View style={styles.compactCard}>
+            <Text style={styles.compactLabel}>Local rank</Text>
+            <Text style={styles.compactValue}>
               {localRank ? `#${localRank}` : '--'}
             </Text>
-            <Text style={styles.cardMeta}>{locationLabel}</Text>
-            <Text style={styles.cardHint}>
-              Lifetime distance {totalDistance.toFixed(1)} km
+            <Text style={styles.compactMeta}>
+              {localRank ? 'Keep climbing nearby' : 'Save a run to unlock rankings'}
+            </Text>
+          </View>
+          <View style={styles.compactCard}>
+            <Text style={styles.compactLabel}>This week</Text>
+            <Text style={styles.compactValue}>{weeklyDistance.toFixed(1)} km</Text>
+            <Text style={styles.compactMeta}>
+              {(weeklyStats?.totalRuns || 0).toString()} runs logged
             </Text>
           </View>
         </View>
 
-        <View style={styles.previewGrid}>
-          <View style={styles.previewCard}>
-            <Text style={styles.previewTitle}>LOCAL TODAY</Text>
-            {localToday.length > 0 ? (
-              localToday.map((entry, index) => (
-                <View
-                  key={`${entry.userId}-${index}`}
-                  style={styles.previewRow}
-                >
-                  <Text style={styles.previewRank}>{entry.rank}</Text>
-                  <Text numberOfLines={1} style={styles.previewName}>
-                    {entry.name}
-                  </Text>
-                  <Text style={styles.previewValue}>
-                    {Number(entry.totalDistance || 0).toFixed(1)} km
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>
-                Local standings appear after your first synced GPS run.
-              </Text>
-            )}
+        <View style={styles.lastRunCard}>
+          <View>
+            <Text style={styles.sectionLabel}>Last run</Text>
+            <Text style={styles.lastRunTitle}>
+              {lastRun
+                ? `${Number(lastRun.distance || 0).toFixed(2)} km`
+                : 'No runs yet'}
+            </Text>
+            <Text style={styles.cardMeta}>
+              {lastRun
+                ? `${formatRelativeRunDate(lastRun.date)} - ${formatClock(
+                    lastRun.duration || 0,
+                  )} - ${formatPace(
+                    lastRun.averagePace ||
+                      (lastRun.avgSpeed ? 60 / lastRun.avgSpeed : 0),
+                  )}`
+                : 'Start your first run to unlock rankings and progress.'}
+            </Text>
           </View>
+          <Text style={styles.totalDistanceText}>
+            {totalDistance.toFixed(1)} km lifetime
+          </Text>
+        </View>
 
-          <View style={styles.previewCard}>
-            <Text style={styles.previewTitle}>CITY WEEK</Text>
-            {cityWeekly.length > 0 ? (
-              cityWeekly.map((entry, index) => (
-                <View
-                  key={`${entry.userId}-${index}`}
-                  style={styles.previewRow}
-                >
-                  <Text style={styles.previewRank}>{entry.rank}</Text>
-                  <Text numberOfLines={1} style={styles.previewName}>
-                    {entry.name}
-                  </Text>
-                  <Text style={styles.previewValue}>
-                    {Number(entry.totalDistance || 0).toFixed(1)} km
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>
-                City momentum will populate when leaderboard data is available.
-              </Text>
-            )}
+        <View style={styles.previewCard}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>Leaderboard</Text>
+              <Text style={styles.previewTitle}>Local today</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('Leaderboards')}>
+              <Text style={styles.viewAllText}>View all</Text>
+            </TouchableOpacity>
           </View>
+          {localToday.length > 0 ? (
+            localToday.slice(0, 4).map((entry, index) => (
+              <View
+                key={`${entry.userId}-${index}`}
+                style={styles.previewRow}
+              >
+                <Text style={styles.previewRank}>{entry.rank}</Text>
+                <Text numberOfLines={1} style={styles.previewName}>
+                  {entry.name}
+                </Text>
+                <Text style={styles.previewValue}>
+                  {Number(entry.totalDistance || 0).toFixed(1)} km
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>
+              Start your first run to unlock rankings.
+            </Text>
+          )}
         </View>
 
         <View style={styles.footerSpace} />
@@ -281,13 +273,28 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     paddingTop: 24,
   },
+  commandPanel: {
+    marginBottom: 18,
+  },
   kicker: {
     color: Colors.primary + '99',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
-    letterSpacing: 2.4,
-    textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  heroTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  locationText: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
   },
   heroRow: {
     flexDirection: 'row',
@@ -329,16 +336,121 @@ const styles = StyleSheet.create({
   startActionText: {
     color: Colors.onPrimaryFixed,
     fontFamily: 'Lexend-Bold',
-    fontSize: 24,
+    fontSize: 25,
     fontWeight: '900',
-    fontStyle: 'italic',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
+  },
+  startActionMeta: {
+    color: Colors.onPrimaryFixed + 'CC',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 4,
   },
   startActionArrow: {
     color: Colors.onPrimaryFixed,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 2.4,
+  },
+  goalCard: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '22',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  sectionLabel: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  goalPercent: {
+    color: Colors.primary,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  goalCopy: {
+    color: Colors.onSurface,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 14,
+  },
+  streakCopy: {
+    color: Colors.secondary,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 6,
+    fontWeight: '700',
+  },
+  compactGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  compactCard: {
+    flex: 1,
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius: 20,
+    padding: 16,
+    minHeight: 132,
+    justifyContent: 'space-between',
+  },
+  compactLabel: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  compactValue: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 28,
+    fontWeight: '900',
+    marginTop: 12,
+  },
+  compactMeta: {
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  lastRunCard: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '22',
+  },
+  lastRunTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 28,
+    fontWeight: '900',
+  },
+  totalDistanceText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 14,
+  },
+  viewAllText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '900',
   },
   bentoGrid: {
     gap: 16,

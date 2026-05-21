@@ -86,20 +86,20 @@ const SignupScreen = ({navigation}: any) => {
         <Text style={styles.hero}>
           JOIN THE <Text style={styles.heroAccent}>PULSE</Text>
         </Text>
-        <Text style={styles.subhead}>PHASE 01: NEURAL IDENTITY LINK</Text>
+        <Text style={styles.subhead}>Create your runner profile</Text>
 
         <View style={styles.progressRow}>
           <View style={styles.progressRing}>
             <Text style={styles.progressText}>01</Text>
           </View>
           <View>
-            <Text style={styles.progressKicker}>STEP PROGRESS</Text>
-            <Text style={styles.progressTitle}>PROTOCOL INITIALIZATION</Text>
+            <Text style={styles.progressKicker}>STEP 1</Text>
+            <Text style={styles.progressTitle}>Account details</Text>
           </View>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.fieldLabel}>FULL NAME / OPERATOR ID</Text>
+          <Text style={styles.fieldLabel}>FULL NAME</Text>
           <TextInput
             value={name}
             onChangeText={setName}
@@ -108,7 +108,7 @@ const SignupScreen = ({navigation}: any) => {
             style={styles.input}
           />
 
-          <Text style={styles.fieldLabel}>COMMUNICATIONS CHANNEL</Text>
+          <Text style={styles.fieldLabel}>EMAIL</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -119,7 +119,7 @@ const SignupScreen = ({navigation}: any) => {
             style={styles.input}
           />
 
-          <Text style={styles.fieldLabel}>SECURE PROTOCOL</Text>
+          <Text style={styles.fieldLabel}>PASSWORD</Text>
           <TextInput
             value={password}
             onChangeText={setPassword}
@@ -134,7 +134,7 @@ const SignupScreen = ({navigation}: any) => {
             onPress={() => setAgreedTerms(value => !value)}>
             <View style={[styles.checkbox, agreedTerms && styles.checkboxActive]} />
             <Text style={styles.termsText}>
-              I agree to the Terms of Performance and privacy protocols.
+              I agree to the terms and privacy policy.
             </Text>
           </TouchableOpacity>
 
@@ -146,7 +146,7 @@ const SignupScreen = ({navigation}: any) => {
               onPress={handleSignup}
               disabled={loading !== null}>
               <LinearGradient colors={[Colors.primary, Colors.primaryContainer]} style={styles.primaryButton}>
-                <Text style={styles.primaryButtonText}>INITIALIZE TRAINING</Text>
+                <Text style={styles.primaryButtonText}>CREATE ACCOUNT</Text>
               </LinearGradient>
             </TouchableOpacity>
           )}
