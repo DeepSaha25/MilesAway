@@ -4,7 +4,20 @@ This backend is ready to deploy as a Railway service from the `backend` director
 
 ## Railway service settings
 
-When creating the service from GitHub, set:
+When creating the service from GitHub with the current root-level `Dockerfile`, set:
+
+```text
+Root Directory: /
+Builder: Dockerfile
+Dockerfile Path: Dockerfile
+Build Command: leave empty
+Start Command: leave empty
+Healthcheck Path: /api/health
+```
+
+The root `railway.json` includes these settings. If Railway still logs `using build driver nixpacks`, open the service settings and change the builder from Nixpacks/Railpack to Dockerfile, then redeploy the latest Git commit.
+
+If you prefer to deploy with the root directory set to `backend`, remove the root Dockerfile setup and use:
 
 ```text
 Root Directory: backend
@@ -12,8 +25,6 @@ Build Command: npm ci
 Start Command: npm start
 Healthcheck Path: /api/health
 ```
-
-`railway.json` also includes the start command and healthcheck, so Railway can detect them automatically when the root directory is `backend`.
 
 ## Environment variables
 
@@ -38,7 +49,7 @@ For `CORS_ORIGINS`, use a comma-separated list if you have more than one allowed
 CORS_ORIGINS=https://app.example.com,https://admin.example.com
 ```
 
-For a React Native mobile app, requests often do not include a browser `Origin` header. The backend already allows no-origin requests. `CORS_ORIGINS` is still required in production so browser-based clients are restricted.
+For a React Native mobile app, requests often do not include a browser `Origin` header. The backend allows no-origin requests. If `CORS_ORIGINS` is empty in production, browser clients with an `Origin` header are blocked, but mobile/server requests can still work.
 
 ## MongoDB Atlas checklist
 

@@ -1,0 +1,9 @@
+.git
+.vscode
+**/node_modules
+**/.env
+**/.env.*
+**/*.log
+RunSphere/android
+RunSphere/ios
+stitch_runsphere_app_ui_ux
