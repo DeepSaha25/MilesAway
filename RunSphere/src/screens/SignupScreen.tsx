@@ -148,7 +148,11 @@ const SignupScreen = ({navigation}: any) => {
           <TouchableOpacity
             style={styles.checkboxRow}
             onPress={() => setAgreedTerms(value => !value)}>
-            <View style={[styles.checkbox, agreedTerms && styles.checkboxActive]} />
+            <View style={[styles.checkbox, agreedTerms && styles.checkboxActive]}>
+              {agreedTerms ? (
+                <Ionicons name="checkmark" size={14} color={Colors.onPrimaryFixed} />
+              ) : null}
+            </View>
             <Text style={styles.termsText}>
               I agree to the terms and privacy policy.
             </Text>
@@ -283,6 +287,8 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.surfaceContainerHigh,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,

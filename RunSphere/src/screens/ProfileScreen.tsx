@@ -1,24 +1,25 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useFocusEffect} from '@react-navigation/native';
 import AppHeader from '../components/AppHeader';
+import Avatar from '../components/Avatar';
 import {useUserStore} from '../store/userStore';
 import {Colors} from '../theme/colors';
+import {
+  getCurrentLocation,
+  requestLocationPermission,
+} from '../utils/location';
 import {formatPace} from '../utils/runMetrics';
-
-const PROFILE_IMAGE = {
-  uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDw_zpHZ2KnGIz5vADzzvKqgSwBNlMb_80kQgwpfJ4Wlg5JJfgY6mKT1803P7OdQoQYfrJ8inPARgQBxDfkeHnmb_aUAanvP8kJOmfVRaUVFI1VTO-oWeq3_lcfXr9gu8vtLLU9qIV8CNCjpxHSEphKIHYbHod8mhwEZGNJlYZRyNA0pOvsmyh0_5ckZd3W9hFTfDCmiz3b6ufYPlBXxnH6ytQ6Qf6OfMqo7ErhgEx6U7l-en9ApVOwwUJun1tUeqPQhzSFmzoWUPdj',
-};
 
 const ProfileScreen = () => {
   const profile = useUserStore(state => state.profile);
@@ -26,7 +27,9 @@ const ProfileScreen = () => {
   const weeklyStats = useUserStore(state => state.weeklyStats);
   const isLoading = useUserStore(state => state.isLoading);
   const refreshDashboard = useUserStore(state => state.refreshDashboard);
+  const updateBackendLocation = useUserStore(state => state.updateBackendLocation);
   const [refreshing, setRefreshing] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const loadProfile = useCallback(async () => {
     await refreshDashboard(8);
@@ -44,6 +47,32 @@ const ProfileScreen = () => {
       await loadProfile();
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const refreshLocation = async () => {
+    setLocating(true);
+    try {
+      const granted = await requestLocationPermission();
+      if (!granted) {
+        return;
+      }
+
+      const position = await getCurrentLocation();
+      if (
+        typeof position.coords.accuracy === 'number' &&
+        position.coords.accuracy > 100
+      ) {
+        return;
+      }
+
+      await updateBackendLocation(
+        position.coords.latitude,
+        position.coords.longitude,
+      );
+      await refreshDashboard(8);
+    } finally {
+      setLocating(false);
     }
   };
 
@@ -119,7 +148,12 @@ const ProfileScreen = () => {
         <View style={styles.hero}>
           <View style={styles.avatarGlow} />
           <View style={styles.avatarRing}>
-            <Image source={PROFILE_IMAGE} style={styles.profileImage} />
+            <Avatar
+              uri={profile?.avatar}
+              name={profile?.name}
+              size={146}
+              borderColor={Colors.transparent}
+            />
           </View>
           <View style={styles.boltBadge}>
             <Ionicons name="flash" size={18} color={Colors.surface} />
@@ -127,9 +161,7 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.identity}>
-          <Text style={styles.tierChip}>
-            {totalRuns > 0 ? 'ACTIVE RUNNER' : 'NEW RUNNER'}
-          </Text>
+       
           <Text adjustsFontSizeToFit numberOfLines={2} style={styles.name}>
             {displayName}
           </Text>
@@ -143,12 +175,21 @@ const ProfileScreen = () => {
               <Text style={styles.metaValue}>{joined}</Text>
             </View>
           </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.locationButton}
+            onPress={refreshLocation}
+            disabled={locating}>
+            <Text style={styles.locationButtonText}>
+              {locating ? 'UPDATING LOCATION...' : 'REFRESH LOCATION'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.lifetimeCard}>
           <View style={styles.cardTop}>
             <Text style={styles.primaryLabel}>LIFETIME DISTANCE</Text>
-            <Ionicons name="sparkles" size={40} color={Colors.primary + '33'} />
+        
           </View>
           <View style={styles.distanceLine}>
             <Text adjustsFontSizeToFit numberOfLines={1} style={styles.lifetimeValue}>
@@ -183,7 +224,6 @@ const ProfileScreen = () => {
               <Text style={styles.chartTitle}>WEEKLY{'\n'}VOLUME</Text>
             </View>
             <View style={styles.chartToggleRow}>
-              <Text style={styles.toggleGhost}>LITRES</Text>
               <Text style={styles.toggleActive}>KILOMETERS</Text>
             </View>
           </View>
@@ -266,11 +306,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerLowest,
     overflow: 'hidden',
   },
-  profileImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 72,
-  },
   boltBadge: {
     position: 'absolute',
     right: 18,
@@ -337,6 +372,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     fontSize: 13,
     fontWeight: '800',
+  },
+  locationButton: {
+    marginTop: 18,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.primary + '55',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    backgroundColor: Colors.primary + '10',
+  },
+  locationButtonText: {
+    color: Colors.primary,
+    fontFamily: 'Inter-Bold',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.4,
   },
   lifetimeCard: {
     borderRadius: 24,

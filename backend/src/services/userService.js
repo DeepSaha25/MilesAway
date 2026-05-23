@@ -2,6 +2,10 @@ const User = require('../models/User');
 const { getLocationFromCoordinates } = require('../utils/geocoding');
 const ApiError = require('../utils/ApiError');
 
+const isLikelyEmulatorDefaultLocation = (latitude, longitude) =>
+  Math.abs(Number(latitude) - 37.4219983) < 0.01 &&
+  Math.abs(Number(longitude) - -122.084) < 0.01;
+
 class UserService {
   /**
    * Get user profile
@@ -19,6 +23,10 @@ class UserService {
    */
   static async updateUserLocation(userId, latitude, longitude) {
     try {
+      if (isLikelyEmulatorDefaultLocation(latitude, longitude)) {
+        throw ApiError.badRequest('Default emulator location cannot be saved as profile location');
+      }
+
       // Get location details from Google Maps API
       const locationData = await getLocationFromCoordinates(latitude, longitude);
 

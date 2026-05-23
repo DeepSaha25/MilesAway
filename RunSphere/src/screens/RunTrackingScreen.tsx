@@ -46,6 +46,14 @@ const RunTrackingScreen = ({navigation}: any) => {
 
   const syncLocationToBackend = useCallback(
     async (coordinate: RunCoordinate) => {
+      if (
+        typeof coordinate.accuracy === 'number' &&
+        coordinate.accuracy > 100
+      ) {
+        setLocationStatus('Waiting for stronger GPS signal');
+        return;
+      }
+
       try {
         const updatedProfile = await updateBackendLocation(
           coordinate.latitude,

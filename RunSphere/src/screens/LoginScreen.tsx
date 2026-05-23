@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
@@ -97,7 +98,11 @@ const LoginScreen = ({navigation}: any) => {
           <TouchableOpacity
             style={styles.checkboxRow}
             onPress={() => setRememberMe(value => !value)}>
-            <View style={[styles.checkbox, rememberMe && styles.checkboxActive]} />
+            <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+              {rememberMe ? (
+                <Ionicons name="checkmark" size={14} color={Colors.onPrimaryFixed} />
+              ) : null}
+            </View>
             <Text style={styles.rememberText}>Remember me</Text>
           </TouchableOpacity>
 
@@ -125,21 +130,12 @@ const LoginScreen = ({navigation}: any) => {
           ) : (
             <>
               <Text style={styles.guestButtonText}>CONTINUE AS GUEST</Text>
-              <Text style={styles.guestButtonMeta}>Track runs locally on this device</Text>
+            
             </>
           )}
         </TouchableOpacity>
 
-        <View style={styles.systemFooter}>
-          <View>
-            <Text style={styles.systemLabel}>SYSTEM STATUS</Text>
-            <View style={styles.statusRow}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>Ready</Text>
-            </View>
-          </View>
-          <Text style={styles.versionText}>v0.0.1</Text>
-        </View>
+        
 
         <Text style={styles.footerText}>
           New to the grid?{' '}
@@ -241,6 +237,8 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.surfaceContainerHigh,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,

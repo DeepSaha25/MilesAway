@@ -23,10 +23,6 @@ const MAP_TEXTURE = {
   uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAF5LWdz8RC7eUJcuirl2S2P_Y3Pg2Dmoj4bj8_5lBXpOdtoKTCP6v2aGO0tI0fWk1o7pAXBDi52OSvWAj3CG5ojn87hHm9bxMO922LqFxUYMwyNcDrLGokmzDagZL0FVoEK_O7jtu1Gmz4rf3ll6LRc7VCmZKnrwTHvoO_zr4Jpisf8BMYMxuFLEVlnL4P6002dSifY3V07DshEYlPFpS7gZRKq0_ltCTFjHjM6fdl29nyu_PSJG_rFjkhAaJ5ARfcfz5QuVgcKvCD',
 };
 
-const LIVE_MAP = {
-  uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBO0nxRiiaFGe7NcBsFC1eRj1kr69dZxt7uTuvWhWVY3W-v36lPyNB3IG2rVIIsoBNtEUVj8wDZBmxplxlQFJZuQQ6rZnMT5Z67WIBArgTBQ0lt3ZMtLFsbJjslBPs_FzKJ_COLG_sowbyiKswrqcWbiMOwYB1ru7JcalIj1UPcnA5X6FRKo5egC-oYWBjLG65VIu-ot_YWThX7o7ruwGgN_IDVDDoi6KJQHIORBId_z1_TD8hqAJLnf-tnsUq5bfpmqooQFhh2sKWb',
-};
-
 const HomeScreen = ({navigation}: any) => {
   const profile = useUserStore(state => state.profile);
   const dailyStats = useUserStore(state => state.dailyStats);
@@ -179,22 +175,7 @@ const HomeScreen = ({navigation}: any) => {
             </Text>
           </View>
 
-          <ImageBackground
-            source={LIVE_MAP}
-            resizeMode="cover"
-            imageStyle={styles.liveMapImage}
-            style={styles.liveCard}>
-            <View style={styles.liveOverlay} />
-            <View style={styles.liveContent}>
-              <View style={styles.liveTitleRow}>
-                <View style={styles.liveDot} />
-              <Text style={styles.liveTitle}>LIVE TRACKING ACTIVE</Text>
-            </View>
-            <Text style={styles.liveCopy}>
-                Start a run to capture your route, pace, and distance.
-            </Text>
-            </View>
-          </ImageBackground>
+    
 
           <View style={styles.footerSpace} />
         </ScrollView>

@@ -1,8 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Image,
-  ImageBackground,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -13,23 +11,11 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AppHeader from '../components/AppHeader';
+import Avatar from '../components/Avatar';
 import CommunityService from '../services/communityService';
 import {isGuestUser} from '../services/guestSession';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
-
-const ROUTE_IMAGE = {
-  uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAne9FKW939tNGLQIod-ppt6YfhXA64N3e4-ywP120nmGABnmeaU6BZO4uJMgnVms_Ogwpb0ItZ_pwOuyZ3z0WJWFnBAbt-w4ri8vnEn1K4lhw86jaJ24N-kCHL3zyCee7S_A6fpWygxHfOAoQYdOj-wyKjRJ7MJZhPrPWdEkK7eGClw3suyKlVZZhK4XnNGtQrqpjf93_ZUNz6Hf0u81jkA6Nka6qAXoE3QaJrGsHni4YQhZ93tu7P9be7xPqtNdxYhs6YG1y0b08M',
-};
-
-const RUN_SCENE_IMAGE = {
-  uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA_LKa2DyuoNiCfoO2E_AEmY89BnUJsCqzU964IYhNTkfw4zOfNy-hzU2gBQ4eU-IZi1URRc5pm3k5HOgYj6MYixnrnqWbF6_hoTNuMs76gWikiTbTZSgLNQj5hW9E0o6_YgXW4ZEew7eL4dURMDPSxXNthycGifRcC8dNTLcBYCdSdQv5k1oZf7F1-NH0VKAVdwtYKi2vnjHcJVAifPiguA_opK9CjnGygJJKOxWRk8FdIVDGZo8J_Q_Rf5q1IHaWuzc0rG6VI7rOA',
-};
-
-const AVATARS = [
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuBLPBkyrL1t7UNAi5Wkj9xozWUHrp13Dd5exN0sRQhKT7VMDrPfKywcooHtigjCdNqC6wPBKJVNlBdT9YzQOHsj9iVQM6bydsyOPz-703h8PlrHGP9GcnsWC1j-BIfcQgmS82EYGP6sxySp0BZl8xu2BEKqlq4aRwYP0xmVKJ_UAaQu1fDG_zPJhl6QnI5k2Twj_EM8Jylf_wwzlBekiMC99oIjdHmwna3zjnw_7tDOoCZWXl4Y4Z0nzwIWaEU5eAx_1_-gVI8ZpA2d',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuAJCxU3dwDU-l5jTJMM3GufuaL6-Z378C5WnLV4ZVH2ATuPsWyzPEG--y_69KBhPGYM_OkX0hRD-MtQzhKMu7KFQOWnj7VgSjSONm9WMR0RmqsAZRtQQA0_aRYV0Cj7hbm7AL3yarUxUNWn1YekPdf9qiDMzx__YzYdwMh45_YdLxN4x6Tu0eoV6e8uEFx9e1_2u25JxD7di55xqQClNKrCvoSFptpuMJ0cAYVnN6TF77tcBRMc1bKqmDbQGdYFdq1mWNOGhHYo0lLh',
-];
 
 const CommunityFeedScreen = () => {
   const authUser = useAuthStore(state => state.user);
@@ -152,18 +138,14 @@ const CommunityFeedScreen = () => {
           feed.map((post, index) =>
             index % 2 === 0 ? (
               <View key={post._id || index} style={styles.routeCard}>
-                <ImageBackground
-                  source={post.image ? {uri: post.image} : ROUTE_IMAGE}
-                  imageStyle={styles.routeImage}
-                  style={styles.routeVisual}>
-                  <View style={styles.routeOverlay} />
-                </ImageBackground>
                 <View style={styles.cardBody}>
                   <View style={styles.userRow}>
                     <View style={styles.userInfo}>
-                      <Image
-                        source={{uri: AVATARS[index % AVATARS.length]}}
-                        style={styles.userAvatar}
+                      <Avatar
+                        uri={post.userId?.avatar}
+                        name={post.userId?.name}
+                        size={42}
+                        borderColor={Colors.secondary}
                       />
                       <View style={styles.userCopy}>
                         <Text numberOfLines={1} style={styles.userName}>
@@ -224,9 +206,11 @@ const CommunityFeedScreen = () => {
             ) : (
               <View key={post._id || index} style={styles.featureCard}>
                 <View style={styles.featureHeader}>
-                  <Image
-                    source={{uri: AVATARS[index % AVATARS.length]}}
-                    style={styles.featureAvatar}
+                  <Avatar
+                    uri={post.userId?.avatar}
+                    name={post.userId?.name}
+                    size={48}
+                    borderColor={Colors.primary + '55'}
                   />
                   <View style={styles.featureIdentity}>
                     <Text numberOfLines={1} style={styles.featureName}>
@@ -235,11 +219,7 @@ const CommunityFeedScreen = () => {
                     <Text style={styles.featureMeta}>{formatDate(post.createdAt)}</Text>
                   </View>
                 </View>
-                <ImageBackground
-                  source={post.image ? {uri: post.image} : RUN_SCENE_IMAGE}
-                  imageStyle={styles.sceneImage}
-                  style={styles.scenePanel}>
-                  <View style={styles.sceneOverlay} />
+                <View style={styles.scenePanel}>
                   <Text style={styles.sceneValue}>
                     {post.runId?.duration
                       ? `${Math.round(post.runId.duration / 60)}:${String(
@@ -248,7 +228,7 @@ const CommunityFeedScreen = () => {
                       : 'SYNCED'}
                   </Text>
                   <Text style={styles.sceneLabel}>OFFICIAL SPLIT</Text>
-                </ImageBackground>
+                </View>
 
                 <View style={styles.featureStats}>
                   <View style={styles.featureStat}>

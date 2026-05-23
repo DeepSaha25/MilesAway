@@ -1,13 +1,11 @@
 import React from 'react';
-import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Avatar from './Avatar';
 import { Colors } from '../theme/colors';
-
-const HEADER_AVATAR = {
-  uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDN3VfEa7BLl4_KkLsg3BZAoRyRAsa_wQ-qQ5FK-kQio7zfMkleavIgrC5keZxDw3PkDkH1z1fFIO0jQqmEv6-y2tIHxNlmgLngsNZAgM5DVE1KcrvOcdjKCtsx-7aesqMBZDIJxQlwx5-hs_OvwlfbvwjvvrUtxmpLDRY6lAYD0HGv-1yktXInbbn6t__Jazr2a6iUb73pDhwW9Q0P1LdMJaqUch48anjybfZ-8RwRW74HngHoVSHG2BYv6imweJLGacAlUoenzJ9R',
-};
+import {useAuthStore} from '../store/authStore';
 
 interface AppHeaderProps {
   showStreak?: boolean;
@@ -22,6 +20,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const user = useAuthStore(state => state.user);
 
   const openProfile = () => {
     navigation.navigate('Profile');
@@ -52,7 +51,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             style={styles.avatar}
             accessibilityLabel="Open profile"
           >
-            <Image source={HEADER_AVATAR} style={styles.avatarImage} />
+            <Avatar
+              uri={user?.avatar}
+              name={user?.name}
+              size={42}
+              borderColor={Colors.primary + '33'}
+            />
           </TouchableOpacity>
         </View>
       )}
@@ -103,14 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surfaceContainerHigh,
-    borderWidth: 2,
-    borderColor: Colors.primary + '33',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
+    backgroundColor: Colors.transparent,
   },
   rightCluster: {
     flexDirection: 'row',
