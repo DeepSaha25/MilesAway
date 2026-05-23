@@ -81,7 +81,7 @@ if (localPropertiesFile.exists()) {
     }
 }
 def googleMapsApiKey = localProperties
-    .getProperty("GOOGLE_MAPS_API_KEY", "")
+    .getProperty("GOOGLE_MAPS_API_KEY", System.getenv("GOOGLE_MAPS_API_KEY") ?: "")
     .replace("\"", "")
 def releaseStoreFile = localProperties.getProperty("MILESAWAY_RELEASE_STORE_FILE", System.getenv("MILESAWAY_RELEASE_STORE_FILE") ?: "")
 def releaseStorePassword = localProperties.getProperty("MILESAWAY_RELEASE_STORE_PASSWORD", System.getenv("MILESAWAY_RELEASE_STORE_PASSWORD") ?: "")
