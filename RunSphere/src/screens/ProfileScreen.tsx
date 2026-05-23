@@ -7,7 +7,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -20,43 +19,6 @@ import {formatPace} from '../utils/runMetrics';
 const PROFILE_IMAGE = {
   uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDw_zpHZ2KnGIz5vADzzvKqgSwBNlMb_80kQgwpfJ4Wlg5JJfgY6mKT1803P7OdQoQYfrJ8inPARgQBxDfkeHnmb_aUAanvP8kJOmfVRaUVFI1VTO-oWeq3_lcfXr9gu8vtLLU9qIV8CNCjpxHSEphKIHYbHod8mhwEZGNJlYZRyNA0pOvsmyh0_5ckZd3W9hFTfDCmiz3b6ufYPlBXxnH6ytQ6Qf6OfMqo7ErhgEx6U7l-en9ApVOwwUJun1tUeqPQhzSFmzoWUPdj',
 };
-
-const WEEKLY_BARS = [
-  {day: 'MON', height: '40%', active: false},
-  {day: 'TUE', height: '65%', active: false},
-  {day: 'WED', height: '30%', active: false},
-  {day: 'THU', height: '90%', active: true},
-  {day: 'FRI', height: '50%', active: false},
-  {day: 'SAT', height: '75%', active: false},
-  {day: 'SUN', height: '15%', active: false},
-] as const;
-
-const ACHIEVEMENTS = [
-  {
-    title: 'CENTURY CLUB',
-    caption: '100 Runs Completed',
-    icon: 'ribbon',
-    color: Colors.primary,
-  },
-  {
-    title: 'SONIC BOOM',
-    caption: 'Sub 4:00 Pace 5K',
-    icon: 'speedometer',
-    color: Colors.secondary,
-  },
-  {
-    title: 'APEX HUNTER',
-    caption: '10,000m Elevation',
-    icon: 'flag',
-    color: Colors.tertiary,
-  },
-  {
-    title: 'MARATHONER',
-    caption: 'Locked: 42.2K Run',
-    icon: 'people',
-    color: Colors.outlineVariant,
-  },
-] as const;
 
 const ProfileScreen = () => {
   const profile = useUserStore(state => state.profile);
@@ -165,7 +127,9 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.identity}>
-          <Text style={styles.tierChip}>ELITE TIER</Text>
+          <Text style={styles.tierChip}>
+            {totalRuns > 0 ? 'ACTIVE RUNNER' : 'NEW RUNNER'}
+          </Text>
           <Text adjustsFontSizeToFit numberOfLines={2} style={styles.name}>
             {displayName}
           </Text>
@@ -193,8 +157,8 @@ const ProfileScreen = () => {
             <Text style={styles.kmUnit}>KM</Text>
           </View>
           <View style={styles.trendLine}>
-            <Ionicons name="trending-up" size={14} color={Colors.secondary} />
-            <Text style={styles.trendText}>+{weeklyDistance.toFixed(1)}% vs last month</Text>
+            <Ionicons name="calendar" size={14} color={Colors.secondary} />
+            <Text style={styles.trendText}>{weeklyDistance.toFixed(1)} km this week</Text>
           </View>
         </View>
 
@@ -224,40 +188,32 @@ const ProfileScreen = () => {
             </View>
           </View>
           <View style={styles.barRow}>
-            {WEEKLY_BARS.map(bar => (
-              <View key={bar.day} style={styles.barColumn}>
-                <View
-                  style={[
-                    styles.bar,
-                    {height: bar.height},
-                    bar.active && styles.barActive,
-                  ]}
-                />
-                <Text style={[styles.barLabel, bar.active && styles.barLabelActive]}>
-                  {bar.day}
+            {weeklyDistance > 0 ? (
+              <View style={styles.weeklyTotalBlock}>
+                <Text style={styles.weeklyTotalValue}>{weeklyDistance.toFixed(1)}</Text>
+                <Text style={styles.weeklyTotalLabel}>KM THIS WEEK</Text>
+              </View>
+            ) : (
+              <View style={styles.weeklyEmptyBlock}>
+                <Text style={styles.weeklyEmptyTitle}>NO WEEKLY RUNS YET</Text>
+                <Text style={styles.weeklyEmptyText}>
+                  Your weekly volume appears after you save a run.
                 </Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
 
         <View style={styles.achievementHeader}>
           <Text style={styles.achievementTitle}>KINETIC{'\n'}ACHIEVEMENTS</Text>
-          <TouchableOpacity activeOpacity={0.75}>
-            <Text style={styles.viewAll}>VIEW{'\n'}ALL</Text>
-          </TouchableOpacity>
         </View>
 
-        <View style={styles.achievementGrid}>
-          {ACHIEVEMENTS.map(item => (
-            <View key={item.title} style={styles.achievementCard}>
-              <View style={[styles.achievementIcon, {shadowColor: item.color}]}>
-                <Ionicons name={item.icon} size={26} color={item.color} />
-              </View>
-              <Text style={styles.achievementName}>{item.title}</Text>
-              <Text style={styles.achievementCaption}>{item.caption}</Text>
-            </View>
-          ))}
+        <View style={styles.achievementEmpty}>
+          <Ionicons name="trophy" size={28} color={Colors.primary} />
+          <Text style={styles.achievementName}>NO ACHIEVEMENTS YET</Text>
+          <Text style={styles.achievementCaption}>
+            Milestones unlock from your saved run data.
+          </Text>
         </View>
 
         <View style={styles.footerSpace} />
@@ -529,34 +485,49 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 26,
   },
-  barColumn: {
+  weeklyTotalBlock: {
     flex: 1,
-    height: '100%',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: Colors.surfaceContainerHigh,
   },
-  bar: {
-    width: '100%',
-    minHeight: 8,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    backgroundColor: Colors.primary + '2E',
+  weeklyTotalValue: {
+    color: Colors.primary,
+    fontFamily: 'Lexend-Black',
+    fontSize: 56,
+    fontWeight: '900',
+    fontStyle: 'italic',
   },
-  barActive: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-  },
-  barLabel: {
-    marginTop: 12,
+  weeklyTotalLabel: {
     color: Colors.onSurfaceVariant,
     fontFamily: 'Inter-Bold',
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: '800',
+    letterSpacing: 1.5,
   },
-  barLabelActive: {
-    color: Colors.primary,
+  weeklyEmptyBlock: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    padding: 24,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  weeklyEmptyTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Black',
+    fontSize: 20,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  weeklyEmptyText: {
+    marginTop: 8,
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: 'center',
   },
   achievementHeader: {
     flexDirection: 'row',
@@ -572,38 +543,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontStyle: 'italic',
   },
-  viewAll: {
-    color: Colors.primary,
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.7,
-    textAlign: 'right',
-  },
-  achievementGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  achievementCard: {
-    width: '47.8%',
+  achievementEmpty: {
     minHeight: 126,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 18,
     backgroundColor: Colors.surfaceContainerHigh,
-  },
-  achievementIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    backgroundColor: Colors.surfaceContainerHighest,
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
   },
   achievementName: {
     color: Colors.onSurface,

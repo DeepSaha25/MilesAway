@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import RunService from '../services/runService';
 import UserService from '../services/userService';
+import GuestRunStorage from '../services/guestRunStorage';
 import { guestUser, isGuestUser } from '../services/guestSession';
 import { useAuthStore } from './authStore';
 
@@ -53,15 +54,18 @@ export const useUserStore = create<UserState>()((set, get) => ({
     try {
       if (isGuestUser(useAuthStore.getState().user)) {
         const currentProfile = get().profile;
+        const dashboard = await GuestRunStorage.getDashboard(historyLimit);
         set({
           profile: {
             ...guestProfile,
             location: currentProfile?.location,
+            totalDistance: dashboard.stats.totalDistance,
+            totalRuns: dashboard.stats.totalRuns,
           },
-          stats: emptyStats,
-          dailyStats: emptyPeriodStats,
-          weeklyStats: emptyPeriodStats,
-          recentRuns: [],
+          stats: dashboard.stats,
+          dailyStats: dashboard.dailyStats,
+          weeklyStats: dashboard.weeklyStats,
+          recentRuns: dashboard.recentRuns,
         });
         return;
       }

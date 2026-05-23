@@ -61,14 +61,14 @@ const HistoryScreen = () => {
           }>
           <Text style={styles.title}>RUN HISTORY</Text>
           <Text style={styles.subtitle}>
-            Every saved route, pace split, and leaderboard-worthy effort.
+            Every saved route, pace split, and distance from your real runs.
           </Text>
 
           {recentRuns.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>No runs saved yet</Text>
               <Text style={styles.emptyText}>
-                Start your first outdoor run to unlock history and leaderboards.
+                Start your first outdoor run to unlock history.
               </Text>
             </View>
           ) : (
@@ -121,7 +121,7 @@ const HistoryScreen = () => {
             })
           )}
 
-          <View style={{height: 120}} />
+          <View style={styles.footerSpace} />
         </ScrollView>
       )}
     </View>
@@ -234,6 +234,9 @@ const styles = StyleSheet.create({
     color: Colors.onSurface,
     fontSize: 14,
     fontWeight: '700',
+  },
+  footerSpace: {
+    height: 120,
   },
 });
 

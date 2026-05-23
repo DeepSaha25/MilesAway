@@ -62,7 +62,7 @@ const LoginScreen = ({navigation}: any) => {
       <View style={styles.glowBottom} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.brand}>MILESAWAY</Text>
+        <Text style={styles.brand}>MilesAway</Text>
         <Text style={styles.hero}>Welcome{'\n'}Back</Text>
 
         <View style={styles.form}>
@@ -70,7 +70,7 @@ const LoginScreen = ({navigation}: any) => {
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="runner@sphere.io"
+            placeholder="you@example.com"
             placeholderTextColor={Colors.outline}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -121,27 +121,10 @@ const LoginScreen = ({navigation}: any) => {
           ) : (
             <>
               <Text style={styles.guestButtonText}>CONTINUE AS GUEST</Text>
-              <Text style={styles.guestButtonMeta}>Try MilesAway with demo stats and local saves</Text>
+              <Text style={styles.guestButtonMeta}>Track runs locally on this device</Text>
             </>
           )}
         </TouchableOpacity>
-
-        <View style={styles.dividerRow}>
-          <View style={styles.divider} />
-          <Text style={styles.dividerText}>OTHER OPTIONS</Text>
-          <View style={styles.divider} />
-        </View>
-
-        <View style={styles.altRow}>
-          <TouchableOpacity style={styles.altButton}>
-            <Text style={styles.altIcon}>fingerprint</Text>
-            <Text style={styles.altButtonText}>BIOMETRICS</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.altButton}>
-            <Text style={styles.altIcon}>key</Text>
-            <Text style={styles.altButtonText}>PASSKEY</Text>
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.systemFooter}>
           <View>
@@ -151,7 +134,7 @@ const LoginScreen = ({navigation}: any) => {
               <Text style={styles.statusText}>Ready</Text>
             </View>
           </View>
-          <Text style={styles.versionText}>v4.2.0-STABLE</Text>
+          <Text style={styles.versionText}>v0.0.1</Text>
         </View>
 
         <Text style={styles.footerText}>
@@ -302,51 +285,6 @@ const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     fontSize: 12,
     textAlign: 'center',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 34,
-    marginBottom: 18,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.surfaceContainerHighest,
-  },
-  dividerText: {
-    color: Colors.onSurfaceVariant,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginHorizontal: 14,
-  },
-  altRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  altButton: {
-    flex: 1,
-    backgroundColor: Colors.surfaceContainerHigh,
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  altIcon: {
-    color: Colors.onSurfaceVariant,
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  altButtonText: {
-    color: Colors.onSurface,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
   },
   footerText: {
     marginTop: 28,

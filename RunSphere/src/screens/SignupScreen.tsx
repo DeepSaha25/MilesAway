@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
@@ -82,52 +83,58 @@ const SignupScreen = ({navigation}: any) => {
       <View style={styles.glowBottom} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.brand}>MILESAWAY</Text>
-        <Text style={styles.hero}>
-          JOIN THE <Text style={styles.heroAccent}>PULSE</Text>
-        </Text>
-        <Text style={styles.subhead}>Create your runner profile</Text>
-
-        <View style={styles.progressRow}>
-          <View style={styles.progressRing}>
-            <Text style={styles.progressText}>01</Text>
-          </View>
-          <View>
-            <Text style={styles.progressKicker}>STEP 1</Text>
-            <Text style={styles.progressTitle}>Account details</Text>
-          </View>
+        <View style={styles.brandBlock}>
+          <Text style={styles.brand}>MilesAway</Text>
+          <Text style={styles.hero}>
+            Create{'\n'}Account
+          </Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.fieldLabel}>FULL NAME</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="ALEX STRIKE"
-            placeholderTextColor={Colors.outline}
-            style={styles.input}
-          />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Runner name</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="person-outline" size={20} color={Colors.onSurfaceVariant} />
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor={Colors.outline}
+                style={styles.input}
+              />
+            </View>
+          </View>
 
-          <Text style={styles.fieldLabel}>EMAIL</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="link@milesaway.core"
-            placeholderTextColor={Colors.outline}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={styles.input}
-          />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Credentials</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="at-outline" size={20} color={Colors.onSurfaceVariant} />
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={Colors.outline}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.input}
+              />
+            </View>
+          </View>
 
-          <Text style={styles.fieldLabel}>PASSWORD</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="............"
-            placeholderTextColor={Colors.outline}
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Access key</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="lock-closed-outline" size={20} color={Colors.onSurfaceVariant} />
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="............"
+                placeholderTextColor={Colors.outline}
+                secureTextEntry
+                style={styles.input}
+              />
+            </View>
+          </View>
 
           <TouchableOpacity
             style={styles.checkboxRow}
@@ -147,6 +154,7 @@ const SignupScreen = ({navigation}: any) => {
               disabled={loading !== null}>
               <LinearGradient colors={[Colors.primary, Colors.primaryContainer]} style={styles.primaryButton}>
                 <Text style={styles.primaryButtonText}>CREATE ACCOUNT</Text>
+                <Ionicons name="arrow-forward" size={24} color={Colors.onPrimaryFixed} />
               </LinearGradient>
             </TouchableOpacity>
           )}
@@ -201,8 +209,11 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 40,
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  brandBlock: {
+    marginBottom: 34,
   },
   brand: {
     color: Colors.primary,
@@ -216,74 +227,41 @@ const styles = StyleSheet.create({
     marginTop: 18,
     color: Colors.onSurface,
     fontFamily: 'Lexend-Bold',
-    fontSize: 52,
-    lineHeight: 54,
+    fontSize: 58,
+    lineHeight: 58,
     fontWeight: '900',
-    letterSpacing: -2.5,
-  },
-  heroAccent: {
-    color: Colors.primary,
-  },
-  subhead: {
-    marginTop: 10,
-    color: Colors.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.2,
-    textTransform: 'uppercase',
-  },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 28,
-    marginBottom: 28,
-  },
-  progressRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 999,
-    borderWidth: 5,
-    borderColor: Colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressText: {
-    color: Colors.onSurface,
-    fontFamily: 'Lexend-Bold',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  progressKicker: {
-    color: Colors.secondary,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-  },
-  progressTitle: {
-    marginTop: 4,
-    color: Colors.onSurface,
-    fontSize: 16,
-    fontWeight: '800',
+    letterSpacing: -3,
   },
   form: {
-    gap: 14,
+    gap: 18,
+  },
+  fieldGroup: {
+    gap: 8,
   },
   fieldLabel: {
     color: Colors.onSurfaceVariant,
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1.8,
+    letterSpacing: 2,
     textTransform: 'uppercase',
+    marginLeft: 14,
+  },
+  inputWrap: {
+    minHeight: 64,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary + '22',
   },
   input: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: 18,
+    flex: 1,
     color: Colors.onSurface,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
     fontSize: 16,
+    paddingVertical: 16,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -315,6 +293,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 18,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 6,
   },
   primaryButtonText: {

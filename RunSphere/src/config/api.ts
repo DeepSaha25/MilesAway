@@ -17,12 +17,15 @@ const getConfiguredUrl = () => {
   return (envUrl || globalUrl || '').trim();
 };
 
+const PRODUCTION_API_URL = 'https://runshphere-production.up.railway.app/api';
+
 const getLocalUrl = () =>
   Platform.OS === 'android'
-    ? 'http://localhost:5000/api'
+    ? 'http://10.0.2.2:5000/api'
     : 'http://localhost:5000/api';
 
-export const API_BASE_URL = getConfiguredUrl() || (__DEV__ ? getLocalUrl() : '');
+export const API_BASE_URL =
+  getConfiguredUrl() || (__DEV__ ? getLocalUrl() : PRODUCTION_API_URL);
 
 if (!API_BASE_URL) {
   throw new Error('MILESAWAY_API_URL must be configured for release builds');

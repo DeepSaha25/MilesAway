@@ -1,6 +1,14 @@
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const geocodeCache = new Map();
 
+const normalizeLocationName = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  return String(value).trim().replace(/\s+/g, ' ') || null;
+};
+
 const buildFallbackLocation = (latitude, longitude) => ({
   latitude,
   longitude,
@@ -18,23 +26,23 @@ const normalizeGoogleResponse = (latitude, longitude, result) => {
     const types = component.types || [];
 
     if (!location.city && (types.includes('locality') || types.includes('postal_town'))) {
-      location.city = component.long_name;
+      location.city = normalizeLocationName(component.long_name);
     }
 
     if (!location.city && types.includes('sublocality_level_1')) {
-      location.city = component.long_name;
+      location.city = normalizeLocationName(component.long_name);
     }
 
     if (!location.district && types.includes('administrative_area_level_2')) {
-      location.district = component.long_name;
+      location.district = normalizeLocationName(component.long_name);
     }
 
     if (!location.state && types.includes('administrative_area_level_1')) {
-      location.state = component.long_name;
+      location.state = normalizeLocationName(component.long_name);
     }
 
     if (!location.country && types.includes('country')) {
-      location.country = component.long_name;
+      location.country = normalizeLocationName(component.long_name);
     }
   });
 
@@ -47,10 +55,10 @@ const normalizeNominatimResponse = (latitude, longitude, result) => {
   return {
     latitude,
     longitude,
-    city: address.city || address.town || address.village || address.municipality || address.suburb || null,
-    district: address.county || address.state_district || address.region || null,
-    state: address.state || address.region || null,
-    country: address.country || null
+    city: normalizeLocationName(address.city || address.town || address.village || address.municipality || address.suburb),
+    district: normalizeLocationName(address.county || address.state_district || address.region),
+    state: normalizeLocationName(address.state || address.region),
+    country: normalizeLocationName(address.country)
   };
 };
 
@@ -134,5 +142,6 @@ const getLocationFromCoordinates = async (latitude, longitude) => {
 };
 
 module.exports = {
-  getLocationFromCoordinates
+  getLocationFromCoordinates,
+  normalizeLocationName
 };

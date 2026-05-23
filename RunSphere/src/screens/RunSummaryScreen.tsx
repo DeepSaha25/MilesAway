@@ -14,6 +14,7 @@ import Toast from 'react-native-toast-message';
 import GradientButton from '../components/GradientButton';
 import RouteMap from '../components/RouteMap';
 import RunService from '../services/runService';
+import GuestRunStorage from '../services/guestRunStorage';
 import {isGuestUser} from '../services/guestSession';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {useRunStore} from '../store/runStore';
@@ -49,6 +50,7 @@ const RunSummaryScreen = ({navigation}: any) => {
   const distanceKm = useRunStore(state => state.distanceKm);
   const elapsedSeconds = useRunStore(state => state.elapsedSeconds);
   const elevationGain = useRunStore(state => state.elevationGain);
+  const startedAt = useRunStore(state => state.startedAt);
   const finishedAt = useRunStore(state => state.finishedAt);
 
   const summary = useMemo(() => {
@@ -122,6 +124,17 @@ const RunSummaryScreen = ({navigation}: any) => {
           clientRunId: clientRunId || `manual-${Date.now()}`,
           coordinates,
         });
+      } else {
+        await GuestRunStorage.saveRun({
+          clientRunId: clientRunId || `guest-${Date.now()}`,
+          coordinates,
+          distanceKm: summary.distanceKm,
+          elapsedSeconds: summary.elapsedSeconds,
+          elevationGain: summary.elevationGain,
+          weightKg: profile?.weightKg,
+          startedAt,
+          finishedAt: summary.finishedAt,
+        });
       }
 
       await Promise.all([
@@ -146,9 +159,9 @@ const RunSummaryScreen = ({navigation}: any) => {
 
       Toast.show({
         type: 'success',
-        text1: isGuestUser(authUser) ? 'Demo run saved' : 'Run saved',
+        text1: 'Run saved',
         text2: isGuestUser(authUser)
-          ? 'Guest mode keeps this run on your device for this demo.'
+          ? 'Guest mode keeps this run on this device.'
           : 'Your stats and leaderboards have been updated.',
       });
     } catch (error: any) {
@@ -292,7 +305,7 @@ const RunSummaryScreen = ({navigation}: any) => {
         <ActivityIndicator
           size="large"
           color={Colors.primaryContainer}
-          style={{marginTop: 28}}
+          style={styles.savingIndicator}
         />
       ) : (
         <View style={styles.actions}>
@@ -487,6 +500,9 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginBottom: 12,
+  },
+  savingIndicator: {
+    marginTop: 28,
   },
   secondaryButton: {
     alignItems: 'center',

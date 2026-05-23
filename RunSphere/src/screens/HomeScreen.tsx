@@ -1,7 +1,6 @@
 import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
-  Image,
   ImageBackground,
   RefreshControl,
   ScrollView,
@@ -27,12 +26,6 @@ const MAP_TEXTURE = {
 const LIVE_MAP = {
   uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBO0nxRiiaFGe7NcBsFC1eRj1kr69dZxt7uTuvWhWVY3W-v36lPyNB3IG2rVIIsoBNtEUVj8wDZBmxplxlQFJZuQQ6rZnMT5Z67WIBArgTBQ0lt3ZMtLFsbJjslBPs_FzKJ_COLG_sowbyiKswrqcWbiMOwYB1ru7JcalIj1UPcnA5X6FRKo5egC-oYWBjLG65VIu-ot_YWThX7o7ruwGgN_IDVDDoi6KJQHIORBId_z1_TD8hqAJLnf-tnsUq5bfpmqooQFhh2sKWb',
 };
-
-const SQUAD_AVATARS = [
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuBZvMK2KAfa1w85Q29GzUsJx37cFwPaquoN3CGqEWmwGSx3txftXihHrdH7YPJnuxq9rMqgCM6FEkHJdmWP6R7ik6tWtS_5KBDO8MTnU56YLCbvZmoY6d7238F2GRtLfb-QUDpFmdP4JBCTC68LA0ECCIhG7Dsk1HA9RtBKIup0rGTo25-yXp58rhqTW23y1FAF9LvlZw1tCYlnOMqZ9262DNg4T7g5fkz4yk7j1OlH91SyfUNP2FLS9hHoXvpGuACl0I-AP4gCWOy6',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCEpV_ZRz7ccA-6afYI_Iu3rqAIynPn7rzLzb6_DBMXFq1dSDp7WjTxmnhrPJpGfBu6gLFtq1s-9YYfIFHbPF9uc_ihDTv8zrMewuxtpTrONP3AlG-0hq1qXOAX1yz5b6Jy0TAyXU1y7USdSzCM7O3wTND9Yo7L2ubNOXTCM9EJiMruVl5-ZacMVUyx-wsuBJl-NbSWq3NRx7VKW9vGXnm-QjetLODWezCzk_XwvBRK_FSYud-iHc5RKJD61wsIDmwqSfzIE2MCU__j',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuBZ2glr49QRnvUE7f7r-FBcDvOhk64giB_qtUHwewjzaHMoEXqgkPkfIQCs8L-KGmK9Rc012UO8Mle8EGrkoKJlu-97BwdTFQrNGpRwceD6_jdMe_xpZQbLJpWtNgqD97S6icFYokunxpxwWMv1TJE5qOaPL-3HJv-wl1EEDhpcbtgf6rnYJ0IfouZ7kAczTTGkK58M3M7Q0M_NMr4N4sbnEMKDnZLjPm3nM_wHeZM6_4fip9X_bu_R-6sAqnTtuawdJrZcAa-vYWvL',
-];
 
 const HomeScreen = ({navigation}: any) => {
   const profile = useUserStore(state => state.profile);
@@ -71,15 +64,15 @@ const HomeScreen = ({navigation}: any) => {
   const lastRun = recentRuns[0];
   const dailyDistance = Number(dailyStats?.totalDistance || 0);
   const weeklyHours = Number(weeklyStats?.totalDuration || 0) / 3600;
-  const displayDistance = dailyDistance > 0 ? dailyDistance.toFixed(1) : '12.4';
-  const activeHours = weeklyHours > 0 ? weeklyHours : 5.2;
+  const displayDistance = dailyDistance.toFixed(1);
+  const activeHours = weeklyHours;
   const activeProgress = Math.min(100, (activeHours / 6) * 100);
-  const rank = leaderboardRanks['local:today'] || 14;
+  const rank = leaderboardRanks['local:today'] ?? null;
   const lastPace = lastRun
     ? formatPace(
         lastRun.averagePace || (lastRun.avgSpeed ? 60 / lastRun.avgSpeed : 0),
       )
-    : '04:22';
+    : '--';
 
   if (isLoading && !profile) {
     return (
@@ -140,7 +133,7 @@ const HomeScreen = ({navigation}: any) => {
             <View>
               <Text style={styles.cardLabel}>LAST PERFORMANCE</Text>
               <Text style={styles.runName}>
-                {lastRun ? 'Latest Sprint' : 'Sunset Sprint'}
+                {lastRun ? 'Latest Run' : 'No runs yet'}
               </Text>
             </View>
             <View style={styles.cardFooter}>
@@ -177,23 +170,13 @@ const HomeScreen = ({navigation}: any) => {
           <View style={styles.card}>
             <View>
               <Text style={styles.cardLabel}>LOCAL SQUAD RANK</Text>
-              <Text style={styles.rankValue}>#{rank}</Text>
+              <Text style={styles.rankValue}>{rank ? `#${rank}` : '--'}</Text>
             </View>
-            <View style={styles.squadRow}>
-              <View style={styles.avatarStack}>
-                {SQUAD_AVATARS.map((avatar, index) => (
-                  <Image
-                    key={avatar}
-                    source={{uri: avatar}}
-                    style={[styles.squadAvatar, index > 0 && styles.avatarOverlap]}
-                  />
-                ))}
-                <View style={[styles.moreAvatar, styles.avatarOverlap]}>
-                  <Text style={styles.moreText}>+82</Text>
-                </View>
-              </View>
-              <Text style={styles.cityText}>Top 5% of your city</Text>
-            </View>
+            <Text style={styles.rankHelp}>
+              {rank
+                ? 'Based on your verified saved runs.'
+                : 'Save a verified run while logged in to enter leaderboards.'}
+            </Text>
           </View>
 
           <ImageBackground
@@ -205,11 +188,11 @@ const HomeScreen = ({navigation}: any) => {
             <View style={styles.liveContent}>
               <View style={styles.liveTitleRow}>
                 <View style={styles.liveDot} />
-                <Text style={styles.liveTitle}>LIVE TRACKING ACTIVE</Text>
-              </View>
-              <Text style={styles.liveCopy}>
-                3 active runners in your 2km radius. Push harder to lead the pack.
-              </Text>
+              <Text style={styles.liveTitle}>LIVE TRACKING ACTIVE</Text>
+            </View>
+            <Text style={styles.liveCopy}>
+                Start a run to capture your route, pace, and distance.
+            </Text>
             </View>
           </ImageBackground>
 
@@ -407,45 +390,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontStyle: 'italic',
   },
-  squadRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarStack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  squadAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 2,
-    borderColor: Colors.surfaceContainer,
-  },
-  avatarOverlap: {
-    marginLeft: -10,
-  },
-  moreAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderWidth: 2,
-    borderColor: Colors.surfaceContainer,
-  },
-  moreText: {
-    color: Colors.onSurfaceVariant,
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  cityText: {
-    marginLeft: 8,
+  rankHelp: {
     color: Colors.onSurfaceVariant,
     fontFamily: 'Inter-Medium',
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 20,
   },
   liveCard: {
     height: 300,

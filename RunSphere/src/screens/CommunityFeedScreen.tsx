@@ -12,9 +12,10 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {LinearGradient} from 'expo-linear-gradient';
 import AppHeader from '../components/AppHeader';
 import CommunityService from '../services/communityService';
+import {isGuestUser} from '../services/guestSession';
+import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
 
 const ROUTE_IMAGE = {
@@ -31,12 +32,21 @@ const AVATARS = [
 ];
 
 const CommunityFeedScreen = () => {
+  const authUser = useAuthStore(state => state.user);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadFeed = useCallback(async () => {
+    if (isGuestUser(authUser)) {
+      setPosts([]);
+      setError(null);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     try {
       const res = await CommunityService.getFeed(1, 20);
       setPosts(res.posts || []);
@@ -48,7 +58,7 @@ const CommunityFeedScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [authUser]);
 
   useEffect(() => {
     loadFeed();
@@ -116,20 +126,20 @@ const CommunityFeedScreen = () => {
         <View style={styles.hero}>
           <Text style={styles.kicker}>GLOBAL NETWORK</Text>
           <Text style={styles.title}>COMMUNITY</Text>
-          <View style={styles.filterRow}>
-            <TouchableOpacity style={styles.filterActive} activeOpacity={0.8}>
-              <Text style={styles.filterActiveText}>ALL ACTIVITY</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.filterInactive} activeOpacity={0.8}>
-              <Text style={styles.filterInactiveText}>FOLLOWING</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         {error ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>COMMUNITY UNAVAILABLE</Text>
             <Text style={styles.emptyText}>{error}</Text>
+          </View>
+        ) : isGuestUser(authUser) ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>SIGN IN TO JOIN</Text>
+            <Text style={styles.emptyText}>
+              Guest mode keeps runs local. Create an account to view and share
+              community activity.
+            </Text>
           </View>
         ) : feed.length === 0 ? (
           <View style={styles.emptyState}>
@@ -147,10 +157,6 @@ const CommunityFeedScreen = () => {
                   imageStyle={styles.routeImage}
                   style={styles.routeVisual}>
                   <View style={styles.routeOverlay} />
-                  <View style={styles.activeBadge}>
-                    <View style={styles.activeDot} />
-                    <Text style={styles.activeText}>ACTIVE NOW</Text>
-                  </View>
                 </ImageBackground>
                 <View style={styles.cardBody}>
                   <View style={styles.userRow}>
@@ -168,9 +174,6 @@ const CommunityFeedScreen = () => {
                         </Text>
                       </View>
                     </View>
-                    <TouchableOpacity style={styles.followButton} disabled>
-                      <Text style={styles.followText}>FOLLOW</Text>
-                    </TouchableOpacity>
                   </View>
 
                   <Text style={styles.postText}>
@@ -266,83 +269,31 @@ const CommunityFeedScreen = () => {
                   </View>
                 </View>
 
-                <View style={styles.featureActions}>
-                  <TouchableOpacity style={styles.outlineAction}>
-                    <Text style={styles.outlineActionText}>CELEBRATE</Text>
+                <View style={styles.engagementRow}>
+                  <TouchableOpacity
+                    style={styles.engageBtn}
+                    onPress={() => handleLike(post._id)}>
+                    <Ionicons name="heart" size={18} color={Colors.onSurfaceVariant} />
+                    <Text style={styles.engageCount}>{post.likesCount || 0}</Text>
                   </TouchableOpacity>
-                  <LinearGradient
-                    colors={[Colors.primary, Colors.primaryContainer]}
-                    style={styles.cheerAction}>
-                    <Text style={styles.cheerActionText}>CHEER</Text>
-                  </LinearGradient>
+                  <View style={styles.engageBtn}>
+                    <Ionicons
+                      name="chatbox"
+                      size={17}
+                      color={Colors.onSurfaceVariant}
+                    />
+                    <Text style={styles.engageCount}>
+                      {post.commentsCount || 0}
+                    </Text>
+                  </View>
                 </View>
               </View>
             ),
           )
         )}
 
-        <View style={styles.sideCard}>
-          <Text style={styles.sideTitle}>TRENDING CHALLENGES</Text>
-          <View style={styles.challengeBlock}>
-            <View style={styles.challengeTop}>
-              <Text style={styles.challengeType}>NETWORK</Text>
-              <Text style={styles.challengeCount}>{feed.length} POSTS</Text>
-            </View>
-            <Text style={styles.challengeName}>Community run stream</Text>
-            <View style={styles.challengeTrack}>
-              <View style={styles.challengeFill} />
-            </View>
-          </View>
-          <TouchableOpacity style={styles.fullOutlineButton}>
-            <Text style={styles.fullOutlineText}>VIEW ALL CHALLENGES</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.sideCard}>
-          <Text style={[styles.sideTitle, styles.clubTitle]}>KINETIC CLUBS</Text>
-          <View style={styles.clubRow}>
-            <View style={styles.clubIcon}>
-              <Ionicons name="flash" size={20} color={Colors.secondary} />
-            </View>
-            <View>
-              <Text style={styles.clubName}>LOCAL RUNNERS</Text>
-              <Text style={styles.clubMeta}>NEARBY MEMBERS</Text>
-            </View>
-          </View>
-          <View style={styles.clubRow}>
-            <View style={styles.clubIcon}>
-              <Ionicons name="snow" size={20} color={Colors.primary} />
-            </View>
-            <View>
-              <Text style={styles.clubName}>PACE CREW</Text>
-              <Text style={styles.clubMeta}>ACTIVE THIS WEEK</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.proCard}>
-          <Ionicons name="analytics" size={34} color={Colors.primary} />
-          <Text style={styles.proTitle}>UPGRADE YOUR PERFORMANCE</Text>
-          <Text style={styles.proCopy}>
-            Unlock deeper route, stride, and recovery insights with MilesAway Pro.
-          </Text>
-          <LinearGradient
-            colors={[Colors.primary, Colors.primaryContainer]}
-            style={styles.proButton}>
-            <Text style={styles.proButtonText}>GO PRO NOW</Text>
-          </LinearGradient>
-        </View>
-
         <View style={styles.footerSpace} />
       </ScrollView>
-
-      <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
-        <LinearGradient
-          colors={[Colors.primary, Colors.primaryContainer]}
-          style={styles.fabGradient}>
-          <Ionicons name="add" size={30} color={Colors.onPrimaryFixed} />
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -382,35 +333,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontStyle: 'italic',
   },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 9,
-    marginTop: 16,
-  },
-  filterActive: {
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: Colors.surfaceContainerHigh,
-  },
-  filterInactive: {
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: Colors.surfaceContainerLow,
-  },
-  filterActiveText: {
-    color: Colors.onSurface,
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  filterInactiveText: {
-    color: Colors.onSurfaceVariant,
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    fontWeight: '800',
-  },
   emptyState: {
     borderRadius: 22,
     padding: 26,
@@ -447,31 +369,6 @@ const styles = StyleSheet.create({
   routeOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: Colors.surfaceContainerHigh + '33',
-  },
-  activeBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginLeft: 14,
-    marginBottom: 12,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: Colors.surface + 'CC',
-  },
-  activeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: Colors.secondary,
-  },
-  activeText: {
-    color: Colors.onSurface,
-    fontFamily: 'Inter-Bold',
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 1.4,
   },
   cardBody: {
     padding: 18,
@@ -512,19 +409,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '800',
     letterSpacing: 1.2,
-  },
-  followButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  followText: {
-    color: Colors.primary,
-    fontFamily: 'Inter-Bold',
-    fontSize: 8,
-    fontWeight: '900',
   },
   postText: {
     color: Colors.onSurfaceVariant,
@@ -663,187 +547,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '900',
     fontStyle: 'italic',
-  },
-  featureActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-  outlineAction: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.onSurface,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  outlineActionText: {
-    color: Colors.onSurface,
-    fontFamily: 'Inter-Bold',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  cheerAction: {
-    borderRadius: 999,
-    paddingHorizontal: 22,
-    paddingVertical: 11,
-  },
-  cheerActionText: {
-    color: Colors.onPrimaryFixed,
-    fontFamily: 'Inter-Bold',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  sideCard: {
-    borderRadius: 22,
-    padding: 22,
-    marginBottom: 18,
-    backgroundColor: Colors.surfaceContainerLow,
-  },
-  sideTitle: {
-    color: Colors.onSurface,
-    fontFamily: 'Lexend-Black',
-    fontSize: 18,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
-    paddingLeft: 12,
-    marginBottom: 20,
-  },
-  clubTitle: {
-    borderLeftColor: Colors.secondary,
-  },
-  challengeBlock: {
-    marginBottom: 22,
-  },
-  challengeTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  challengeType: {
-    color: Colors.primary,
-    fontFamily: 'Inter-Bold',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  challengeCount: {
-    color: Colors.onSurfaceVariant,
-    fontFamily: 'Inter-Bold',
-    fontSize: 9,
-  },
-  challengeName: {
-    marginTop: 8,
-    color: Colors.onSurface,
-    fontFamily: 'Inter-Bold',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  challengeTrack: {
-    marginTop: 12,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: Colors.surfaceContainerHighest,
-    overflow: 'hidden',
-  },
-  challengeFill: {
-    width: '65%',
-    height: '100%',
-    backgroundColor: Colors.primary,
-  },
-  fullOutlineButton: {
-    alignItems: 'center',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant + '55',
-    paddingVertical: 14,
-  },
-  fullOutlineText: {
-    color: Colors.onSurface,
-    fontFamily: 'Inter-Bold',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.3,
-  },
-  clubRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 10,
-    backgroundColor: Colors.surfaceContainerHigh,
-  },
-  clubIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surfaceContainerLowest,
-  },
-  clubName: {
-    color: Colors.onSurface,
-    fontFamily: 'Inter-Bold',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  clubMeta: {
-    marginTop: 3,
-    color: Colors.onSurfaceVariant,
-    fontFamily: 'Inter-Bold',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  proCard: {
-    borderRadius: 22,
-    padding: 26,
-    backgroundColor: Colors.surfaceContainerHigh,
-  },
-  proTitle: {
-    marginTop: 18,
-    color: Colors.onSurface,
-    fontFamily: 'Lexend-Black',
-    fontSize: 23,
-    lineHeight: 28,
-    fontWeight: '900',
-    fontStyle: 'italic',
-  },
-  proCopy: {
-    marginTop: 12,
-    color: Colors.onSurfaceVariant,
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  proButton: {
-    marginTop: 22,
-    borderRadius: 999,
-    alignItems: 'center',
-    paddingVertical: 15,
-  },
-  proButtonText: {
-    color: Colors.onPrimaryFixed,
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.6,
-  },
-  fab: {
-    position: 'absolute',
-    right: 22,
-    bottom: 82,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    overflow: 'hidden',
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-  },
-  fabGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   footerSpace: {
     height: 116,

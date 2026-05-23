@@ -2,6 +2,7 @@ const DailyAggregate = require('../models/DailyAggregate');
 const moment = require('moment-timezone');
 const ApiError = require('../utils/ApiError');
 const mongoose = require('mongoose');
+const { normalizeLocationName } = require('../utils/geocoding');
 
 const CACHE_TTL_MS = 30 * 1000;
 const leaderboardCache = new Map();
@@ -171,19 +172,19 @@ class LeaderboardService {
     }
 
     if (level === 'city' && userLocation.city) {
-      matchStage['location.city'] = userLocation.city;
+      matchStage['location.city'] = normalizeLocationName(userLocation.city);
     }
 
     if (level === 'district' && userLocation.district) {
-      matchStage['location.district'] = userLocation.district;
+      matchStage['location.district'] = normalizeLocationName(userLocation.district);
     }
 
     if (level === 'state' && userLocation.state) {
-      matchStage['location.state'] = userLocation.state;
+      matchStage['location.state'] = normalizeLocationName(userLocation.state);
     }
 
     if (level === 'country' && userLocation.country) {
-      matchStage['location.country'] = userLocation.country;
+      matchStage['location.country'] = normalizeLocationName(userLocation.country);
     }
 
     return matchStage;
@@ -253,16 +254,16 @@ class LeaderboardService {
       return `${userLocation.latitude || 'na'}:${userLocation.longitude || 'na'}`;
     }
     if (level === 'city') {
-      return userLocation.city || 'unknown';
+      return normalizeLocationName(userLocation.city) || 'unknown';
     }
     if (level === 'district') {
-      return userLocation.district || 'unknown';
+      return normalizeLocationName(userLocation.district) || 'unknown';
     }
     if (level === 'state') {
-      return userLocation.state || 'unknown';
+      return normalizeLocationName(userLocation.state) || 'unknown';
     }
     if (level === 'country') {
-      return userLocation.country || 'worldwide';
+      return normalizeLocationName(userLocation.country) || 'worldwide';
     }
     return 'unknown';
   }

@@ -5,8 +5,10 @@ import {
   NavigationContainer,
 } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import LoginScreen from '../screens/LoginScreen';
 import RunTrackingScreen from '../screens/RunTrackingScreen';
 import RunSummaryScreen from '../screens/RunSummaryScreen';
+import SignupScreen from '../screens/SignupScreen';
 import ApiClient from '../services/apiClient';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
@@ -29,11 +31,12 @@ const navigationTheme = {
 
 const AppNavigator = () => {
   const hydrated = useAuthStore(state => state.hydrated);
+  const user = useAuthStore(state => state.user);
   const bootstrap = useAuthStore(state => state.bootstrap);
 
   useEffect(() => {
     ApiClient.setUnauthorizedHandler(async () => {
-      await useAuthStore.getState().loginAsGuest();
+      await useAuthStore.getState().logout();
     });
     bootstrap();
 
@@ -58,13 +61,22 @@ const AppNavigator = () => {
           contentStyle: {backgroundColor: Colors.surface},
           animation: 'slide_from_right',
         }}>
-        <Stack.Screen name="Main" component={BottomTabNavigator} />
-        <Stack.Screen
-          name="RunTracking"
-          component={RunTrackingScreen}
-          options={{animation: 'slide_from_bottom'}}
-        />
-        <Stack.Screen name="RunSummary" component={RunSummaryScreen} />
+        {user ? (
+          <>
+            <Stack.Screen name="Main" component={BottomTabNavigator} />
+            <Stack.Screen
+              name="RunTracking"
+              component={RunTrackingScreen}
+              options={{animation: 'slide_from_bottom'}}
+            />
+            <Stack.Screen name="RunSummary" component={RunSummaryScreen} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

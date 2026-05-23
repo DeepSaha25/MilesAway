@@ -20,9 +20,20 @@ const requireValue = (name) => {
   return String(value).trim();
 };
 
+const requireAnyValue = (...names) => {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value && String(value).trim() !== '') {
+      return String(value).trim();
+    }
+  }
+
+  throw new Error(`${names.join(' or ')} must be set`);
+};
+
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProduction = NODE_ENV === 'production';
-const DATABASE_URL = requireValue('DATABASE_URL');
+const DATABASE_URL = requireAnyValue('DATABASE_URL', 'MONGO_URI');
 const JWT_SECRET = requireValue('JWT_SECRET');
 
 if (JWT_SECRET.length < 32 || PLACEHOLDER_SECRETS.has(JWT_SECRET)) {

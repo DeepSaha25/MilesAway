@@ -34,7 +34,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           <Ionicons name="menu" size={26} color={Colors.primary} />
         </TouchableOpacity>
         <Text numberOfLines={1} adjustsFontSizeToFit style={styles.logoText}>
-          MILESAWAY
+          MilesAway
         </Text>
       </View>
 

@@ -8,6 +8,27 @@ const LEVEL_REQUIREMENTS = {
   state: 'state'
 };
 
+const buildLocationScope = (user, level) => {
+  const location = user?.location || {};
+
+  if (level === 'local') {
+    return {
+      label: `${location.city || 'Current location'} radius`,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      radiusKm: Number(process.env.LOCAL_LEADERBOARD_RADIUS_KM || 8)
+    };
+  }
+
+  return {
+    label: location[level] || location.country || null,
+    city: location.city || null,
+    district: location.district || null,
+    state: location.state || null,
+    country: location.country || null
+  };
+};
+
 const ensureLocation = (user, level) => {
   const requiredField = LEVEL_REQUIREMENTS[level];
   if (!requiredField) {
@@ -63,9 +84,8 @@ const buildLeaderboardPayload = async (req, level, fetcher) => {
       message: `${level.charAt(0).toUpperCase() + level.slice(1)} leaderboard retrieved successfully`,
       timePeriod,
       level,
-      location: level === 'local'
-        ? `${user.location.city || 'Local'} Radius`
-        : user.location[level] || user.location.country || null,
+      location: buildLocationScope(user, level).label,
+      scope: buildLocationScope(user, level),
       count: data.length,
       yourRank: yourRank ? yourRank.rank : null,
       data
