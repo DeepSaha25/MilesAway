@@ -26,29 +26,8 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.10.0"
 }
 
-def expoAutolinkingBin = new File(
-    new File(
-        providers.exec {
-            workingDir(rootDir)
-            commandLine("node", "--print", "require.resolve('expo-modules-autolinking/package.json', { paths: [require.resolve('expo/package.json')] })")
-        }.standardOutput.asText.get().trim()
-    ).getParentFile(),
-    "bin/expo-modules-autolinking.js"
-).absolutePath
-
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-    if (System.getenv("EXPO_USE_COMMUNITY_AUTOLINKING") == "1") {
-        ex.autolinkLibrariesFromCommand()
-    } else {
-        ex.autolinkLibrariesFromCommand([
-            "node",
-            expoAutolinkingBin,
-            "react-native-config",
-            "--json",
-            "--platform",
-            "android"
-        ])
-    }
+    ex.autolinkLibrariesFromCommand()
 }
 
 expoAutolinking.useExpoModules()
