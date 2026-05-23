@@ -2,7 +2,6 @@ import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import Avatar from './Avatar';
 import { Colors } from '../theme/colors';
 import {useAuthStore} from '../store/authStore';
@@ -29,9 +28,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 16) }]}>
       <View style={styles.leftCluster}>
-        <TouchableOpacity activeOpacity={0.76} style={styles.iconButton}>
-          <Ionicons name="menu" size={26} color={Colors.primary} />
-        </TouchableOpacity>
         <Text numberOfLines={1} adjustsFontSizeToFit style={styles.logoText}>
           MilesAway
         </Text>
@@ -92,14 +88,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(153,247,255,0.8)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
-  },
-  iconButton: {
-    width: 28,
-    height: 38,
-    borderRadius: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.transparent,
   },
   avatar: {
     width: 42,
