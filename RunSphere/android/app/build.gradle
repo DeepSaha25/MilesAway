@@ -93,11 +93,6 @@ android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
-    externalNativeBuild {
-        cmake {
-            path "src/main/jni/CMakeLists.txt"
-        }
-    }
 
     namespace "com.milesaway"
     defaultConfig {
@@ -106,11 +101,6 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        externalNativeBuild {
-            cmake {
-                arguments.add("-DANDROID_STL=c++_shared")
-            }
-        }
         manifestPlaceholders = [
             GOOGLE_MAPS_API_KEY: googleMapsApiKey,
             usesCleartextTraffic: "false"
@@ -140,6 +130,8 @@ android {
         release {
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
             }
             manifestPlaceholders += [usesCleartextTraffic: "false"]
             minifyEnabled enableProguardInReleaseBuilds
