@@ -7,11 +7,19 @@
     "icon": "./assets/icon.png",
     "scheme": "milesaway",
     "userInterfaceStyle": "automatic",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "jsEngine": "hermes",
     "android": {
       "package": "com.milesaway.app",
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0c0e0f"
@@ -30,6 +38,11 @@
           "locationWhenInUsePermission": "MilesAway uses your location to track outdoor runs and show your route."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2ff0b651-54e2-4dbc-b7fc-691d97650a84"
+      }
+    }
   }
 }
