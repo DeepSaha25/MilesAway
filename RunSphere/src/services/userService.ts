@@ -5,6 +5,10 @@ const UserService = {
     return ApiClient.get('/user/profile');
   },
 
+  async getMe() {
+    return ApiClient.get('/user/me');
+  },
+
   async updateLocation(latitude: number, longitude: number) {
     return ApiClient.put('/user/location', { latitude, longitude });
   },

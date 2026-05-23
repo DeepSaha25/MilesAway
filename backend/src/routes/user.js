@@ -16,6 +16,12 @@ router.use(authenticate);
 router.get('/profile', getProfile);
 
 /**
+ * GET /api/user/me
+ * Get authenticated user profile
+ */
+router.get('/me', getProfile);
+
+/**
  * PUT /api/user/location
  * Update user location
  */

@@ -4,6 +4,7 @@ const DailyAggregate = require('../models/DailyAggregate');
 const moment = require('moment-timezone');
 const mongoose = require('mongoose');
 const { getLocationFromCoordinates } = require('../utils/geocoding');
+const LeaderboardService = require('./leaderboardService');
 const ApiError = require('../utils/ApiError');
 
 const MIN_RUN_DISTANCE_KM = 0.2;
@@ -86,6 +87,7 @@ class RunService {
 
     await this.upsertDailyAggregate(user, run);
     await this.updateUserStats(userId, run.endTime);
+    LeaderboardService.clearCache();
 
     return { run, created: true };
   }

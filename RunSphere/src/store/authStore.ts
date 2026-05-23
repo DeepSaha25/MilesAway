@@ -2,6 +2,7 @@ import {create} from 'zustand';
 import {createJSONStorage, devtools, persist} from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiClient from '../services/apiClient';
+import UserService from '../services/userService';
 import AuthService, {
   LoginPayload,
   SignupPayload,
@@ -18,7 +19,7 @@ interface AuthState {
   bootstrap: () => Promise<void>;
   login: (payload: LoginPayload) => Promise<AuthResponse>;
   loginAsGuest: () => Promise<AuthResponse>;
-  signup: (payload: SignupPayload) => Promise<void>;
+  signup: (payload: SignupPayload) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   setUser: (user: AuthUser) => Promise<void>;
 }
@@ -48,6 +49,28 @@ export const useAuthStore = create<AuthState>()(
 
             if (!token) {
               await ApiClient.clearAuth();
+            }
+
+            if (token && !isGuestUser(storedUser)) {
+              try {
+                const profileRes = await UserService.getMe();
+                const profile = profileRes.data;
+                await ApiClient.setAuth(token, profile);
+                set({
+                  token,
+                  user: profile,
+                  hydrated: true,
+                });
+                return;
+              } catch {
+                await ApiClient.clearAuth();
+                set({
+                  token: null,
+                  user: null,
+                  hydrated: true,
+                });
+                return;
+              }
             }
 
             set({
@@ -83,7 +106,13 @@ export const useAuthStore = create<AuthState>()(
           return response;
         },
         signup: async payload => {
-          await AuthService.signup(payload);
+          const response = await AuthService.signup(payload);
+          set({
+            token: response.token,
+            user: response.user,
+            hydrated: true,
+          });
+          return response;
         },
         logout: async () => {
           await AuthService.logout();

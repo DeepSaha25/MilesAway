@@ -22,12 +22,13 @@ const signup = async (req, res, next) => {
       });
     }
 
-    // Register user
     const user = await AuthService.register({ name, email, password });
+    const token = AuthService.generateToken(user._id);
 
     res.status(201).json({
       status: 'success',
-      message: 'User registered successfully. Please login.',
+      message: 'User registered successfully',
+      token,
       user: user.toJSON()
     });
   } catch (err) {

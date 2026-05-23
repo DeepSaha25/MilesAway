@@ -58,6 +58,10 @@ class LeaderboardService {
     return value;
   }
 
+  static clearCache() {
+    leaderboardCache.clear();
+  }
+
   static async getLocalLeaderboard(userLocation, timePeriod = 'today', limit = 100, timezone = 'Asia/Kolkata') {
     return this.generateLeaderboard('local', userLocation, timePeriod, limit, timezone);
   }

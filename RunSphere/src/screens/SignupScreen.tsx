@@ -30,8 +30,21 @@ const SignupScreen = ({navigation}: any) => {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Password too short', 'Use at least 6 characters.');
+    if (password.length < 10) {
+      Alert.alert('Password too short', 'Use at least 10 characters.');
+      return;
+    }
+
+    if (
+      !/[a-z]/.test(password) ||
+      !/[A-Z]/.test(password) ||
+      !/\d/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+      Alert.alert(
+        'Password needs more strength',
+        'Use uppercase, lowercase, number, and symbol characters.',
+      );
       return;
     }
 
@@ -48,10 +61,6 @@ const SignupScreen = ({navigation}: any) => {
         password,
         confirmPassword: password,
       });
-
-      Alert.alert('Account created', 'Please log in with your new account.', [
-        {text: 'Continue', onPress: () => navigation.navigate('Login')},
-      ]);
     } catch (error: any) {
       Alert.alert(
         'Signup failed',

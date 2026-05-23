@@ -27,8 +27,10 @@ const AuthService = {
     return data;
   },
 
-  async signup(payload: SignupPayload): Promise<any> {
-    return ApiClient.post('/auth/signup', payload);
+  async signup(payload: SignupPayload): Promise<AuthResponse> {
+    const data = await ApiClient.post<AuthResponse>('/auth/signup', payload);
+    await ApiClient.setAuth(data.token, data.user);
+    return data;
   },
 
   async logout() {
