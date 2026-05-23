@@ -14,6 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {useFocusEffect} from '@react-navigation/native';
 import {LinearGradient} from 'expo-linear-gradient';
 import AppHeader from '../components/AppHeader';
+import {useGoalStore} from '../store/goalStore';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {useUserStore} from '../store/userStore';
 import {Colors} from '../theme/colors';
@@ -32,6 +33,9 @@ const HomeScreen = ({navigation}: any) => {
   const isLoading = useUserStore(state => state.isLoading);
   const leaderboardRanks = useLeaderboardStore(state => state.ranks);
   const loadLeaderboard = useLeaderboardStore(state => state.loadLeaderboard);
+  const weeklyHoursGoal = useGoalStore(state => state.weeklyHoursGoal);
+  const increaseWeeklyGoal = useGoalStore(state => state.increaseWeeklyGoal);
+  const decreaseWeeklyGoal = useGoalStore(state => state.decreaseWeeklyGoal);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadHome = useCallback(async () => {
@@ -62,7 +66,7 @@ const HomeScreen = ({navigation}: any) => {
   const weeklyHours = Number(weeklyStats?.totalDuration || 0) / 3600;
   const displayDistance = dailyDistance.toFixed(1);
   const activeHours = weeklyHours;
-  const activeProgress = Math.min(100, (activeHours / 6) * 100);
+  const activeProgress = Math.min(100, (activeHours / weeklyHoursGoal) * 100);
   const rank = leaderboardRanks['local:today'] ?? null;
   const lastPace = lastRun
     ? formatPace(
@@ -151,11 +155,30 @@ const HomeScreen = ({navigation}: any) => {
               </Text>
             </View>
             <View>
+              <View style={styles.goalHeader}>
+                <Text style={styles.microLabel}>GOAL: {weeklyHoursGoal.toFixed(1)} HRS</Text>
+                <View style={styles.goalControls}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={styles.goalButton}
+                    onPress={decreaseWeeklyGoal}
+                    accessibilityLabel="Decrease weekly active time goal">
+                    <Ionicons name="remove" size={16} color={Colors.secondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={styles.goalButton}
+                    onPress={increaseWeeklyGoal}
+                    accessibilityLabel="Increase weekly active time goal">
+                    <Ionicons name="add" size={16} color={Colors.secondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, {width: `${activeProgress}%`}]} />
               </View>
               <View style={styles.progressMeta}>
-                <Text style={styles.microLabel}>GOAL: 6.0 HRS</Text>
+                <Text style={styles.microLabel}>THIS WEEK</Text>
                 <Text style={styles.progressPercent}>
                   {Math.round(activeProgress)}% ACHIEVED
                 </Text>
@@ -345,6 +368,27 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: 'hidden',
     backgroundColor: Colors.surfaceContainerLowest,
+  },
+  goalHeader: {
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  goalControls: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  goalButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceContainerHighest,
+    borderWidth: 1,
+    borderColor: Colors.secondary + '33',
   },
   progressFill: {
     height: '100%',
