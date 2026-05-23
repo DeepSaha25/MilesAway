@@ -20,6 +20,11 @@ interface AuthState {
   login: (payload: LoginPayload) => Promise<AuthResponse>;
   loginAsGuest: () => Promise<AuthResponse>;
   signup: (payload: SignupPayload) => Promise<AuthResponse>;
+  resetPassword: (payload: {
+    token: string;
+    password: string;
+    confirmPassword: string;
+  }) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   setUser: (user: AuthUser) => Promise<void>;
 }
@@ -37,6 +42,16 @@ export const useAuthStore = create<AuthState>()(
             const storedUser = await ApiClient.getStoredUser();
 
             if (!storedUser) {
+              set({
+                token: null,
+                user: null,
+                hydrated: true,
+              });
+              return;
+            }
+
+            if (isGuestUser(storedUser)) {
+              await ApiClient.clearAuth();
               set({
                 token: null,
                 user: null,
@@ -114,6 +129,15 @@ export const useAuthStore = create<AuthState>()(
           });
           return response;
         },
+        resetPassword: async payload => {
+          const response = await AuthService.resetPassword(payload);
+          set({
+            token: response.token,
+            user: response.user,
+            hydrated: true,
+          });
+          return response;
+        },
         logout: async () => {
           await AuthService.logout();
           set({
@@ -136,8 +160,8 @@ export const useAuthStore = create<AuthState>()(
       name: 'milesaway-auth-store',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: state => ({
-        token: state.token,
-        user: state.user,
+        token: isGuestUser(state.user) ? null : state.token,
+        user: isGuestUser(state.user) ? null : state.user,
       }),
     },
   ),

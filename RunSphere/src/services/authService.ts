@@ -33,6 +33,24 @@ const AuthService = {
     return data;
   },
 
+  async forgotPassword(email: string): Promise<{
+    status: string;
+    message: string;
+    resetToken?: string;
+  }> {
+    return ApiClient.post('/auth/forgot-password', {email});
+  },
+
+  async resetPassword(payload: {
+    token: string;
+    password: string;
+    confirmPassword: string;
+  }): Promise<AuthResponse> {
+    const data = await ApiClient.post<AuthResponse>('/auth/reset-password', payload);
+    await ApiClient.setAuth(data.token, data.user);
+    return data;
+  },
+
   async logout() {
     await ApiClient.clearAuth();
   },

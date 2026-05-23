@@ -79,7 +79,11 @@ const LoginScreen = ({navigation}: any) => {
 
           <View style={styles.passwordHeader}>
             <Text style={styles.fieldLabel}>PASSWORD</Text>
-            <Text style={styles.linkText}>FORGOT?</Text>
+            <Text
+              style={styles.linkText}
+              onPress={() => navigation.navigate('ForgotPassword')}>
+              FORGOT?
+            </Text>
           </View>
           <TextInput
             value={password}

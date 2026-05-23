@@ -53,6 +53,7 @@ module.exports = {
   NODE_ENV,
   TIMEZONE: process.env.TIMEZONE || 'Asia/Kolkata',
   GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || '',
+  ALLOW_RESET_TOKEN_RESPONSE: process.env.ALLOW_RESET_TOKEN_RESPONSE === 'true',
   CORS_ORIGINS,
   LOCAL_LEADERBOARD_RADIUS_KM: Number(process.env.LOCAL_LEADERBOARD_RADIUS_KM || 8),
   isProduction

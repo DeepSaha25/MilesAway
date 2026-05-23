@@ -5,6 +5,7 @@ declare const process:
   | {
       env?: {
         MILESAWAY_API_URL?: string;
+        MILESAWAY_USE_LOCAL_API?: string;
       };
     }
   | undefined;
@@ -24,8 +25,18 @@ const getLocalUrl = () =>
     ? 'http://10.0.2.2:5000/api'
     : 'http://localhost:5000/api';
 
+const shouldUseLocalApi = () => {
+  const globalUseLocal = (globalThis as any).MILESAWAY_USE_LOCAL_API;
+  const envUseLocal =
+    typeof process !== 'undefined'
+      ? process?.env?.MILESAWAY_USE_LOCAL_API
+      : undefined;
+
+  return String(envUseLocal || globalUseLocal || '').toLowerCase() === 'true';
+};
+
 export const API_BASE_URL =
-  getConfiguredUrl() || (__DEV__ ? getLocalUrl() : PRODUCTION_API_URL);
+  getConfiguredUrl() || (__DEV__ && shouldUseLocalApi() ? getLocalUrl() : PRODUCTION_API_URL);
 
 if (!API_BASE_URL) {
   throw new Error('MILESAWAY_API_URL must be configured for release builds');

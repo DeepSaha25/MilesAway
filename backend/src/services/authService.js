@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const config = require('../config/env');
 const ApiError = require('../utils/ApiError');
 
@@ -57,6 +58,44 @@ class AuthService {
     };
   }
 
+  static async createPasswordReset({ email }) {
+    const user = await User.findOne({
+      email: email.trim().toLowerCase()
+    }).select('+passwordResetToken +passwordResetExpires');
+
+    if (!user) {
+      return null;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = this.hashResetToken(resetToken);
+    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+
+    return resetToken;
+  }
+
+  static async resetPassword({ token, password }) {
+    const user = await User.findOne({
+      passwordResetToken: this.hashResetToken(token),
+      passwordResetExpires: { $gt: new Date() }
+    }).select('+password +passwordResetToken +passwordResetExpires');
+
+    if (!user) {
+      throw ApiError.badRequest('Password reset link is invalid or expired');
+    }
+
+    user.password = password;
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+    await user.save();
+
+    return {
+      token: this.generateToken(user._id),
+      user: user.toJSON()
+    };
+  }
+
   /**
    * Generate JWT token
    */
@@ -78,6 +117,10 @@ class AuthService {
     } catch (err) {
       throw ApiError.unauthorized('Invalid or expired token');
     }
+  }
+
+  static hashResetToken(token) {
+    return crypto.createHash('sha256').update(token).digest('hex');
   }
 }
 
