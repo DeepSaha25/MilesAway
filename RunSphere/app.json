@@ -35,7 +35,7 @@
           "apiKey": "AIzaSyCcFZ09DbswR-yJNfNQKSGJhRWB0xdftJQ"
         }
       },
-      "versionCode": 6
+      "versionCode": 7
     },
     "ios": {
       "bundleIdentifier": "com.milesaway.app",
