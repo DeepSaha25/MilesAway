@@ -12,9 +12,7 @@
       "android"
     ],
     "jsEngine": "hermes",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "0.0.1",
     "updates": {
       "url": "https://u.expo.dev/2ff0b651-54e2-4dbc-b7fc-691d97650a84"
     },
@@ -35,7 +33,7 @@
           "apiKey": "AIzaSyCcFZ09DbswR-yJNfNQKSGJhRWB0xdftJQ"
         }
       },
-      "versionCode": 7
+      "versionCode": 8
     },
     "ios": {
       "bundleIdentifier": "com.milesaway.app",
