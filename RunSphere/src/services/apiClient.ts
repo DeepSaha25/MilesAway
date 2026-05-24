@@ -76,9 +76,24 @@ class ApiClient {
       options.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, options);
+    let response: Response;
+    try {
+      response = await fetch(url, options);
+    } catch (error: any) {
+      throw new ApiError(
+        'Network error. Please check your internet connection and try again.',
+        0,
+        {url, originalMessage: error?.message},
+      );
+    }
+
     const rawText = await response.text();
-    const data = rawText ? JSON.parse(rawText) : {};
+    let data: any = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      data = {message: rawText || response.statusText || 'Request failed'};
+    }
 
     if (response.status === 401 && this.token !== GUEST_TOKEN) {
       await this.clearAuth();

@@ -24,7 +24,12 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0c0e0f"
       },
-      "versionCode": 3
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCcFZ09DbswR-yJNfNQKSGJhRWB0xdftJQ"
+        }
+      },
+      "versionCode": 5
     },
     "ios": {
       "bundleIdentifier": "com.milesaway.app",
