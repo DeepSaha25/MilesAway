@@ -23,7 +23,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0c0e0f"
-      }
+      },
+      "versionCode": 3
     },
     "ios": {
       "bundleIdentifier": "com.milesaway.app",
