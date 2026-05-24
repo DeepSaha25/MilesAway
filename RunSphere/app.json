@@ -12,6 +12,12 @@
       "android"
     ],
     "jsEngine": "hermes",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2ff0b651-54e2-4dbc-b7fc-691d97650a84"
+    },
     "android": {
       "package": "com.milesaway.app",
       "permissions": [

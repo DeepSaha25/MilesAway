@@ -7,20 +7,23 @@
 		"development": {
 			"developmentClient": false,
 			"distribution": "internal",
+			"channel": "development",
 			"env": {
 				"MILESAWAY_API_URL": "https://runshphere-production.up.railway.app/api"
 			}
 		},
 		"preview": {
 			"distribution": "internal",
+			"channel": "preview",
 			"env": {
 				"MILESAWAY_API_URL": "https://runshphere-production.up.railway.app/api"
 			}
 		},
 		"production": {
 			"autoIncrement": true,
+			"channel": "production",
 			"android": {
-				"buildType": "apk"
+				"buildType": "app-bundle"
 			},
 			"env": {
 				"MILESAWAY_API_URL": "https://runshphere-production.up.railway.app/api"
