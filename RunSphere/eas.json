@@ -19,6 +19,16 @@
 				"MILESAWAY_API_URL": "https://runshphere-production.up.railway.app/api"
 			}
 		},
+		"preview-apk": {
+			"distribution": "internal",
+			"channel": "preview",
+			"android": {
+				"buildType": "apk"
+			},
+			"env": {
+				"MILESAWAY_API_URL": "https://runshphere-production.up.railway.app/api"
+			}
+		},
 		"production": {
 			"autoIncrement": true,
 			"channel": "production",
