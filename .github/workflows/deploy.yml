@@ -1,6 +1,13 @@
 name: Deploy
 
 on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       app_environment:
@@ -14,7 +21,7 @@ on:
       deploy_backend:
         description: Deploy backend to Railway
         required: true
-        default: false
+        default: true
         type: boolean
       deploy_app:
         description: Build app with EAS
@@ -22,10 +29,18 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   backend:
     name: Deploy backend
-    if: inputs.deploy_backend
+    if: >
+      (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_backend)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,6 +48,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -53,11 +70,11 @@ jobs:
       - name: Deploy to Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service "${{ secrets.RAILWAY_SERVICE_NAME }}"
+        run: railway up --ci --service "${{ secrets.RAILWAY_SERVICE_NAME }}"
 
   app:
     name: Build app
-    if: inputs.deploy_app
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_app
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -65,6 +82,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4

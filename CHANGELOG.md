@@ -24,14 +24,17 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 
 ### Summary
 - Added project change tracking, AI planning guidance, and CI/CD workflow configuration.
+- Updated deployment flow so backend deploy runs automatically only after `CI` succeeds on `main`, while app EAS builds remain manual.
+- Fixed app startup auth recovery so reopening the installed app can reuse the persisted token instead of forcing login when SecureStore hydration is unavailable.
 
 ### Files Changed
 - `CHANGELOG.md`: added a repeatable format for documenting AI-assisted changes.
 - `VERSION.md`: added current version metadata and rules for future updates.
 - `docs/AI_PROMPT_PLAN.md`: added a planning template to use before AI-assisted coding.
 - `.github/workflows/ci.yml`: added app and backend CI checks.
-- `.github/workflows/deploy.yml`: added manual deployment workflow for Expo EAS and Railway.
+- `.github/workflows/deploy.yml`: added Railway backend deploy after successful CI on `main`, checked out the exact commit that passed CI, kept manual backend deploy override, and kept Expo EAS app builds manual.
 - `RunSphere/src/components/LiveRunMap.tsx`: moved the bearing helper outside the component and fixed the effect dependency list so app lint can pass in CI.
+- `RunSphere/src/store/authStore.ts`: used the persisted auth token as a fallback during bootstrap before clearing stored auth.
 
 ### Verification
 - `cd RunSphere && npm test -- --runInBand`

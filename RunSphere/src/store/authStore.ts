@@ -60,7 +60,10 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
 
-            const token = ApiClient.token || (isGuestUser(storedUser) ? GUEST_TOKEN : null);
+            const persistedToken = get().token;
+            const token =
+              ApiClient.token ||
+              (isGuestUser(storedUser) ? GUEST_TOKEN : persistedToken);
 
             if (!token) {
               await ApiClient.clearAuth();
