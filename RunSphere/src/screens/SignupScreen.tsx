@@ -62,10 +62,15 @@ const SignupScreen = ({navigation}: any) => {
         confirmPassword: password,
       });
     } catch (error: any) {
-      Alert.alert(
-        'Signup failed',
-        error?.message || 'Please try a different email address.',
-      );
+      try {
+        // eslint-disable-next-line no-console
+        console.error('Signup error', error);
+      } catch {}
+
+      const detail =
+        error?.data?.message || error?.data || error?.originalMessage || error?.message;
+
+      Alert.alert('Signup failed', detail || 'Please try a different email address.');
     } finally {
       setLoading(null);
     }

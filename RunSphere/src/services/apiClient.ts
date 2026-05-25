@@ -14,6 +14,10 @@ class ApiClient {
     try {
       this.token = (await SecureStore.getItemAsync(TOKEN_KEY)) || null;
     } catch {}
+    try {
+      // eslint-disable-next-line no-console
+      console.log('ApiClient initialized. API_BASE_URL=', API_BASE_URL, 'tokenPresent=', !!this.token);
+    } catch {}
   }
 
   static async setAuth(token: string, user: any) {
@@ -80,10 +84,16 @@ class ApiClient {
     try {
       response = await fetch(url, options);
     } catch (error: any) {
+      // log full error for debugging on device/emulator
+      try {
+        // eslint-disable-next-line no-console
+        console.error('ApiClient network error', {url, options, error});
+      } catch {}
+
       throw new ApiError(
         'Network error. Please check your internet connection and try again.',
         0,
-        {url, originalMessage: error?.message},
+        {url, originalMessage: error?.message, rawError: error},
       );
     }
 

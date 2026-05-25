@@ -63,12 +63,35 @@ const LiveRunMap = ({
       return;
     }
 
+    const computeBearing = (from: RunCoordinate, to: RunCoordinate) => {
+      const toRad = (deg: number) => (deg * Math.PI) / 180;
+      const toDeg = (rad: number) => (rad * 180) / Math.PI;
+
+      const lat1 = toRad(from.latitude);
+      const lat2 = toRad(to.latitude);
+      const dLon = toRad(to.longitude - from.longitude);
+
+      const y = Math.sin(dLon) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+      const brng = toDeg(Math.atan2(y, x));
+      return (brng + 360) % 360;
+    };
+
+    // prefer device-provided heading if available, otherwise derive from last two points
+    let heading = 0;
+    if (typeof latest.heading === 'number') {
+      heading = latest.heading;
+    } else if (route.length >= 2) {
+      const prev = route[route.length - 2];
+      heading = computeBearing(prev, latest);
+    }
+
     mapRef.current.animateCamera(
       {
         center: {latitude: latest.latitude, longitude: latest.longitude},
         zoom: 16.5,
         pitch: 0,
-        heading: 0,
+        heading,
       },
       {duration: 900},
     );
@@ -105,7 +128,25 @@ const LiveRunMap = ({
               <View style={styles.locationMarker}>
                 <View style={styles.markerHalo} />
                 <View style={styles.markerCore}>
-                  <View style={styles.markerArrow} />
+                  <View style={[styles.markerArrow, {transform: [{rotate: `${
+                    typeof latest.heading === 'number'
+                      ? `${latest.heading}deg`
+                      : route.length >= 2
+                      ? `${(() => {
+                          const toRad = (deg: number) => (deg * Math.PI) / 180;
+                          const toDeg = (rad: number) => (rad * 180) / Math.PI;
+                          const from = route[route.length - 2];
+                          const to = latest;
+                          const lat1 = toRad(from.latitude);
+                          const lat2 = toRad(to.latitude);
+                          const dLon = toRad(to.longitude - from.longitude);
+                          const y = Math.sin(dLon) * Math.cos(lat2);
+                          const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+                          const brng = toDeg(Math.atan2(y, x));
+                          return (brng + 360) % 360;
+                        })() + 'deg'`
+                      : '0deg'
+                  }]} />
                   <View style={styles.markerCenter} />
                 </View>
               </View>

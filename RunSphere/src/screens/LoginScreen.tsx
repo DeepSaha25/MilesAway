@@ -33,10 +33,13 @@ const LoginScreen = ({navigation}: any) => {
     try {
       await login({email: email.trim(), password});
     } catch (error: any) {
-      Alert.alert(
-        'Login failed',
-        error?.message || 'Please check your credentials and try again.',
-      );
+      try {
+        // eslint-disable-next-line no-console
+        console.error('Login error', error);
+      } catch {}
+
+      const detail = error?.data?.message || error?.data || error?.originalMessage || error?.message;
+      Alert.alert('Login failed', detail || 'Please check your credentials and try again.');
     } finally {
       setLoading(null);
     }
