@@ -23,6 +23,22 @@ interface LiveRunMapProps {
   onCancel: () => void;
 }
 
+const computeBearing = (from: RunCoordinate, to: RunCoordinate) => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const toDeg = (rad: number) => (rad * 180) / Math.PI;
+
+  const lat1 = toRad(from.latitude);
+  const lat2 = toRad(to.latitude);
+  const dLon = toRad(to.longitude - from.longitude);
+
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  const brng = toDeg(Math.atan2(y, x));
+  return (brng + 360) % 360;
+};
+
 const LiveRunMap = ({
   route,
   elapsedSeconds,
@@ -45,22 +61,6 @@ const LiveRunMap = ({
   const gpsNeedsAttention = /acquiring|search|waiting|weak|required|could/i.test(
     gpsStatus || '',
   );
-
-  const computeBearing = (from: RunCoordinate, to: RunCoordinate) => {
-    const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const toDeg = (rad: number) => (rad * 180) / Math.PI;
-
-    const lat1 = toRad(from.latitude);
-    const lat2 = toRad(to.latitude);
-    const dLon = toRad(to.longitude - from.longitude);
-
-    const y = Math.sin(dLon) * Math.cos(lat2);
-    const x =
-      Math.cos(lat1) * Math.sin(lat2) -
-      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    const brng = toDeg(Math.atan2(y, x));
-    return (brng + 360) % 360;
-  };
 
   const arrowRotation =
     typeof latest?.heading === 'number'
@@ -104,7 +104,7 @@ const LiveRunMap = ({
       },
       {duration: 900},
     );
-  }, [latest]);
+  }, [latest, route]);
 
   return (
     <View style={styles.container}>
