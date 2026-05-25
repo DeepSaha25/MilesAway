@@ -12,6 +12,18 @@ import {GUEST_TOKEN, isGuestUser} from '../services/guestSession';
 
 type AuthUser = Record<string, any> | null;
 
+const AUTH_STORE_KEY = 'milesaway-auth-store';
+
+const getPersistedAuthToken = async () => {
+  try {
+    const raw = await AsyncStorage.getItem(AUTH_STORE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed?.state?.token || null;
+  } catch {
+    return null;
+  }
+};
+
 interface AuthState {
   token: string | null;
   user: AuthUser;
@@ -60,7 +72,7 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
 
-            const persistedToken = get().token;
+            const persistedToken = get().token || (await getPersistedAuthToken());
             const token =
               ApiClient.token ||
               (isGuestUser(storedUser) ? GUEST_TOKEN : persistedToken);
@@ -71,6 +83,7 @@ export const useAuthStore = create<AuthState>()(
 
             if (token && !isGuestUser(storedUser)) {
               try {
+                await ApiClient.setAuth(token, storedUser);
                 const profileRes = await UserService.getMe();
                 const profile = profileRes.data;
                 await ApiClient.setAuth(token, profile);
