@@ -25,12 +25,16 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Summary
 - Restricted Ticketmaster running event discovery to the user's nearby location when GPS is available, with India as the country fallback instead of global/US-biased results.
 - Reworked the Community running events board into large photo-backed event blocks with event name, date/status, and location.
+- Changed completed valid runs to auto-save after the user confirms Finish, with retry behavior if saving fails.
+- Added recent saved runs to the Profile dashboard and renamed Weekly Volume to This Week's Distance.
 
 ### Files Changed
 - `backend/src/services/runningEventService.js`: added location radius support, future-event filtering, running-event filtering, India fallback, and Ticketmaster image/location normalization.
 - `backend/src/controllers/communityController.js`: accepts latitude, longitude, radius, and India country fallback for running event queries.
 - `RunSphere/src/services/communityService.ts`: sends structured event query parameters, including optional device coordinates and radius.
 - `RunSphere/src/screens/CommunityFeedScreen.tsx`: requests current location for the race board, falls back to the saved user country or India, and renders larger image event cards.
+- `RunSphere/src/screens/RunSummaryScreen.tsx`: replaced manual post-run saving with automatic saving, saved confirmation, and retry state that preserves route data on failure.
+- `RunSphere/src/screens/ProfileScreen.tsx`: added recent run cards with route previews and clarified the weekly distance section wording.
 - `CHANGELOG.md`: documented the Ticketmaster event location and UI update.
 
 ### Verification
@@ -39,6 +43,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 
 ### Notes
 - Device GPS takes priority over country fallback. If location permission is denied or unavailable, the app uses the saved user country, then `IN`.
+- A valid run now saves after Finish confirmation; users no longer need to find a separate Save Run button on the summary screen.
 - Existing unrelated generated/dist worktree changes were left untouched.
 
 ## v0.2.0 - 2026-05-26
