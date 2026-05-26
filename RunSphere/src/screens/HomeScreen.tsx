@@ -198,7 +198,17 @@ const HomeScreen = ({navigation}: any) => {
             </Text>
           </View>
 
-    
+          <View style={styles.signaturePanel}>
+            <View style={styles.signatureArt}>
+              <View style={styles.signatureLine} />
+              <View style={[styles.signatureLine, styles.signatureLineAlt]} />
+            </View>
+            <Text style={styles.signatureHash}>#MilesAway</Text>
+            <View style={styles.signatureCopy}>
+              <Text style={styles.signatureText}>🇮🇳 Crafted in Kolkata</Text>
+              <Text style={styles.signatureText}>❤️ For the #Runners Of the World</Text>
+            </View>
+          </View>
 
           <View style={styles.footerSpace} />
         </ScrollView>
@@ -420,6 +430,77 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 13,
     lineHeight: 20,
+  },
+  signaturePanel: {
+    minHeight: 250,
+    overflow: 'hidden',
+    marginTop: 0,
+    marginBottom: 22,
+    paddingHorizontal: 4,
+    paddingBottom: 28,
+    justifyContent: 'flex-end',
+  },
+  signatureArt: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
+  },
+  signatureIcon: {
+    position: 'absolute',
+  },
+  signaturePin: {
+    left: 20,
+    top: 54,
+    transform: [{rotate: '-12deg'}],
+  },
+  signatureSteps: {
+    right: 32,
+    top: 38,
+    transform: [{rotate: '18deg'}],
+  },
+  signatureTrail: {
+    left: 92,
+    bottom: 106,
+    transform: [{rotate: '7deg'}],
+  },
+  signatureWorld: {
+    right: -8,
+    bottom: 74,
+  },
+  signatureLine: {
+    position: 'absolute',
+    left: 8,
+    right: 4,
+    top: 92,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: Colors.onSurfaceVariant + '0C',
+    transform: [{rotate: '-5deg'}],
+  },
+  signatureLineAlt: {
+    top: 150,
+    left: 0,
+    right: 24,
+    backgroundColor: Colors.primary + '0D',
+    transform: [{rotate: '6deg'}],
+  },
+  signatureHash: {
+    color: Colors.onSurfaceVariant + '34',
+    fontFamily: 'Lexend-Black',
+    fontSize: 46,
+    lineHeight: 54,
+    fontWeight: '900',
+    fontStyle: 'italic',
+  },
+  signatureCopy: {
+    marginTop: 12,
+    gap: 8,
+  },
+  signatureText: {
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    lineHeight: 25,
+    fontWeight: '800',
   },
   liveCard: {
     height: 300,
