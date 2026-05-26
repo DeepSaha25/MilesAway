@@ -13,18 +13,20 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {useFocusEffect} from '@react-navigation/native';
 import AppHeader from '../components/AppHeader';
 import Avatar from '../components/Avatar';
+import MiniRoutePreview from '../components/MiniRoutePreview';
 import {useUserStore} from '../store/userStore';
 import {Colors} from '../theme/colors';
 import {
   getCurrentLocation,
   requestLocationPermission,
 } from '../utils/location';
-import {formatPace} from '../utils/runMetrics';
+import {formatClock, formatPace, formatRunDate} from '../utils/runMetrics';
 
 const ProfileScreen = () => {
   const profile = useUserStore(state => state.profile);
   const stats = useUserStore(state => state.stats);
   const weeklyStats = useUserStore(state => state.weeklyStats);
+  const recentRuns = useUserStore(state => state.recentRuns);
   const isLoading = useUserStore(state => state.isLoading);
   const refreshDashboard = useUserStore(state => state.refreshDashboard);
   const updateBackendLocation = useUserStore(state => state.updateBackendLocation);
@@ -221,7 +223,7 @@ const ProfileScreen = () => {
           <View style={styles.chartHeader}>
             <View>
               <Text style={styles.primaryLabel}>PERFORMANCE VIEW</Text>
-              <Text style={styles.chartTitle}>WEEKLY{'\n'}VOLUME</Text>
+              <Text style={styles.chartTitle}>THIS WEEK'S{'\n'}DISTANCE</Text>
             </View>
             <View style={styles.chartToggleRow}>
               <Text style={styles.toggleActive}>KILOMETERS</Text>
@@ -235,26 +237,74 @@ const ProfileScreen = () => {
               </View>
             ) : (
               <View style={styles.weeklyEmptyBlock}>
-                <Text style={styles.weeklyEmptyTitle}>NO WEEKLY RUNS YET</Text>
+                <Text style={styles.weeklyEmptyTitle}>NO RUNS THIS WEEK YET</Text>
                 <Text style={styles.weeklyEmptyText}>
-                  Your weekly volume appears after you save a run.
+                  Your weekly distance appears after your next saved run.
                 </Text>
               </View>
             )}
           </View>
         </View>
 
-        <View style={styles.achievementHeader}>
-          <Text style={styles.achievementTitle}>KINETIC{'\n'}ACHIEVEMENTS</Text>
+        <View style={styles.recentHeader}>
+          <Text style={styles.recentTitle}>RECENT{'\n'}RUNS</Text>
         </View>
 
-        <View style={styles.achievementEmpty}>
-          <Ionicons name="trophy" size={28} color={Colors.primary} />
-          <Text style={styles.achievementName}>NO ACHIEVEMENTS YET</Text>
-          <Text style={styles.achievementCaption}>
-            Milestones unlock from your saved run data.
-          </Text>
-        </View>
+        {recentRuns.length === 0 ? (
+          <View style={styles.recentEmpty}>
+            <Ionicons name="footsteps" size={28} color={Colors.primary} />
+            <Text style={styles.recentEmptyTitle}>NO SAVED RUNS YET</Text>
+            <Text style={styles.recentEmptyText}>
+              Completed runs will appear here automatically.
+            </Text>
+          </View>
+        ) : (
+          recentRuns.slice(0, 4).map((run, index) => {
+            const pace =
+              run.averagePace || (run.avgSpeed ? 60 / run.avgSpeed : 0);
+
+            return (
+              <View key={`${run._id || run.date}-${index}`} style={styles.recentCard}>
+                <MiniRoutePreview
+                  coordinates={run.coordinates || []}
+                  style={styles.recentRoute}
+                />
+                <View style={styles.recentCardHeader}>
+                  <View style={styles.recentDistanceBlock}>
+                    <Text style={styles.recentDistance}>
+                      {Number(run.distance || 0).toFixed(2)}
+                    </Text>
+                    <Text style={styles.recentDistanceUnit}>KM</Text>
+                  </View>
+                  <View style={styles.recentLocationBadge}>
+                    <Text numberOfLines={1} style={styles.recentLocationText}>
+                      {run.location?.city || 'OUTDOOR'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.recentDate}>
+                  {formatRunDate(run.date || run.endTime || new Date())}
+                </Text>
+                <View style={styles.recentMetrics}>
+                  <View style={styles.recentMetric}>
+                    <Text style={styles.recentMetricLabel}>TIME</Text>
+                    <Text style={styles.recentMetricValue}>
+                      {formatClock(run.duration || 0)}
+                    </Text>
+                  </View>
+                  <View style={styles.recentMetric}>
+                    <Text style={styles.recentMetricLabel}>PACE</Text>
+                    <Text style={styles.recentMetricValue}>{formatPace(pace)}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })
+        )}
+
+        
+
+        
 
         <View style={styles.footerSpace} />
       </ScrollView>
@@ -579,6 +629,125 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 19,
     textAlign: 'center',
+  },
+  recentHeader: {
+    marginBottom: 18,
+  },
+  recentTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Black',
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '900',
+    fontStyle: 'italic',
+  },
+  recentEmpty: {
+    minHeight: 126,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+    marginBottom: 34,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  recentEmptyTitle: {
+    marginTop: 10,
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Black',
+    fontSize: 18,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  recentEmptyText: {
+    marginTop: 6,
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
+  recentCard: {
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 16,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '22',
+  },
+  recentRoute: {
+    height: 118,
+    marginBottom: 14,
+  },
+  recentCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  recentDistanceBlock: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  recentDistance: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Black',
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: '900',
+    fontStyle: 'italic',
+  },
+  recentDistanceUnit: {
+    marginLeft: 4,
+    marginBottom: 4,
+    color: Colors.primary,
+    fontFamily: 'Lexend-Black',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  recentLocationBadge: {
+    maxWidth: 120,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  recentLocationText: {
+    color: Colors.secondary,
+    fontFamily: 'Inter-Bold',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  recentDate: {
+    marginTop: 4,
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+  },
+  recentMetrics: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  recentMetric: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 12,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  recentMetricLabel: {
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Bold',
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  recentMetricValue: {
+    marginTop: 5,
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 13,
+    fontWeight: '900',
   },
   achievementHeader: {
     flexDirection: 'row',
