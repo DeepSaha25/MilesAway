@@ -1,6 +1,6 @@
 # Version
 
-Current project version: `0.1.1`
+Current project version: `0.2.0`
 
 Last updated: `2026-05-26`
 

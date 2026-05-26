@@ -20,6 +20,35 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.0 - 2026-05-26
+
+### Summary
+- Added a Global leaderboard that includes newly joined users before their first run.
+- Updated the Ranks screen to default to Global, removed Local from the app tabs, and refined leaderboard row sizing.
+- Added a lightweight MilesAway signature section to the bottom of the Home screen.
+
+### Files Changed
+- `backend/src/services/leaderboardService.js`: added global leaderboard support, switched ranking to include zero-run users from MongoDB users, and made rank calculation work without the previous aggregate-only requirement.
+- `backend/src/controllers/leaderboardController.js`: exposed the global leaderboard response payload.
+- `backend/src/routes/leaderboard.js`: added the `/api/leaderboard/global` route.
+- `RunSphere/src/config/api.ts`: added Expo public environment variable support for local Expo Go testing.
+- `RunSphere/src/services/leaderboardService.ts`: added the `global` leaderboard level on the app client.
+- `RunSphere/src/screens/LeaderboardScreen.tsx`: defaulted ranks to Global, removed Local from the visible tabs, and tightened row/podium sizing.
+- `RunSphere/src/screens/HomeScreen.tsx`: switched dashboard rank loading to Global and added the bottom MilesAway signature copy.
+- `RunSphere/src/screens/RunSummaryScreen.tsx`: switched post-run rank display to Global.
+- `CHANGELOG.md`: documented the leaderboard and Home footer feature work.
+- `VERSION.md`: bumped the current project version to `0.2.0`.
+
+### Verification
+- `cd backend && npm test`
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm run lint`
+- Manual Expo Go testing with local backend and deployed backend after Railway deployment.
+
+### Notes
+- Backend deployment must happen before publishing app updates because the app calls `/api/leaderboard/global`.
+- `npm run lint` currently reports existing warnings only for unused `no-console` disable comments.
+
 ## v0.1.1 - 2026-05-26
 
 ### Summary
