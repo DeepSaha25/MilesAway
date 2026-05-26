@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
+  ImageBackground,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -16,13 +17,56 @@ import CommunityService from '../services/communityService';
 import {isGuestUser} from '../services/guestSession';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
+import {getCurrentLocation, requestLocationPermission} from '../utils/location';
+
+const COUNTRY_CODE_BY_NAME: Record<string, string> = {
+  india: 'IN',
+  'united states': 'US',
+  usa: 'US',
+  'united kingdom': 'GB',
+  uk: 'GB',
+  canada: 'CA',
+  australia: 'AU',
+};
+
+const getUserCountryCode = (country?: string | null) => {
+  const normalized = String(country || '').trim();
+  if (/^[a-z]{2}$/i.test(normalized)) {
+    return normalized.toUpperCase();
+  }
+
+  return COUNTRY_CODE_BY_NAME[normalized.toLowerCase()] || 'IN';
+};
 
 const CommunityFeedScreen = () => {
   const authUser = useAuthStore(state => state.user);
   const [posts, setPosts] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+
+  const loadEvents = useCallback(async () => {
+    try {
+      const countryCode = getUserCountryCode(authUser?.location?.country);
+      const hasPermission = await requestLocationPermission();
+      const position = hasPermission ? await getCurrentLocation().catch(() => null) : null;
+      const res = await CommunityService.getRunningEvents({
+        countryCode,
+        keyword: 'running',
+        limit: 8,
+        radiusKm: 75,
+        latitude: position?.coords.latitude,
+        longitude: position?.coords.longitude,
+      });
+      setEvents(res.events || []);
+      setEventsError(null);
+    } catch (loadError: any) {
+      setEvents([]);
+      setEventsError(loadError?.message || 'Unable to load running events.');
+    }
+  }, [authUser?.location?.country]);
 
   const loadFeed = useCallback(async () => {
     if (isGuestUser(authUser)) {
@@ -47,12 +91,12 @@ const CommunityFeedScreen = () => {
   }, [authUser]);
 
   useEffect(() => {
-    loadFeed();
-  }, [loadFeed]);
+    Promise.all([loadEvents(), loadFeed()]).finally(() => setLoading(false));
+  }, [loadEvents, loadFeed]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadFeed();
+    Promise.all([loadEvents(), loadFeed()]).finally(() => setRefreshing(false));
   };
 
   const handleLike = async (postId?: string) => {
@@ -67,6 +111,7 @@ const CommunityFeedScreen = () => {
   };
 
   const feed = useMemo(() => posts.slice(0, 6), [posts]);
+  const liveEvents = useMemo(() => events.slice(0, 4), [events]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) {
@@ -84,6 +129,19 @@ const CommunityFeedScreen = () => {
       return `${diffHrs}H AGO`;
     }
     return `${Math.floor(diffHrs / 24)}D AGO`;
+  };
+
+  const formatEventDate = (dateStr?: string) => {
+    if (!dateStr) {
+      return 'DATE TBA';
+    }
+
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(dateStr)).toUpperCase();
   };
 
   if (loading) {
@@ -112,6 +170,67 @@ const CommunityFeedScreen = () => {
         <View style={styles.hero}>
           <Text style={styles.kicker}>GLOBAL NETWORK</Text>
           <Text style={styles.title}>COMMUNITY</Text>
+        </View>
+
+        <View style={styles.eventsSection}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionKicker}>LIVE RACE BOARD</Text>
+              <Text style={styles.sectionTitle}>RUNNING EVENTS</Text>
+            </View>
+            <Ionicons name="radio" size={22} color={Colors.primaryContainer} />
+          </View>
+
+          {eventsError ? (
+            <Text style={styles.eventsHint}>{eventsError}</Text>
+          ) : liveEvents.length === 0 ? (
+            <Text style={styles.eventsHint}>
+              Add a Ticketmaster API key on the backend to stream live marathon
+              listings.
+            </Text>
+          ) : (
+            liveEvents.map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                style={styles.eventCard}
+                activeOpacity={0.84}>
+                <ImageBackground
+                  source={
+                    event.image
+                      ? {uri: event.image}
+                      : require('../../assets/0d5b657d-389f-4324-9f54-467c22982015.png')
+                  }
+                  style={styles.eventImage}
+                  imageStyle={styles.eventImageRadius}>
+                  <View style={styles.eventOverlay} />
+                  <View style={styles.eventTopRow}>
+                    <View style={styles.eventBadge}>
+                      <Ionicons name="flag" size={14} color={Colors.surface} />
+                      <Text style={styles.eventBadgeText}>
+                        {String(event.status || 'LIVE').toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={styles.eventDate}>{formatEventDate(event.date)}</Text>
+                  </View>
+                  <View style={styles.eventCopy}>
+                    <Text numberOfLines={2} style={styles.eventTitle}>
+                      {event.title}
+                    </Text>
+                    <View style={styles.eventLocationRow}>
+                      <Ionicons
+                        name="location"
+                        size={14}
+                        color={Colors.primaryContainer}
+                      />
+                      <Text numberOfLines={1} style={styles.eventMeta}>
+                        {event.location || event.country || 'Location TBA'}
+                      </Text>
+                    </View>
+                  </View>
+                </ImageBackground>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         {error ? (
@@ -331,6 +450,117 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 13,
     lineHeight: 20,
+  },
+  eventsSection: {
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 22,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  sectionKicker: {
+    color: Colors.primary + '99',
+    fontFamily: 'Inter-Bold',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.6,
+  },
+  sectionTitle: {
+    marginTop: 4,
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Black',
+    fontSize: 20,
+    fontWeight: '900',
+    fontStyle: 'italic',
+  },
+  eventsHint: {
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  eventCard: {
+    height: 210,
+    borderRadius: 20,
+    marginTop: 10,
+    overflow: 'hidden',
+    backgroundColor: Colors.surfaceContainerHighest,
+  },
+  eventImage: {
+    flex: 1,
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  eventImageRadius: {
+    borderRadius: 20,
+  },
+  eventOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5, 8, 13, 0.46)',
+  },
+  eventTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  eventBadge: {
+    maxWidth: '58%',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.primaryContainer,
+  },
+  eventBadgeText: {
+    color: Colors.surface,
+    fontFamily: 'Inter-Bold',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  eventDate: {
+    flex: 1,
+    color: Colors.white,
+    fontFamily: 'Inter-Bold',
+    fontSize: 10,
+    fontWeight: '900',
+    textAlign: 'right',
+    letterSpacing: 0.8,
+  },
+  eventCopy: {
+    gap: 10,
+  },
+  eventTitle: {
+    color: Colors.white,
+    fontFamily: 'Lexend-Black',
+    fontSize: 23,
+    lineHeight: 28,
+    fontWeight: '900',
+    fontStyle: 'italic',
+    textShadowColor: '#000000',
+    textShadowOffset: {width: 1, height: 2},
+    textShadowRadius: 0,
+  },
+  eventLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  eventMeta: {
+    flex: 1,
+    color: Colors.white,
+    fontFamily: 'Inter-Bold',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   routeCard: {
     borderRadius: 22,
