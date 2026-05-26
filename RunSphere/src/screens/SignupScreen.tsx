@@ -120,7 +120,7 @@ const SignupScreen = ({navigation}: any) => {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Credentials</Text>
+            <Text style={styles.fieldLabel}>Email Id</Text>
             <View style={styles.inputWrap}>
               <Ionicons name="at-outline" size={20} color={Colors.onSurfaceVariant} />
               <TextInput
@@ -136,7 +136,7 @@ const SignupScreen = ({navigation}: any) => {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Access key</Text>
+            <Text style={styles.fieldLabel}>Create password</Text>
             <View style={styles.inputWrap}>
               <Ionicons name="lock-closed-outline" size={20} color={Colors.onSurfaceVariant} />
               <TextInput
