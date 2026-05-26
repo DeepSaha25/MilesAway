@@ -1,6 +1,6 @@
 import ApiClient from './apiClient';
 
-export type LeaderboardLevel = 'local' | 'city' | 'district' | 'state' | 'country';
+export type LeaderboardLevel = 'global' | 'city' | 'district' | 'state' | 'country';
 export type TimePeriod = 'today' | 'weekly' | 'monthly';
 
 const LeaderboardService = {
@@ -8,8 +8,8 @@ const LeaderboardService = {
     return ApiClient.get(`/leaderboard/${level}?timePeriod=${timePeriod}&limit=${limit}`);
   },
 
-  async getLocal(timePeriod: TimePeriod = 'weekly') {
-    return this.getLeaderboard('local', timePeriod);
+  async getGlobal(timePeriod: TimePeriod = 'weekly') {
+    return this.getLeaderboard('global', timePeriod);
   },
 
   async getCity(timePeriod: TimePeriod = 'weekly') {

@@ -41,7 +41,7 @@ const HomeScreen = ({navigation}: any) => {
   const loadHome = useCallback(async () => {
     await Promise.allSettled([
       refreshDashboard(6),
-      loadLeaderboard('local', 'today', 5),
+      loadLeaderboard('global', 'today', 5),
       loadLeaderboard('city', 'weekly', 5),
     ]);
   }, [loadLeaderboard, refreshDashboard]);
@@ -67,7 +67,7 @@ const HomeScreen = ({navigation}: any) => {
   const displayDistance = dailyDistance.toFixed(1);
   const activeHours = weeklyHours;
   const activeProgress = Math.min(100, (activeHours / weeklyHoursGoal) * 100);
-  const rank = leaderboardRanks['local:today'] ?? null;
+  const rank = leaderboardRanks['global:today'] ?? null;
   const lastPace = lastRun
     ? formatPace(
         lastRun.averagePace || (lastRun.avgSpeed ? 60 / lastRun.avgSpeed : 0),
@@ -188,13 +188,13 @@ const HomeScreen = ({navigation}: any) => {
 
           <View style={styles.card}>
             <View>
-              <Text style={styles.cardLabel}>LOCAL SQUAD RANK</Text>
+              <Text style={styles.cardLabel}>GLOBAL RANK</Text>
               <Text style={styles.rankValue}>{rank ? `#${rank}` : '--'}</Text>
             </View>
             <Text style={styles.rankHelp}>
               {rank
                 ? 'Based on your verified saved runs.'
-                : 'Save a verified run while logged in to enter leaderboards.'}
+                : 'Join the global board now, then run to climb higher.'}
             </Text>
           </View>
 

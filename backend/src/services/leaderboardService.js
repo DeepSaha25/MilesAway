@@ -1,4 +1,5 @@
 const DailyAggregate = require('../models/DailyAggregate');
+const User = require('../models/User');
 const moment = require('moment-timezone');
 const ApiError = require('../utils/ApiError');
 const mongoose = require('mongoose');
@@ -7,7 +8,7 @@ const { normalizeLocationName } = require('../utils/geocoding');
 const CACHE_TTL_MS = 30 * 1000;
 const leaderboardCache = new Map();
 const VALID_PERIODS = new Set(['today', 'weekly', 'week', 'monthly', 'month']);
-const VALID_LEVELS = new Set(['local', 'city', 'district', 'state', 'country']);
+const VALID_LEVELS = new Set(['global', 'local', 'city', 'district', 'state', 'country']);
 
 class LeaderboardService {
   static async generateLeaderboard(level, userLocation = {}, timePeriod = 'today', limit = 100, timezone = 'Asia/Kolkata') {
@@ -16,6 +17,7 @@ class LeaderboardService {
     const safeLimit = this.validateLimit(limit);
     const dateRange = this.getDateRange(safePeriod, timezone);
     const matchStage = this.buildMatchStage(safeLevel, userLocation, dateRange);
+    const userMatchStage = this.buildUserMatchStage(safeLevel, userLocation);
     const cacheKey = this.getCacheKey(safeLevel, userLocation, safePeriod, safeLimit, dateRange);
     const cached = leaderboardCache.get(cacheKey);
 
@@ -23,33 +25,65 @@ class LeaderboardService {
       return cached.value;
     }
 
-    const aggregates = await DailyAggregate.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$userId',
-          totalDistance: { $sum: '$totalDistance' },
-          totalDuration: { $sum: '$totalDuration' },
-          totalRuns: { $sum: '$totalRuns' },
-          caloriesBurned: { $sum: '$caloriesBurned' },
-          elevationGain: { $sum: '$elevationGain' },
-          lastRunAt: { $max: '$lastRunAt' }
-        }
-      },
-      { $sort: { totalDistance: -1, lastRunAt: 1, _id: 1 } },
-      { $limit: safeLimit },
+    const users = await User.aggregate([
+      { $match: userMatchStage },
       {
         $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
+          from: DailyAggregate.collection.name,
+          let: { userId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                ...matchStage,
+                $expr: { $eq: ['$userId', '$$userId'] }
+              }
+            },
+            {
+              $group: {
+                _id: '$userId',
+                totalDistance: { $sum: '$totalDistance' },
+                totalDuration: { $sum: '$totalDuration' },
+                totalRuns: { $sum: '$totalRuns' },
+                caloriesBurned: { $sum: '$caloriesBurned' },
+                elevationGain: { $sum: '$elevationGain' },
+                lastRunAt: { $max: '$lastRunAt' }
+              }
+            }
+          ],
+          as: 'aggregate'
         }
       },
-      { $unwind: '$user' }
+      { $unwind: { path: '$aggregate', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          totalDistance: { $ifNull: ['$aggregate.totalDistance', 0] },
+          totalDuration: { $ifNull: ['$aggregate.totalDuration', 0] },
+          totalRuns: { $ifNull: ['$aggregate.totalRuns', 0] },
+          caloriesBurned: { $ifNull: ['$aggregate.caloriesBurned', 0] },
+          elevationGain: { $ifNull: ['$aggregate.elevationGain', 0] },
+          lastRunAt: '$aggregate.lastRunAt',
+          activeSort: {
+            $cond: [{ $gt: [{ $ifNull: ['$aggregate.totalRuns', 0] }, 0] }, 0, 1]
+          }
+        }
+      },
+      { $sort: { totalDistance: -1, totalRuns: -1, activeSort: 1, lastRunAt: 1, createdAt: 1, _id: 1 } },
+      { $group: { _id: null, rows: { $push: '$$ROOT' } } },
+      { $unwind: { path: '$rows', includeArrayIndex: 'rankIndex' } },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              '$rows',
+              { rank: { $add: ['$rankIndex', 1] } }
+            ]
+          }
+        }
+      },
+      { $limit: safeLimit }
     ]);
 
-    const value = aggregates.map((aggregate, index) => this.toLeaderboardEntry(aggregate, index));
+    const value = users.map((user, index) => this.toLeaderboardEntry({ ...user, user }, index));
     leaderboardCache.set(cacheKey, {
       value,
       expiresAt: Date.now() + CACHE_TTL_MS
@@ -64,6 +98,10 @@ class LeaderboardService {
 
   static async getLocalLeaderboard(userLocation, timePeriod = 'today', limit = 100, timezone = 'Asia/Kolkata') {
     return this.generateLeaderboard('local', userLocation, timePeriod, limit, timezone);
+  }
+
+  static async getGlobalLeaderboard(userLocation = {}, timePeriod = 'today', limit = 100, timezone = 'Asia/Kolkata') {
+    return this.generateLeaderboard('global', userLocation, timePeriod, limit, timezone);
   }
 
   static async getCityLeaderboard(userLocation, timePeriod = 'today', limit = 100, timezone = 'Asia/Kolkata') {
@@ -87,52 +125,68 @@ class LeaderboardService {
     const safePeriod = this.validateTimePeriod(timePeriod);
     const dateRange = this.getDateRange(safePeriod, timezone);
     const matchStage = this.buildMatchStage(safeLevel, userLocation, dateRange);
-
+    const userMatchStage = this.buildUserMatchStage(safeLevel, userLocation);
     const userObjectId = new mongoose.Types.ObjectId(userId);
-    const [userAggregate] = await DailyAggregate.aggregate([
-      { $match: { ...matchStage, userId: userObjectId } },
-      {
-        $group: {
-          _id: '$userId',
-          totalDistance: { $sum: '$totalDistance' },
-          totalDuration: { $sum: '$totalDuration' },
-          totalRuns: { $sum: '$totalRuns' },
-          lastRunAt: { $max: '$lastRunAt' }
-        }
-      }
-    ]);
 
-    if (!userAggregate) {
-      return null;
-    }
-
-    const [{ ahead = 0 } = {}] = await DailyAggregate.aggregate([
-      { $match: matchStage },
+    const [userRank] = await User.aggregate([
+      { $match: userMatchStage },
       {
-        $group: {
-          _id: '$userId',
-          totalDistance: { $sum: '$totalDistance' },
-          lastRunAt: { $max: '$lastRunAt' }
-        }
-      },
-      {
-        $match: {
-          $or: [
-            { totalDistance: { $gt: userAggregate.totalDistance } },
+        $lookup: {
+          from: DailyAggregate.collection.name,
+          let: { userId: '$_id' },
+          pipeline: [
             {
-              totalDistance: userAggregate.totalDistance,
-              lastRunAt: { $lt: userAggregate.lastRunAt }
+              $match: {
+                ...matchStage,
+                $expr: { $eq: ['$userId', '$$userId'] }
+              }
+            },
+            {
+              $group: {
+                _id: '$userId',
+                totalDistance: { $sum: '$totalDistance' },
+                totalDuration: { $sum: '$totalDuration' },
+                totalRuns: { $sum: '$totalRuns' },
+                caloriesBurned: { $sum: '$caloriesBurned' },
+                elevationGain: { $sum: '$elevationGain' },
+                lastRunAt: { $max: '$lastRunAt' }
+              }
             }
-          ]
+          ],
+          as: 'aggregate'
         }
       },
-      { $count: 'ahead' }
+      { $unwind: { path: '$aggregate', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          totalDistance: { $ifNull: ['$aggregate.totalDistance', 0] },
+          totalDuration: { $ifNull: ['$aggregate.totalDuration', 0] },
+          totalRuns: { $ifNull: ['$aggregate.totalRuns', 0] },
+          caloriesBurned: { $ifNull: ['$aggregate.caloriesBurned', 0] },
+          elevationGain: { $ifNull: ['$aggregate.elevationGain', 0] },
+          lastRunAt: '$aggregate.lastRunAt',
+          activeSort: {
+            $cond: [{ $gt: [{ $ifNull: ['$aggregate.totalRuns', 0] }, 0] }, 0, 1]
+          }
+        }
+      },
+      { $sort: { totalDistance: -1, totalRuns: -1, activeSort: 1, lastRunAt: 1, createdAt: 1, _id: 1 } },
+      { $group: { _id: null, rows: { $push: '$$ROOT' } } },
+      { $unwind: { path: '$rows', includeArrayIndex: 'rankIndex' } },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              '$rows',
+              { rank: { $add: ['$rankIndex', 1] } }
+            ]
+          }
+        }
+      },
+      { $match: { _id: userObjectId } }
     ]);
 
-    return {
-      ...this.toLeaderboardEntry({ ...userAggregate, user: { _id: userObjectId, name: null, location: {} } }, ahead),
-      rank: ahead + 1
-    };
+    return userRank ? this.toLeaderboardEntry({ ...userRank, user: userRank }, userRank.rank - 1) : null;
   }
 
   static getDateRange(timePeriod, timezone = 'Asia/Kolkata') {
@@ -194,6 +248,37 @@ class LeaderboardService {
     return matchStage;
   }
 
+  static buildUserMatchStage(level, userLocation) {
+    const matchStage = {};
+
+    if (level === 'local' && Number.isFinite(userLocation.latitude) && Number.isFinite(userLocation.longitude)) {
+      const radiusKm = Number(process.env.LOCAL_LEADERBOARD_RADIUS_KM || 8);
+      matchStage['location.point'] = {
+        $geoWithin: {
+          $centerSphere: [[userLocation.longitude, userLocation.latitude], radiusKm / 6371]
+        }
+      };
+    }
+
+    if (level === 'city' && userLocation.city) {
+      matchStage['location.city'] = normalizeLocationName(userLocation.city);
+    }
+
+    if (level === 'district' && userLocation.district) {
+      matchStage['location.district'] = normalizeLocationName(userLocation.district);
+    }
+
+    if (level === 'state' && userLocation.state) {
+      matchStage['location.state'] = normalizeLocationName(userLocation.state);
+    }
+
+    if (level === 'country' && userLocation.country) {
+      matchStage['location.country'] = normalizeLocationName(userLocation.country);
+    }
+
+    return matchStage;
+  }
+
   static toLeaderboardEntry(aggregate, index) {
     const totalDistance = aggregate.totalDistance || 0;
     const totalDuration = aggregate.totalDuration || 0;
@@ -201,7 +286,7 @@ class LeaderboardService {
     const averagePace = totalDistance > 0 ? (totalDuration / 60) / totalDistance : 0;
 
     return {
-      rank: index + 1,
+      rank: aggregate.rank || index + 1,
       userId: aggregate.user._id,
       name: aggregate.user.name,
       avatar: aggregate.user.avatar || null,

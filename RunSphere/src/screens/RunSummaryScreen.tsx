@@ -139,7 +139,7 @@ const RunSummaryScreen = ({navigation}: any) => {
 
       await Promise.all([
         refreshDashboard(20),
-        loadLeaderboard('local', 'today', 6),
+        loadLeaderboard('global', 'today', 6),
         loadLeaderboard('city', 'weekly', 6),
       ]);
 
@@ -150,7 +150,7 @@ const RunSummaryScreen = ({navigation}: any) => {
         distanceKm: summary.distanceKm,
         elapsedSeconds: summary.elapsedSeconds,
         averagePace: summary.averagePace,
-        rank: leaderboardState.ranks['local:today'] ?? null,
+        rank: leaderboardState.ranks['global:today'] ?? null,
         streak: userState.profile?.streak || profile?.streak || 0,
         weeklyDistance: Number(userState.weeklyStats?.totalDistance || 0),
       });
@@ -211,7 +211,7 @@ const RunSummaryScreen = ({navigation}: any) => {
               </Text>
             </View>
             <View style={styles.savedMetricCard}>
-              <Text style={styles.savedMetricLabel}>Local rank</Text>
+              <Text style={styles.savedMetricLabel}>Global rank</Text>
               <Text style={styles.savedMetricValue}>
                 {savedRun.rank ? `#${savedRun.rank}` : '--'}
               </Text>

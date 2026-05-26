@@ -4,6 +4,8 @@ declare const __DEV__: boolean;
 declare const process:
   | {
       env?: {
+        EXPO_PUBLIC_MILESAWAY_API_URL?: string;
+        EXPO_PUBLIC_MILESAWAY_USE_LOCAL_API?: string;
         MILESAWAY_API_URL?: string;
         MILESAWAY_USE_LOCAL_API?: string;
       };
@@ -13,7 +15,10 @@ declare const process:
 const getConfiguredUrl = () => {
   const globalUrl = (globalThis as any).MILESAWAY_API_URL;
   const envUrl =
-    typeof process !== 'undefined' ? process?.env?.MILESAWAY_API_URL : undefined;
+    typeof process !== 'undefined'
+      ? process?.env?.EXPO_PUBLIC_MILESAWAY_API_URL ||
+        process?.env?.MILESAWAY_API_URL
+      : undefined;
 
   return (envUrl || globalUrl || '').trim();
 };
@@ -29,7 +34,8 @@ const shouldUseLocalApi = () => {
   const globalUseLocal = (globalThis as any).MILESAWAY_USE_LOCAL_API;
   const envUseLocal =
     typeof process !== 'undefined'
-      ? process?.env?.MILESAWAY_USE_LOCAL_API
+      ? process?.env?.EXPO_PUBLIC_MILESAWAY_USE_LOCAL_API ||
+        process?.env?.MILESAWAY_USE_LOCAL_API
       : undefined;
 
   return String(envUseLocal || globalUseLocal || '').toLowerCase() === 'true';

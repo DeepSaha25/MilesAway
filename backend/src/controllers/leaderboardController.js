@@ -20,6 +20,16 @@ const buildLocationScope = (user, level) => {
     };
   }
 
+  if (level === 'global') {
+    return {
+      label: 'Worldwide',
+      city: null,
+      district: null,
+      state: null,
+      country: null
+    };
+  }
+
   return {
     label: location[level] || location.country || null,
     city: location.city || null,
@@ -91,6 +101,22 @@ const buildLeaderboardPayload = async (req, level, fetcher) => {
       data
     }
   };
+};
+
+/**
+ * Get global leaderboard
+ */
+const getGlobalLeaderboard = async (req, res, next) => {
+  try {
+    const payload = await buildLeaderboardPayload(
+      req,
+      'global',
+      LeaderboardService.getGlobalLeaderboard.bind(LeaderboardService)
+    );
+    res.status(payload.statusCode).json(payload.body);
+  } catch (err) {
+    next(err);
+  }
 };
 
 /**
@@ -172,6 +198,7 @@ const getCountryLeaderboard = async (req, res, next) => {
 };
 
 module.exports = {
+  getGlobalLeaderboard,
   getLocalLeaderboard,
   getCityLeaderboard,
   getDistrictLeaderboard,

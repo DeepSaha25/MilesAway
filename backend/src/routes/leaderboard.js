@@ -2,6 +2,7 @@ const express = require('express');
 const authenticate = require('../middlewares/auth');
 const { leaderboardLimiter } = require('../middlewares/rateLimits');
 const {
+  getGlobalLeaderboard,
   getLocalLeaderboard,
   getCityLeaderboard,
   getDistrictLeaderboard,
@@ -14,6 +15,12 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticate);
 router.use(leaderboardLimiter);
+
+/**
+ * GET /api/leaderboard/global
+ * Get global leaderboard
+ */
+router.get('/global', getGlobalLeaderboard);
 
 /**
  * GET /api/leaderboard/local
