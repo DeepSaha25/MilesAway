@@ -205,8 +205,8 @@ const HomeScreen = ({navigation}: any) => {
             </View>
             <Text style={styles.signatureHash}>#MilesAway</Text>
             <View style={styles.signatureCopy}>
-              <Text style={styles.signatureText}>🇮🇳 Crafted in Kolkata</Text>
-              <Text style={styles.signatureText}>❤️ For the #Runners Of the World</Text>
+              <Text style={styles.signatureText}>Crafted in Kolkata 🇮🇳 </Text>
+              <Text style={styles.signatureText}> For the #Runners Of the World ❤️</Text>
             </View>
           </View>
 
