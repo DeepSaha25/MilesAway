@@ -20,6 +20,27 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.1 - 2026-05-26
+
+### Summary
+- Restricted Ticketmaster running event discovery to the user's nearby location when GPS is available, with India as the country fallback instead of global/US-biased results.
+- Reworked the Community running events board into large photo-backed event blocks with event name, date/status, and location.
+
+### Files Changed
+- `backend/src/services/runningEventService.js`: added location radius support, future-event filtering, running-event filtering, India fallback, and Ticketmaster image/location normalization.
+- `backend/src/controllers/communityController.js`: accepts latitude, longitude, radius, and India country fallback for running event queries.
+- `RunSphere/src/services/communityService.ts`: sends structured event query parameters, including optional device coordinates and radius.
+- `RunSphere/src/screens/CommunityFeedScreen.tsx`: requests current location for the race board, falls back to the saved user country or India, and renders larger image event cards.
+- `CHANGELOG.md`: documented the Ticketmaster event location and UI update.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd backend && npm test`
+
+### Notes
+- Device GPS takes priority over country fallback. If location permission is denied or unavailable, the app uses the saved user country, then `IN`.
+- Existing unrelated generated/dist worktree changes were left untouched.
+
 ## v0.2.0 - 2026-05-26
 
 ### Summary
