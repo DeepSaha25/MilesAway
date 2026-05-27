@@ -18,7 +18,7 @@ import {useGoalStore} from '../store/goalStore';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {useUserStore} from '../store/userStore';
 import {Colors} from '../theme/colors';
-import {formatPace} from '../utils/runMetrics';
+import {formatDistance, formatPace} from '../utils/runMetrics';
 
 const MAP_TEXTURE = {
   uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAF5LWdz8RC7eUJcuirl2S2P_Y3Pg2Dmoj4bj8_5lBXpOdtoKTCP6v2aGO0tI0fWk1o7pAXBDi52OSvWAj3CG5ojn87hHm9bxMO922LqFxUYMwyNcDrLGokmzDagZL0FVoEK_O7jtu1Gmz4rf3ll6LRc7VCmZKnrwTHvoO_zr4Jpisf8BMYMxuFLEVlnL4P6002dSifY3V07DshEYlPFpS7gZRKq0_ltCTFjHjM6fdl29nyu_PSJG_rFjkhAaJ5ARfcfz5QuVgcKvCD',
@@ -64,7 +64,7 @@ const HomeScreen = ({navigation}: any) => {
   const lastRun = recentRuns[0];
   const dailyDistance = Number(dailyStats?.totalDistance || 0);
   const weeklyHours = Number(weeklyStats?.totalDuration || 0) / 3600;
-  const displayDistance = dailyDistance.toFixed(1);
+  const displayDistance = formatDistance(dailyDistance, true);
   const activeHours = weeklyHours;
   const activeProgress = Math.min(100, (activeHours / weeklyHoursGoal) * 100);
   const rank = leaderboardRanks['global:today'] ?? null;
@@ -131,9 +131,9 @@ const HomeScreen = ({navigation}: any) => {
 
           <View style={styles.card}>
             <View>
-              <Text style={styles.cardLabel}>LAST PERFORMANCE</Text>
+              <Text style={styles.cardLabel}>LAST SAVED RUN</Text>
               <Text style={styles.runName}>
-                {lastRun ? 'Latest Run' : 'No runs yet'}
+                {lastRun ? `${formatDistance(Number(lastRun.distance || 0))} km` : 'No runs yet'}
               </Text>
             </View>
             <View style={styles.cardFooter}>

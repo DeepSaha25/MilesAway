@@ -19,6 +19,7 @@ import {isGuestUser} from '../services/guestSession';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
 import {getCurrentLocation, requestLocationPermission} from '../utils/location';
+import {formatDistance} from '../utils/runMetrics';
 
 const COUNTRY_CODE_BY_NAME: Record<string, string> = {
   india: 'IN',
@@ -313,7 +314,7 @@ const CommunityFeedScreen = () => {
                       <View style={styles.dataChip}>
                         <Ionicons name="location" size={12} color={Colors.tertiary} />
                         <Text style={styles.dataChipValue}>
-                          {Number(post.runId.distance || 0).toFixed(1)} KM
+                          {formatDistance(Number(post.runId.distance || 0), true)} KM
                         </Text>
                       </View>
                       <View style={styles.dataChip}>
@@ -381,7 +382,7 @@ const CommunityFeedScreen = () => {
                     <Text style={styles.featureStatLabel}>DISTANCE</Text>
                     <Text style={styles.featureStatValue}>
                       {post.runId?.distance
-                        ? `${Number(post.runId.distance).toFixed(1)} KM`
+                        ? `${formatDistance(Number(post.runId.distance), true)} KM`
                         : '--'}
                     </Text>
                   </View>

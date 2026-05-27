@@ -27,6 +27,7 @@ class RunService {
 
     const existingRun = await Run.findOne({ userId, clientRunId });
     if (existingRun) {
+      await this.rebuildUserDerivedStats(userId);
       return { run: existingRun, created: false };
     }
 
@@ -85,11 +86,31 @@ class RunService {
       'location.point.coordinates': [locationData.longitude, locationData.latitude]
     });
 
-    await this.upsertDailyAggregate(user, run);
-    await this.updateUserStats(userId, run.endTime);
+    await this.rebuildUserDerivedStats(userId, run.endTime);
     LeaderboardService.clearCache();
 
     return { run, created: true };
+  }
+
+  static async rebuildUserDerivedStats(userId, runDate = new Date()) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw ApiError.notFound('User not found');
+    }
+
+    await DailyAggregate.deleteMany({ userId });
+
+    const runs = await Run.find({ userId }).sort({ date: 1 });
+    for (const run of runs) {
+      await this.upsertDailyAggregate(user, run);
+    }
+
+    const latestRun = runs[runs.length - 1];
+    await this.updateUserStats(
+      userId,
+      latestRun?.endTime || latestRun?.date || runDate
+    );
+    LeaderboardService.clearCache();
   }
 
   static async updateUserStats(userId, runDate = new Date()) {
@@ -135,6 +156,8 @@ class RunService {
   }
 
   static async getUserAggregatedStats(userId) {
+    await this.rebuildUserDerivedStats(userId);
+
     const totalRunsStats = await Run.aggregate([
       { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {

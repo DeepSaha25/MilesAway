@@ -27,13 +27,18 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Preserved pending summary runs if the tracking screen is reopened, redirecting users back to the unsaved summary instead of resetting route data.
 - Temporarily lowered saved-run validation to at least 0.01 km, 30 seconds, and two GPS samples for easier testing.
 - Fixed backend run save middleware compatibility with the current Mongoose version, resolving the `next is not a function` save failure.
+- Made saved-run metrics recover from MongoDB on dashboard/stat reads by rebuilding per-user derived totals and leaderboard aggregates from permanent run records.
+- Updated distance displays to preserve decimal precision for very short saved runs instead of showing them as 0.0 km.
 
 ### Files Changed
 - `RunSphere/src/screens/RunSummaryScreen.tsx`: added a visible X close action, duplicate-save protection, navigation/back guards, and retry-on-close behavior that only leaves after a successful save.
 - `RunSphere/src/screens/RunTrackingScreen.tsx`: prevents summary-state runs from being reset and updates Finish validation/copy for the auto-save flow.
-- `backend/src/services/runService.js`: lowered server-side minimum saved-run distance and duration to match the app.
+- `backend/src/services/runService.js`: lowered server-side minimum saved-run distance and duration, and rebuilds user totals/daily aggregates from saved MongoDB runs on save and stats refresh.
 - `backend/src/models/Run.js`: updated model validation helper messages for the temporary saved-run threshold and converted save middleware away from callback-style `next`.
 - `backend/test/runService.test.js`: added coverage for the temporary short-run validation threshold.
+- `RunSphere/src/utils/runMetrics.ts`: added decimal-preserving distance formatting for short runs.
+- `RunSphere/src/store/userStore.ts`: derives a temporary UI fallback from MongoDB-backed run history if aggregate endpoints briefly return zero.
+- `RunSphere/src/screens/HomeScreen.tsx`, `RunSphere/src/screens/ProfileScreen.tsx`, `RunSphere/src/screens/LeaderboardScreen.tsx`, `RunSphere/src/screens/HistoryScreen.tsx`, `RunSphere/src/screens/CommunityFeedScreen.tsx`: switched distance display to the decimal-preserving formatter.
 - `CHANGELOG.md`: documented the run summary save-first safety fix.
 
 ### Verification

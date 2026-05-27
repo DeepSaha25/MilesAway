@@ -23,6 +23,7 @@ import {Colors} from '../theme/colors';
 import {
   calculatePaceMinutesPerKm,
   estimateCalories,
+  formatDistance,
   formatClock,
   formatPace,
 } from '../utils/runMetrics';
@@ -275,7 +276,9 @@ const RunSummaryScreen = ({navigation}: any) => {
           </Text>
 
           <View style={styles.savedHeroCard}>
-            <Text style={styles.savedDistance}>{savedRun.distanceKm.toFixed(2)}</Text>
+            <Text style={styles.savedDistance}>
+              {formatDistance(savedRun.distanceKm)}
+            </Text>
             <Text style={styles.savedDistanceLabel}>km completed</Text>
           </View>
 
@@ -283,7 +286,10 @@ const RunSummaryScreen = ({navigation}: any) => {
             <MetricCard label="Time" value={formatClock(savedRun.elapsedSeconds)} />
             <MetricCard label="Pace" value={formatPace(savedRun.averagePace)} />
             <MetricCard label="Global rank" value={savedRun.rank ? `#${savedRun.rank}` : '--'} />
-            <MetricCard label="This week" value={`${savedRun.weeklyDistance.toFixed(1)} km`} />
+            <MetricCard
+              label="This week"
+              value={`${formatDistance(savedRun.weeklyDistance, true)} km`}
+            />
             <MetricCard label="Calories" value={String(Math.round(savedRun.caloriesBurned))} />
             <MetricCard label="Route points" value={String(savedRun.routePoints)} />
           </View>
@@ -338,7 +344,9 @@ const RunSummaryScreen = ({navigation}: any) => {
 
         <View style={styles.heroMetrics}>
           <View>
-            <Text style={styles.distanceValue}>{summary.distanceKm.toFixed(2)}</Text>
+            <Text style={styles.distanceValue}>
+              {formatDistance(summary.distanceKm)}
+            </Text>
             <Text style={styles.distanceLabel}>KM COMPLETED</Text>
           </View>
           <View style={styles.badge}>

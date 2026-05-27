@@ -34,6 +34,32 @@ const emptyPeriodStats = {
   averagePace: 0,
 };
 
+const sumRuns = (runs: any[]) => {
+  const totalDistance = runs.reduce(
+    (total, run) => total + Number(run.distance || 0),
+    0,
+  );
+  const totalDuration = runs.reduce(
+    (total, run) => total + Number(run.duration || 0),
+    0,
+  );
+
+  return {
+    totalDistance: Math.round(totalDistance * 100) / 100,
+    totalDuration,
+    totalRuns: runs.length,
+    avgSpeed: totalDuration > 0 ? totalDistance / (totalDuration / 3600) : 0,
+    averagePace: totalDistance > 0 ? totalDuration / 60 / totalDistance : 0,
+  };
+};
+
+const sameLocalDay = (dateA: Date, dateB: Date) =>
+  dateA.getFullYear() === dateB.getFullYear() &&
+  dateA.getMonth() === dateB.getMonth() &&
+  dateA.getDate() === dateB.getDate();
+
+const getRunDate = (run: any) => new Date(run.date || run.endTime || run.createdAt);
+
 const guestProfile = {
   ...guestUser,
   totalDistance: 0,
@@ -83,6 +109,29 @@ export const useUserStore = create<UserState>()((set, get) => ({
         profileRes.status === 'fulfilled'
           ? profileRes.value.data
           : get().profile;
+      const recentRuns =
+        historyRes.status === 'fulfilled'
+          ? historyRes.value.data || []
+          : get().recentRuns;
+      const now = new Date();
+      const weekStart = new Date();
+      weekStart.setDate(now.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+      const historyStats = sumRuns(recentRuns);
+      const historyDailyStats = sumRuns(
+        recentRuns.filter((run: any) => sameLocalDay(getRunDate(run), now)),
+      );
+      const historyWeeklyStats = sumRuns(
+        recentRuns.filter((run: any) => getRunDate(run) >= weekStart),
+      );
+      const serverStats =
+        statsRes.status === 'fulfilled' ? statsRes.value.data : get().stats;
+      const serverDailyStats =
+        dailyRes.status === 'fulfilled' ? dailyRes.value.data : get().dailyStats;
+      const serverWeeklyStats =
+        weeklyRes.status === 'fulfilled'
+          ? weeklyRes.value.data
+          : get().weeklyStats;
 
       if (nextProfile) {
         await useAuthStore.getState().setUser(nextProfile);
@@ -91,19 +140,18 @@ export const useUserStore = create<UserState>()((set, get) => ({
       set({
         profile: nextProfile,
         stats:
-          statsRes.status === 'fulfilled' ? statsRes.value.data : get().stats,
+          Number(serverStats?.totalDistance || 0) > 0
+            ? serverStats
+            : historyStats,
         dailyStats:
-          dailyRes.status === 'fulfilled'
-            ? dailyRes.value.data
-            : get().dailyStats,
+          Number(serverDailyStats?.totalDistance || 0) > 0
+            ? serverDailyStats
+            : historyDailyStats,
         weeklyStats:
-          weeklyRes.status === 'fulfilled'
-            ? weeklyRes.value.data
-            : get().weeklyStats,
-        recentRuns:
-          historyRes.status === 'fulfilled'
-            ? historyRes.value.data || []
-            : get().recentRuns,
+          Number(serverWeeklyStats?.totalDistance || 0) > 0
+            ? serverWeeklyStats
+            : historyWeeklyStats,
+        recentRuns,
       });
     } finally {
       set({ isLoading: false });

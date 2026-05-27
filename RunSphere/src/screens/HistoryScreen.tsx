@@ -13,7 +13,12 @@ import AppHeader from '../components/AppHeader';
 import MiniRoutePreview from '../components/MiniRoutePreview';
 import {useUserStore} from '../store/userStore';
 import {Colors} from '../theme/colors';
-import {formatClock, formatPace, formatRunDate} from '../utils/runMetrics';
+import {
+  formatClock,
+  formatDistance,
+  formatPace,
+  formatRunDate,
+} from '../utils/runMetrics';
 
 const HistoryScreen = () => {
   const recentRuns = useUserStore(state => state.recentRuns);
@@ -85,7 +90,7 @@ const HistoryScreen = () => {
                   <View style={styles.cardHeader}>
                     <View>
                       <Text style={styles.distanceValue}>
-                        {Number(run.distance || 0).toFixed(2)} km
+                        {formatDistance(Number(run.distance || 0))} km
                       </Text>
                       <Text style={styles.runDate}>
                         {formatRunDate(run.date)}

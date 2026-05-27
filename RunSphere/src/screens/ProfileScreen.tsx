@@ -20,7 +20,12 @@ import {
   getCurrentLocation,
   requestLocationPermission,
 } from '../utils/location';
-import {formatClock, formatPace, formatRunDate} from '../utils/runMetrics';
+import {
+  formatClock,
+  formatDistance,
+  formatPace,
+  formatRunDate,
+} from '../utils/runMetrics';
 
 const ProfileScreen = () => {
   const profile = useUserStore(state => state.profile);
@@ -195,13 +200,13 @@ const ProfileScreen = () => {
           </View>
           <View style={styles.distanceLine}>
             <Text adjustsFontSizeToFit numberOfLines={1} style={styles.lifetimeValue}>
-              {Math.round(totalDistance).toLocaleString()}
+              {formatDistance(totalDistance, true)}
             </Text>
             <Text style={styles.kmUnit}>KM</Text>
           </View>
           <View style={styles.trendLine}>
             <Ionicons name="calendar" size={14} color={Colors.secondary} />
-            <Text style={styles.trendText}>{weeklyDistance.toFixed(1)} km this week</Text>
+            <Text style={styles.trendText}>{formatDistance(weeklyDistance, true)} km this week</Text>
           </View>
         </View>
 
@@ -232,7 +237,7 @@ const ProfileScreen = () => {
           <View style={styles.barRow}>
             {weeklyDistance > 0 ? (
               <View style={styles.weeklyTotalBlock}>
-                <Text style={styles.weeklyTotalValue}>{weeklyDistance.toFixed(1)}</Text>
+                <Text style={styles.weeklyTotalValue}>{formatDistance(weeklyDistance, true)}</Text>
                 <Text style={styles.weeklyTotalLabel}>KM THIS WEEK</Text>
               </View>
             ) : (
@@ -272,7 +277,7 @@ const ProfileScreen = () => {
                 <View style={styles.recentCardHeader}>
                   <View style={styles.recentDistanceBlock}>
                     <Text style={styles.recentDistance}>
-                      {Number(run.distance || 0).toFixed(2)}
+                      {formatDistance(Number(run.distance || 0))}
                     </Text>
                     <Text style={styles.recentDistanceUnit}>KM</Text>
                   </View>

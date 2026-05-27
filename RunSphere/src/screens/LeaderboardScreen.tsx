@@ -15,6 +15,7 @@ import Avatar from '../components/Avatar';
 import {LeaderboardLevel, TimePeriod} from '../services/leaderboardService';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {Colors} from '../theme/colors';
+import {formatDistance} from '../utils/runMetrics';
 
 const scopeTabs: {label: string; value: LeaderboardLevel}[] = [
   {label: 'Global', value: 'global'},
@@ -191,7 +192,7 @@ const LeaderboardScreen = () => {
                       </Text>
                       {entry.you ? <Text style={styles.youPodiumBadge}>YOU</Text> : null}
                       <Text style={[styles.podiumDistance, isWinner && styles.winnerDistance]}>
-                        {entry.totalDistance.toFixed(1)}
+                        {formatDistance(entry.totalDistance, true)}
                         <Text style={styles.podiumDistanceUnit}> KM</Text>
                       </Text>
                     </View>
@@ -228,7 +229,7 @@ const LeaderboardScreen = () => {
                   </View>
                   <View style={styles.rowDistanceWrap}>
                     <Text style={[styles.rowDistance, entry.you && styles.youText]}>
-                      {Number(entry.totalDistance || 0).toFixed(1)}
+                      {formatDistance(Number(entry.totalDistance || 0), true)}
                     </Text>
                     <Text style={styles.rowUnit}>KM</Text>
                     <Text style={styles.rowRuns}>{entry.totalRuns || 0} RUNS</Text>

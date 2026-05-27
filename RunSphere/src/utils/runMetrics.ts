@@ -135,6 +135,16 @@ export const formatPace = (paceMinutesPerKm: number) => {
   return `${minutes}:${seconds} /km`;
 };
 
+export const formatDistance = (distanceKm: number, compact = false) => {
+  const distance = Number(distanceKm || 0);
+
+  if (distance > 0 && distance < 1) {
+    return distance.toFixed(3);
+  }
+
+  return distance.toFixed(compact ? 2 : 3);
+};
+
 export const formatRunDate = (date: string | Date) =>
   format(new Date(date), 'dd MMM yyyy, hh:mm a');
 
