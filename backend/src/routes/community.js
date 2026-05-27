@@ -4,11 +4,18 @@ const { communityLimiter } = require('../middlewares/rateLimits');
 const {
   createPost,
   getFeed,
+  getRunningEvents,
   toggleLike,
   addComment
 } = require('../controllers/communityController');
 
 const router = express.Router();
+
+/**
+ * GET /api/community/events
+ * Get upcoming live running events and marathons
+ */
+router.get('/events', communityLimiter, getRunningEvents);
 
 // All routes require auth
 router.use(authenticate);

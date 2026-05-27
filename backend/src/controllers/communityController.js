@@ -1,4 +1,5 @@
 const CommunityService = require('../services/communityService');
+const RunningEventService = require('../services/runningEventService');
 
 const createPost = async (req, res, next) => {
   try {
@@ -36,6 +37,35 @@ const getFeed = async (req, res, next) => {
       status: 'success',
       message: 'Feed retrieved successfully',
       ...feed
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getRunningEvents = async (req, res, next) => {
+  try {
+    const {
+      countryCode = 'IN',
+      keyword = 'running',
+      limit = 10,
+      latitude,
+      longitude,
+      radiusKm
+    } = req.query;
+    const events = await RunningEventService.getLiveEvents({
+      countryCode: String(countryCode).toUpperCase(),
+      keyword: String(keyword),
+      limit: Number(limit),
+      latitude: latitude === undefined ? undefined : Number(latitude),
+      longitude: longitude === undefined ? undefined : Number(longitude),
+      radiusKm: radiusKm === undefined ? undefined : Number(radiusKm)
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Running events retrieved successfully',
+      events
     });
   } catch (err) {
     next(err);
@@ -84,4 +114,4 @@ const addComment = async (req, res, next) => {
   }
 };
 
-module.exports = { createPost, getFeed, toggleLike, addComment };
+module.exports = { createPost, getFeed, getRunningEvents, toggleLike, addComment };

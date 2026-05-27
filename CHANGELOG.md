@@ -27,6 +27,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Reworked the Community running events board into large photo-backed event blocks with event name, date/status, and location.
 - Changed completed valid runs to auto-save after the user confirms Finish, with retry behavior if saving fails.
 - Added recent saved runs to the Profile dashboard and renamed Weekly Volume to This Week's Distance.
+- Labeled external running event links as Event Details instead of ticket-buying actions.
 
 ### Files Changed
 - `backend/src/services/runningEventService.js`: added location radius support, future-event filtering, running-event filtering, India fallback, and Ticketmaster image/location normalization.
@@ -35,6 +36,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - `RunSphere/src/screens/CommunityFeedScreen.tsx`: requests current location for the race board, falls back to the saved user country or India, and renders larger image event cards.
 - `RunSphere/src/screens/RunSummaryScreen.tsx`: replaced manual post-run saving with automatic saving, saved confirmation, and retry state that preserves route data on failure.
 - `RunSphere/src/screens/ProfileScreen.tsx`: added recent run cards with route previews and clarified the weekly distance section wording.
+- `backend/src/services/runningEventService.js`: exposes Ticketmaster links as event detail URLs so the app can treat them as information pages rather than ticket purchase actions.
 - `CHANGELOG.md`: documented the Ticketmaster event location and UI update.
 
 ### Verification
