@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,6 +15,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
+
+const PRIVACY_POLICY_URL = 'https://sites.google.com/view/privacypolicy-milesaway/';
 
 const LoginScreen = ({navigation}: any) => {
   const [email, setEmail] = useState('');
@@ -57,6 +60,12 @@ const LoginScreen = ({navigation}: any) => {
     } finally {
       setLoading(null);
     }
+  };
+
+  const openPrivacyPolicy = () => {
+    Linking.openURL(PRIVACY_POLICY_URL).catch(() => {
+      Alert.alert('Unable to open link', 'Please try again later.');
+    });
   };
 
   return (
@@ -145,6 +154,14 @@ const LoginScreen = ({navigation}: any) => {
           <Text style={styles.footerLink} onPress={() => navigation.navigate('Signup')}>
             JOIN NOW
           </Text>
+        </Text>
+
+        <Text style={styles.privacyText}>
+          By continuing, you agree to the{' '}
+          <Text style={styles.privacyLink} onPress={openPrivacyPolicy}>
+            Privacy Policy
+          </Text>
+          .
         </Text>
       </ScrollView>
     </View>
@@ -301,6 +318,17 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '900',
     letterSpacing: 1.2,
+  },
+  privacyText: {
+    marginTop: 14,
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  privacyLink: {
+    color: Colors.primary,
+    fontWeight: '900',
   },
   systemFooter: {
     marginTop: 34,

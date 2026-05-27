@@ -114,7 +114,16 @@ const RunTrackingScreen = ({navigation}: any) => {
 
     const bootstrap = async () => {
       const currentRun = useRunStore.getState();
-      if (currentRun.status === 'idle' || currentRun.status === 'summary') {
+      if (currentRun.status === 'summary') {
+        if (currentRun.coordinates.length >= 2) {
+          navigation.replace('RunSummary');
+          return;
+        }
+
+        resetRun();
+      }
+
+      if (currentRun.status === 'idle') {
         resetRun();
       }
 
@@ -206,7 +215,7 @@ const RunTrackingScreen = ({navigation}: any) => {
   };
 
   const finishRun = () => {
-    Alert.alert('Finish run?', 'You will review the summary before saving.', [
+    Alert.alert('Finish run?', 'Your run will be saved and shown on the summary.', [
       {text: 'Keep running', style: 'cancel'},
       {
         text: 'Finish',
@@ -216,6 +225,16 @@ const RunTrackingScreen = ({navigation}: any) => {
               type: 'error',
               text1: 'Run discarded',
               text2: 'A saved run needs at least 0.2 km and 60 seconds.',
+            });
+            discardRun();
+            return;
+          }
+
+          if (coordinates.length < 2) {
+            Toast.show({
+              type: 'error',
+              text1: 'Run discarded',
+              text2: 'A saved run needs at least two GPS samples.',
             });
             discardRun();
             return;

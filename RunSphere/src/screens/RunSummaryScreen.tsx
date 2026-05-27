@@ -44,6 +44,8 @@ const RunSummaryScreen = ({navigation}: any) => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedRun, setSavedRun] = useState<SavedRunResult | null>(null);
   const saveStartedRef = useRef(false);
+  const saveInFlightRef = useRef<Promise<boolean> | null>(null);
+  const allowLeavingRef = useRef(false);
   const authUser = useAuthStore(state => state.user);
   const profile = useUserStore(state => state.profile);
   const refreshDashboard = useUserStore(state => state.refreshDashboard);
@@ -71,6 +73,7 @@ const RunSummaryScreen = ({navigation}: any) => {
   }, [distanceKm, elapsedSeconds, elevationGain, finishedAt, profile?.weightKg]);
 
   const goHome = useCallback(() => {
+    allowLeavingRef.current = true;
     navigation.reset({
       index: 0,
       routes: [{name: 'Main', params: {screen: 'Home'}}],
@@ -78,90 +81,111 @@ const RunSummaryScreen = ({navigation}: any) => {
   }, [navigation]);
 
   const viewProfile = () => {
+    allowLeavingRef.current = true;
     navigation.reset({
       index: 0,
       routes: [{name: 'Main', params: {screen: 'Profile'}}],
     });
   };
 
-  const saveRun = useCallback(async () => {
-    if (coordinates.length === 0 || distanceKm < 0.2) {
-      setSaving(false);
-      setSaveError('Track at least 0.2 km before saving a run.');
-      Toast.show({
-        type: 'error',
-        text1: 'Run is too short',
-        text2: 'Track at least 0.2 km before saving a run.',
-      });
-      return;
+  const saveRun = useCallback(async (): Promise<boolean> => {
+    if (saveInFlightRef.current) {
+      return saveInFlightRef.current;
     }
 
-    setSaving(true);
-    setSaveError(null);
-    try {
-      if (isGuestUser(authUser)) {
-        await GuestRunStorage.saveRun({
-          clientRunId: clientRunId || `guest-${Date.now()}`,
-          coordinates,
-          distanceKm: summary.distanceKm,
-          elapsedSeconds: summary.elapsedSeconds,
-          elevationGain: summary.elevationGain,
-          weightKg: profile?.weightKg,
-          startedAt,
-          finishedAt: summary.finishedAt,
+    const saveTask = (async () => {
+      if (coordinates.length < 2 || distanceKm < 0.2 || elapsedSeconds < 60) {
+        setSaving(false);
+        setSaveError(
+          'Track at least 0.2 km, 60 seconds, and two GPS points before saving a run.',
+        );
+        Toast.show({
+          type: 'error',
+          text1: 'Run is too short',
+          text2: 'A saved run needs at least 0.2 km and 60 seconds.',
         });
-      } else {
-        await RunService.submitRun({
-          clientRunId: clientRunId || `manual-${Date.now()}`,
-          coordinates,
-        });
+        return false;
       }
 
-      await Promise.all([
-        refreshDashboard(20),
-        loadLeaderboard('global', 'today', 6),
-        loadLeaderboard('city', 'weekly', 6),
-      ]);
+      setSaving(true);
+      setSaveError(null);
+      try {
+        if (isGuestUser(authUser)) {
+          await GuestRunStorage.saveRun({
+            clientRunId: clientRunId || `guest-${Date.now()}`,
+            coordinates,
+            distanceKm: summary.distanceKm,
+            elapsedSeconds: summary.elapsedSeconds,
+            elevationGain: summary.elevationGain,
+            weightKg: profile?.weightKg,
+            startedAt,
+            finishedAt: summary.finishedAt,
+          });
+        } else {
+          await RunService.submitRun({
+            clientRunId: clientRunId || `manual-${Date.now()}`,
+            coordinates,
+          });
+        }
 
-      const userState = useUserStore.getState();
-      const leaderboardState = useLeaderboardStore.getState();
+        await Promise.all([
+          refreshDashboard(20),
+          loadLeaderboard('global', 'today', 6),
+          loadLeaderboard('city', 'weekly', 6),
+        ]);
 
-      setSavedRun({
-        distanceKm: summary.distanceKm,
-        elapsedSeconds: summary.elapsedSeconds,
-        averagePace: summary.averagePace,
-        rank: leaderboardState.ranks['global:today'] ?? null,
-        streak: userState.profile?.streak || profile?.streak || 0,
-        weeklyDistance: Number(userState.weeklyStats?.totalDistance || 0),
-        caloriesBurned: summary.caloriesBurned,
-        elevationGain: summary.elevationGain,
-        routePoints: coordinates.length,
-      });
+        const userState = useUserStore.getState();
+        const leaderboardState = useLeaderboardStore.getState();
 
-      resetRun();
+        setSavedRun({
+          distanceKm: summary.distanceKm,
+          elapsedSeconds: summary.elapsedSeconds,
+          averagePace: summary.averagePace,
+          rank: leaderboardState.ranks['global:today'] ?? null,
+          streak: userState.profile?.streak || profile?.streak || 0,
+          weeklyDistance: Number(userState.weeklyStats?.totalDistance || 0),
+          caloriesBurned: summary.caloriesBurned,
+          elevationGain: summary.elevationGain,
+          routePoints: coordinates.length,
+        });
 
-      Toast.show({
-        type: 'success',
-        text1: 'Run saved',
-        text2: isGuestUser(authUser)
-          ? 'Guest mode keeps this run on this device.'
-          : 'Your stats and leaderboards have been updated.',
-      });
-    } catch (error: any) {
-      setSaveError(error?.message || 'Please try again.');
-      Toast.show({
-        type: 'error',
-        text1: 'Could not save run',
-        text2: error?.message || 'Please try again.',
-      });
-    } finally {
-      setSaving(false);
-    }
+        resetRun();
+
+        Toast.show({
+          type: 'success',
+          text1: 'Run saved',
+          text2: isGuestUser(authUser)
+            ? 'Guest mode keeps this run on this device.'
+            : 'Your stats and leaderboards have been updated.',
+        });
+        return true;
+      } catch (error: any) {
+        setSaveError(error?.message || 'Please try again.');
+        Toast.show({
+          type: 'error',
+          text1: 'Could not save run',
+          text2: error?.message || 'Please try again.',
+        });
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    })();
+
+    saveInFlightRef.current = saveTask;
+    saveTask.finally(() => {
+      if (saveInFlightRef.current === saveTask) {
+        saveInFlightRef.current = null;
+      }
+    });
+
+    return saveTask;
   }, [
     authUser,
     clientRunId,
     coordinates,
     distanceKm,
+    elapsedSeconds,
     loadLeaderboard,
     profile?.streak,
     profile?.weightKg,
@@ -176,6 +200,29 @@ const RunSummaryScreen = ({navigation}: any) => {
     summary.finishedAt,
   ]);
 
+  const handleClose = useCallback(async () => {
+    if (savedRun) {
+      Toast.show({
+        type: 'success',
+        text1: 'Run saved',
+        text2: 'Your run is available from your profile dashboard.',
+      });
+      goHome();
+      return;
+    }
+
+    Toast.show({
+      type: 'info',
+      text1: saving ? 'Saving run' : 'Saving before closing',
+      text2: 'We will close this screen after your run is saved.',
+    });
+
+    const didSave = await saveRun();
+    if (didSave) {
+      goHome();
+    }
+  }, [goHome, saveRun, savedRun, saving]);
+
   useEffect(() => {
     if (saveStartedRef.current || savedRun) {
       return;
@@ -187,17 +234,37 @@ const RunSummaryScreen = ({navigation}: any) => {
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      goHome();
+      handleClose();
       return true;
     });
 
     return () => subscription.remove();
-  }, [goHome]);
+  }, [handleClose]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
+      if (allowLeavingRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+      handleClose();
+    });
+
+    return unsubscribe;
+  }, [handleClose, navigation]);
 
   if (savedRun) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={Colors.surfaceDim} />
+        <TouchableOpacity
+          accessibilityLabel="Close saved run summary"
+          activeOpacity={0.75}
+          style={styles.closeButton}
+          onPress={handleClose}>
+          <Text style={styles.closeButtonText}>X</Text>
+        </TouchableOpacity>
         <ScrollView
           contentContainerStyle={styles.savedState}
           showsVerticalScrollIndicator={false}>
@@ -246,6 +313,13 @@ const RunSummaryScreen = ({navigation}: any) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.surfaceDim} />
+      <TouchableOpacity
+        accessibilityLabel="Close run summary"
+        activeOpacity={0.75}
+        style={styles.closeButton}
+        onPress={handleClose}>
+        <Text style={styles.closeButtonText}>X</Text>
+      </TouchableOpacity>
       <ScrollView
         contentContainerStyle={styles.summaryState}
         showsVerticalScrollIndicator={false}>
@@ -306,7 +380,7 @@ const RunSummaryScreen = ({navigation}: any) => {
               {saveError} Your route is still on this device.
             </Text>
             <GradientButton title="Retry Save" onPress={saveRun} style={styles.saveButton} />
-            <TouchableOpacity style={styles.secondaryButton} onPress={goHome}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={handleClose}>
               <Text style={styles.secondaryButtonText}>Back Home</Text>
             </TouchableOpacity>
           </View>
@@ -332,8 +406,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 52,
   },
+  closeButton: {
+    position: 'absolute',
+    top: 54,
+    right: 20,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Lexend-Bold',
+    fontSize: 30,
+    fontWeight: '900',
+  },
   summaryState: {
     paddingBottom: 28,
+    paddingRight: 2,
   },
   savedState: {
     flexGrow: 1,

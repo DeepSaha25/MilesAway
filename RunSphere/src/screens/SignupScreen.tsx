@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,6 +15,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useAuthStore} from '../store/authStore';
 import {Colors} from '../theme/colors';
+
+const PRIVACY_POLICY_URL = 'https://sites.google.com/view/privacypolicy-milesaway/';
 
 const SignupScreen = ({navigation}: any) => {
   const [name, setName] = useState('');
@@ -90,6 +93,12 @@ const SignupScreen = ({navigation}: any) => {
     }
   };
 
+  const openPrivacyPolicy = () => {
+    Linking.openURL(PRIVACY_POLICY_URL).catch(() => {
+      Alert.alert('Unable to open link', 'Please try again later.');
+    });
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.surface} />
@@ -159,7 +168,11 @@ const SignupScreen = ({navigation}: any) => {
               ) : null}
             </View>
             <Text style={styles.termsText}>
-              I agree to the terms and privacy policy.
+              I agree to the terms and{' '}
+              <Text style={styles.termsLink} onPress={openPrivacyPolicy}>
+                privacy policy
+              </Text>
+              .
             </Text>
           </TouchableOpacity>
 
@@ -308,6 +321,10 @@ const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     fontSize: 13,
     lineHeight: 20,
+  },
+  termsLink: {
+    color: Colors.primary,
+    fontWeight: '900',
   },
   primaryButton: {
     borderRadius: 20,
