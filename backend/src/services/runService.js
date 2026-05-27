@@ -19,7 +19,7 @@ const ROUTE_SIMPLIFY_DISTANCE_METERS = 20;
 const EARTH_RADIUS_METERS = 6371e3;
 
 class RunService {
-  static async submitRun(userId, { clientRunId, coordinates }) {
+  static async submitRun(userId, { clientRunId, coordinates, startedAt, finishedAt, elapsedSeconds }) {
     const user = await User.findById(userId);
     if (!user) {
       throw ApiError.notFound('User not found');
@@ -32,7 +32,11 @@ class RunService {
     }
 
     const normalizedCoordinates = this.normalizeCoordinates(coordinates);
-    const trustedMetrics = this.calculateTrustedMetrics(normalizedCoordinates);
+    const trustedMetrics = this.calculateTrustedMetrics(normalizedCoordinates, {
+      startedAt,
+      finishedAt,
+      elapsedSeconds
+    });
     const lastCoordinate = trustedMetrics.coordinates[trustedMetrics.coordinates.length - 1];
     const locationData = await getLocationFromCoordinates(lastCoordinate.latitude, lastCoordinate.longitude);
     const caloriesBurned = this.calculateCalories(trustedMetrics.distanceKm, user.weightKg);
@@ -261,7 +265,7 @@ class RunService {
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
 
-  static calculateTrustedMetrics(coordinates) {
+  static calculateTrustedMetrics(coordinates, timing = {}) {
     if (coordinates.length < 2) {
       throw ApiError.badRequest('At least two valid GPS samples are required');
     }
@@ -335,9 +339,28 @@ class RunService {
       throw ApiError.badRequest('Not enough movement after GPS drift filtering');
     }
 
-    const startTime = acceptedCoordinates[0].timestamp;
-    const endTime = acceptedCoordinates[acceptedCoordinates.length - 1].timestamp;
-    const durationSeconds = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+    const coordinateStartTime = acceptedCoordinates[0].timestamp;
+    const coordinateEndTime = acceptedCoordinates[acceptedCoordinates.length - 1].timestamp;
+    const clientStartTime = timing.startedAt ? new Date(timing.startedAt) : null;
+    const clientEndTime = timing.finishedAt ? new Date(timing.finishedAt) : null;
+    const clientElapsedSeconds = Number(timing.elapsedSeconds);
+    const hasClientTiming =
+      clientStartTime instanceof Date &&
+      !Number.isNaN(clientStartTime.getTime()) &&
+      clientEndTime instanceof Date &&
+      !Number.isNaN(clientEndTime.getTime()) &&
+      clientStartTime.getTime() >= moment().subtract(MAX_BACKDATE_DAYS, 'days').valueOf() &&
+      clientEndTime.getTime() <= now + MAX_FUTURE_SKEW_MS &&
+      clientEndTime.getTime() >= clientStartTime.getTime();
+    const clientWindowSeconds = hasClientTiming
+      ? Math.round((clientEndTime.getTime() - clientStartTime.getTime()) / 1000)
+      : 0;
+    const durationSeconds =
+      Number.isFinite(clientElapsedSeconds) && clientElapsedSeconds > 0
+        ? Math.round(clientElapsedSeconds)
+        : clientWindowSeconds || Math.round((coordinateEndTime.getTime() - coordinateStartTime.getTime()) / 1000);
+    const startTime = hasClientTiming ? clientStartTime : coordinateStartTime;
+    const endTime = hasClientTiming ? clientEndTime : coordinateEndTime;
     const distanceKm = Math.round((totalMeters / 1000) * 100) / 100;
 
     if (durationSeconds < MIN_RUN_DURATION_SECONDS) {

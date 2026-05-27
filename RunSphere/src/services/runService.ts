@@ -2,6 +2,9 @@ import ApiClient from './apiClient';
 
 export interface RunPayload {
   clientRunId: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  elapsedSeconds?: number;
   coordinates: Array<{
     latitude: number;
     longitude: number;

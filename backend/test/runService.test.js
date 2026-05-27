@@ -79,3 +79,20 @@ test('run model validation helper accepts temporary short-run threshold', () => 
     /Run duration must be at least 30 seconds/
   );
 });
+
+test('uses sane client elapsed time for short saved runs', () => {
+  const metrics = RunService.calculateTrustedMetrics(
+    RunService.normalizeCoordinates([
+      sample(0, 22.57, 88.36),
+      sample(20, 22.5702, 88.3602)
+    ]),
+    {
+      startedAt: sample(0, 22.57, 88.36).timestamp,
+      finishedAt: sample(37, 22.5702, 88.3602).timestamp,
+      elapsedSeconds: 37
+    }
+  );
+
+  assert.equal(metrics.durationSeconds, 37);
+  assert.ok(metrics.distanceKm >= 0.01);
+});

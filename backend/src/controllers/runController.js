@@ -6,11 +6,14 @@ const RunService = require('../services/runService');
 const submitRun = async (req, res, next) => {
   try {
     const userId = req.userId;
-    const { clientRunId, coordinates } = req.body;
+    const { clientRunId, coordinates, startedAt, finishedAt, elapsedSeconds } = req.body;
 
     const result = await RunService.submitRun(userId, {
       clientRunId,
       coordinates,
+      startedAt,
+      finishedAt,
+      elapsedSeconds,
     });
 
     res.status(result.created ? 201 : 200).json({

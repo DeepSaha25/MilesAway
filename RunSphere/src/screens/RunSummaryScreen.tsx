@@ -125,6 +125,9 @@ const RunSummaryScreen = ({navigation}: any) => {
         } else {
           await RunService.submitRun({
             clientRunId: clientRunId || `manual-${Date.now()}`,
+            startedAt,
+            finishedAt: summary.finishedAt,
+            elapsedSeconds: summary.elapsedSeconds,
             coordinates,
           });
         }
