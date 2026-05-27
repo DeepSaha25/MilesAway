@@ -220,11 +220,11 @@ const RunTrackingScreen = ({navigation}: any) => {
       {
         text: 'Finish',
         onPress: () => {
-          if (distanceKm < 0.2 || elapsedSeconds < 60) {
+          if (distanceKm < 0.01 || elapsedSeconds < 30) {
             Toast.show({
               type: 'error',
               text1: 'Run discarded',
-              text2: 'A saved run needs at least 0.2 km and 60 seconds.',
+              text2: 'A saved run needs at least 0.01 km and 30 seconds.',
             });
             discardRun();
             return;

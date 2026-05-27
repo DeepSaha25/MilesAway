@@ -94,15 +94,15 @@ const RunSummaryScreen = ({navigation}: any) => {
     }
 
     const saveTask = (async () => {
-      if (coordinates.length < 2 || distanceKm < 0.2 || elapsedSeconds < 60) {
+      if (coordinates.length < 2 || distanceKm < 0.01 || elapsedSeconds < 30) {
         setSaving(false);
         setSaveError(
-          'Track at least 0.2 km, 60 seconds, and two GPS points before saving a run.',
+          'Track at least 0.01 km, 30 seconds, and two GPS points before saving a run.',
         );
         Toast.show({
           type: 'error',
           text1: 'Run is too short',
-          text2: 'A saved run needs at least 0.2 km and 60 seconds.',
+          text2: 'A saved run needs at least 0.01 km and 30 seconds.',
         });
         return false;
       }

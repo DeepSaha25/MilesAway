@@ -20,6 +20,29 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.2 - 2026-05-27
+
+### Summary
+- Made the Run Summary close/back flow save-first so a valid finished run cannot be discarded by tapping X, pressing Android back, or leaving the summary before save completes.
+- Preserved pending summary runs if the tracking screen is reopened, redirecting users back to the unsaved summary instead of resetting route data.
+- Temporarily lowered saved-run validation to at least 0.01 km, 30 seconds, and two GPS samples for easier testing.
+
+### Files Changed
+- `RunSphere/src/screens/RunSummaryScreen.tsx`: added a visible X close action, duplicate-save protection, navigation/back guards, and retry-on-close behavior that only leaves after a successful save.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: prevents summary-state runs from being reset and updates Finish validation/copy for the auto-save flow.
+- `backend/src/services/runService.js`: lowered server-side minimum saved-run distance and duration to match the app.
+- `backend/src/models/Run.js`: updated model validation helper messages for the temporary saved-run threshold.
+- `CHANGELOG.md`: documented the run summary save-first safety fix.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- `npm run lint` passed with existing warnings only for unused `no-console` disable comments in unrelated files.
+- A fresh Expo/EAS update or app rebuild is needed before installed devices receive this fix.
+
 ## v0.2.1 - 2026-05-26
 
 ### Summary

@@ -178,16 +178,16 @@ RunSchema.index({ 'location.country': 1, date: -1 });
 RunSchema.statics.validateRunData = function (distance, duration) {
   const errors = [];
 
-  if (distance < 0.2) {
-    errors.push('Distance must be at least 0.2 km');
+  if (distance < 0.01) {
+    errors.push('Distance must be at least 0.01 km');
   }
 
   if (duration <= 0) {
     errors.push('Duration must be greater than 0');
   }
 
-  if (duration < 60) {
-    errors.push('Run duration must be at least 60 seconds');
+  if (duration < 30) {
+    errors.push('Run duration must be at least 30 seconds');
   }
 
   const speedKmh = (distance / (duration / 3600));

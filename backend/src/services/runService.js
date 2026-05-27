@@ -7,8 +7,8 @@ const { getLocationFromCoordinates } = require('../utils/geocoding');
 const LeaderboardService = require('./leaderboardService');
 const ApiError = require('../utils/ApiError');
 
-const MIN_RUN_DISTANCE_KM = 0.2;
-const MIN_RUN_DURATION_SECONDS = 60;
+const MIN_RUN_DISTANCE_KM = 0.01;
+const MIN_RUN_DURATION_SECONDS = 30;
 const MAX_AVERAGE_SPEED_KMH = 25;
 const MAX_SEGMENT_SPEED_KMH = 30;
 const MAX_ACCEPTED_ACCURACY_METERS = 80;
