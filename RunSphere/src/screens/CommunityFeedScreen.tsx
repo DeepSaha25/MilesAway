@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   ImageBackground,
+  Linking,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -113,6 +114,14 @@ const CommunityFeedScreen = () => {
   const feed = useMemo(() => posts.slice(0, 6), [posts]);
   const liveEvents = useMemo(() => events.slice(0, 4), [events]);
 
+  const openEventDetails = async (url?: string) => {
+    if (!url) {
+      return;
+    }
+
+    await Linking.openURL(url).catch(() => undefined);
+  };
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) {
       return 'JUST NOW';
@@ -185,14 +194,15 @@ const CommunityFeedScreen = () => {
             <Text style={styles.eventsHint}>{eventsError}</Text>
           ) : liveEvents.length === 0 ? (
             <Text style={styles.eventsHint}>
-              Add a Ticketmaster API key on the backend to stream live marathon
-              listings.
+              Add an events API key on the backend to stream nearby running
+              event details.
             </Text>
           ) : (
             liveEvents.map((event) => (
               <TouchableOpacity
                 key={event.id}
                 style={styles.eventCard}
+                onPress={() => openEventDetails(event.detailsUrl || event.url)}
                 activeOpacity={0.84}>
                 <ImageBackground
                   source={
@@ -225,6 +235,23 @@ const CommunityFeedScreen = () => {
                       <Text numberOfLines={1} style={styles.eventMeta}>
                         {event.location || event.country || 'Location TBA'}
                       </Text>
+                    </View>
+                    <View style={styles.eventFooterRow}>
+                      <View style={styles.eventSourceChip}>
+                        <Text style={styles.eventSourceText}>
+                          {event.source || 'EVENT INFO'}
+                        </Text>
+                      </View>
+                      {event.detailsUrl || event.url ? (
+                        <View style={styles.eventDetailsChip}>
+                          <Text style={styles.eventDetailsText}>EVENT DETAILS</Text>
+                          <Ionicons
+                            name="open-outline"
+                            size={13}
+                            color={Colors.surface}
+                          />
+                        </View>
+                      ) : null}
                     </View>
                   </View>
                 </ImageBackground>
@@ -485,7 +512,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   eventCard: {
-    height: 210,
+    height: 238,
     borderRadius: 20,
     marginTop: 10,
     overflow: 'hidden',
@@ -560,6 +587,41 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     fontSize: 11,
     fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  eventFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  eventSourceChip: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  eventSourceText: {
+    color: Colors.white,
+    fontFamily: 'Inter-Bold',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  eventDetailsChip: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.primaryContainer,
+  },
+  eventDetailsText: {
+    color: Colors.surface,
+    fontFamily: 'Inter-Bold',
+    fontSize: 8,
+    fontWeight: '900',
     letterSpacing: 0.8,
   },
   routeCard: {
