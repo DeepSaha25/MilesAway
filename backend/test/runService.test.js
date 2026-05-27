@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const RunService = require('../src/services/runService');
+const Run = require('../src/models/Run');
 
 const sample = (offsetSeconds, latitude, longitude, extra = {}) => ({
   latitude,
@@ -64,5 +65,17 @@ test('rejects low accuracy-only tracks', () => {
         timestamp: new Date(coordinate.timestamp)
       }))),
     /GPS accuracy is too low/
+  );
+});
+
+test('run model validation helper accepts temporary short-run threshold', () => {
+  assert.deepEqual(Run.validateRunData(0.01, 30), []);
+  assert.match(
+    Run.validateRunData(0.009, 30).join(' '),
+    /Distance must be at least 0\.01 km/
+  );
+  assert.match(
+    Run.validateRunData(0.01, 29).join(' '),
+    /Run duration must be at least 30 seconds/
   );
 });

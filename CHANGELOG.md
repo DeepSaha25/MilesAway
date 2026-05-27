@@ -26,12 +26,14 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Made the Run Summary close/back flow save-first so a valid finished run cannot be discarded by tapping X, pressing Android back, or leaving the summary before save completes.
 - Preserved pending summary runs if the tracking screen is reopened, redirecting users back to the unsaved summary instead of resetting route data.
 - Temporarily lowered saved-run validation to at least 0.01 km, 30 seconds, and two GPS samples for easier testing.
+- Fixed backend run save middleware compatibility with the current Mongoose version, resolving the `next is not a function` save failure.
 
 ### Files Changed
 - `RunSphere/src/screens/RunSummaryScreen.tsx`: added a visible X close action, duplicate-save protection, navigation/back guards, and retry-on-close behavior that only leaves after a successful save.
 - `RunSphere/src/screens/RunTrackingScreen.tsx`: prevents summary-state runs from being reset and updates Finish validation/copy for the auto-save flow.
 - `backend/src/services/runService.js`: lowered server-side minimum saved-run distance and duration to match the app.
-- `backend/src/models/Run.js`: updated model validation helper messages for the temporary saved-run threshold.
+- `backend/src/models/Run.js`: updated model validation helper messages for the temporary saved-run threshold and converted save middleware away from callback-style `next`.
+- `backend/test/runService.test.js`: added coverage for the temporary short-run validation threshold.
 - `CHANGELOG.md`: documented the run summary save-first safety fix.
 
 ### Verification

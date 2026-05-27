@@ -141,7 +141,7 @@ const RunSchema = new mongoose.Schema(
 );
 
 // Derive pace fields from trusted service-calculated metrics.
-RunSchema.pre('save', function (next) {
+RunSchema.pre('save', function () {
   if (this.duration && this.duration > 0) {
     const speedKmh = (this.distance / (this.duration / 3600));
     this.avgSpeed = Math.round(speedKmh * 100) / 100;
@@ -149,15 +149,13 @@ RunSchema.pre('save', function (next) {
       ? Math.round(((this.duration / 60) / this.distance) * 100) / 100
       : 0;
   }
-  next();
 });
 
 // Validate coordinates array
-RunSchema.pre('save', function (next) {
+RunSchema.pre('save', function () {
   if (!this.coordinates || this.coordinates.length === 0) {
-    return next(new Error('Coordinates array cannot be empty'));
+    throw new Error('Coordinates array cannot be empty');
   }
-  next();
 });
 
 // Index for faster queries
