@@ -30,6 +30,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Made saved-run metrics recover from MongoDB on dashboard/stat reads by rebuilding per-user derived totals and leaderboard aggregates from permanent run records.
 - Updated distance displays to preserve decimal precision for very short saved runs instead of showing them as 0.0 km.
 - Sent app timer metadata with run submissions so short runs use the displayed elapsed duration instead of only the accepted GPS point span.
+- Preserved three-decimal live run distance so short test walks visibly progress before reaching 0.01 km.
 
 ### Files Changed
 - `RunSphere/src/screens/RunSummaryScreen.tsx`: added a visible X close action, duplicate-save protection, navigation/back guards, and retry-on-close behavior that only leaves after a successful save.
@@ -40,6 +41,8 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - `backend/src/models/Run.js`: updated model validation helper messages for the temporary saved-run threshold and converted save middleware away from callback-style `next`.
 - `backend/test/runService.test.js`: added coverage for the temporary short-run validation threshold and app-timer duration handling.
 - `RunSphere/src/utils/runMetrics.ts`: added decimal-preserving distance formatting for short runs.
+- `RunSphere/src/store/runStore.ts`: keeps live run distance at three-decimal precision instead of rounding each GPS segment to two decimals.
+- `RunSphere/src/components/LiveRunMap.tsx`: displays live distance with the shared decimal-preserving formatter.
 - `RunSphere/src/store/userStore.ts`: derives a temporary UI fallback from MongoDB-backed run history if aggregate endpoints briefly return zero.
 - `RunSphere/src/screens/HomeScreen.tsx`, `RunSphere/src/screens/ProfileScreen.tsx`, `RunSphere/src/screens/LeaderboardScreen.tsx`, `RunSphere/src/screens/HistoryScreen.tsx`, `RunSphere/src/screens/CommunityFeedScreen.tsx`: switched distance display to the decimal-preserving formatter.
 - `CHANGELOG.md`: documented the run summary save-first safety fix.

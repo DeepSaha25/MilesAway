@@ -7,6 +7,7 @@ import {
   calculatePaceMinutesPerKm,
   estimateCalories,
   formatClock,
+  formatDistance,
   formatPace,
 } from '../utils/runMetrics';
 
@@ -161,7 +162,7 @@ const LiveRunMap = ({
             {gpsStatus || 'GPS ready'}
           </Text>
           <View style={styles.distanceRow}>
-            <Text style={styles.primaryValue}>{distanceKm.toFixed(2)}</Text>
+            <Text style={styles.primaryValue}>{formatDistance(distanceKm)}</Text>
             <Text style={styles.primaryLabel}>km</Text>
           </View>
           <Text style={styles.timer}>{formatClock(elapsedSeconds)}</Text>

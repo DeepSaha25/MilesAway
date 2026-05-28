@@ -77,7 +77,7 @@ export const useRunStore = create<RunState>()(
 
           set(state => ({
             coordinates,
-            distanceKm: Math.round((state.distanceKm + segmentKm) * 100) / 100,
+            distanceKm: Math.round((state.distanceKm + segmentKm) * 1000) / 1000,
             elevationGain: Math.round((state.elevationGain + elevationDelta) * 100) / 100,
           }));
         },
