@@ -1,8 +1,10 @@
 import ApiClient from './apiClient';
+import {buildQuery} from '../utils/url';
 
 const CommunityService = {
   async getFeed(page = 1, limit = 20) {
-    return ApiClient.get(`/community/feed?page=${page}&limit=${limit}`);
+    const query = buildQuery({page, limit});
+    return ApiClient.get(`/community/feed${query}`);
   },
 
   async getRunningEvents({
@@ -20,23 +22,15 @@ const CommunityService = {
     longitude?: number;
     radiusKm?: number;
   } = {}) {
-    const params = [
-      ['countryCode', countryCode],
-      ['keyword', keyword],
-      ['limit', String(limit)],
-      ['radiusKm', String(radiusKm)],
-    ];
-
-    if (typeof latitude === 'number' && typeof longitude === 'number') {
-      params.push(['latitude', String(latitude)]);
-      params.push(['longitude', String(longitude)]);
-    }
-
-    const query = params
-      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-      .join('&');
-
-    return ApiClient.get(`/community/events?${query}`);
+    const query = buildQuery({
+      countryCode,
+      keyword,
+      limit,
+      radiusKm,
+      latitude: typeof latitude === 'number' ? latitude : undefined,
+      longitude: typeof longitude === 'number' ? longitude : undefined,
+    });
+    return ApiClient.get(`/community/events${query}`);
   },
 
   async createPost(text: string, runId?: string) {

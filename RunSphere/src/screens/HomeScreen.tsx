@@ -1,6 +1,5 @@
-import React, {useCallback, useState} from 'react';
+import React from 'react';
 import {
-  ActivityIndicator,
   ImageBackground,
   RefreshControl,
   ScrollView,
@@ -11,75 +10,21 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {useFocusEffect} from '@react-navigation/native';
 import {LinearGradient} from 'expo-linear-gradient';
 import AppHeader from '../components/AppHeader';
-import {useGoalStore} from '../store/goalStore';
-import {useLeaderboardStore} from '../store/leaderboardStore';
-import {useUserStore} from '../store/userStore';
+import HomeSkeleton from '../components/HomeSkeleton';
+import {useDashboard} from '../hooks/useDashboard';
 import {Colors} from '../theme/colors';
-import {formatDistance, formatPace} from '../utils/runMetrics';
 
 const MAP_TEXTURE = {
   uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAF5LWdz8RC7eUJcuirl2S2P_Y3Pg2Dmoj4bj8_5lBXpOdtoKTCP6v2aGO0tI0fWk1o7pAXBDi52OSvWAj3CG5ojn87hHm9bxMO922LqFxUYMwyNcDrLGokmzDagZL0FVoEK_O7jtu1Gmz4rf3ll6LRc7VCmZKnrwTHvoO_zr4Jpisf8BMYMxuFLEVlnL4P6002dSifY3V07DshEYlPFpS7gZRKq0_ltCTFjHjM6fdl29nyu_PSJG_rFjkhAaJ5ARfcfz5QuVgcKvCD',
 };
 
 const HomeScreen = ({navigation}: any) => {
-  const profile = useUserStore(state => state.profile);
-  const dailyStats = useUserStore(state => state.dailyStats);
-  const weeklyStats = useUserStore(state => state.weeklyStats);
-  const recentRuns = useUserStore(state => state.recentRuns);
-  const refreshDashboard = useUserStore(state => state.refreshDashboard);
-  const isLoading = useUserStore(state => state.isLoading);
-  const leaderboardRanks = useLeaderboardStore(state => state.ranks);
-  const loadLeaderboard = useLeaderboardStore(state => state.loadLeaderboard);
-  const weeklyHoursGoal = useGoalStore(state => state.weeklyHoursGoal);
-  const increaseWeeklyGoal = useGoalStore(state => state.increaseWeeklyGoal);
-  const decreaseWeeklyGoal = useGoalStore(state => state.decreaseWeeklyGoal);
-  const [refreshing, setRefreshing] = useState(false);
+  const dashboard = useDashboard();
 
-  const loadHome = useCallback(async () => {
-    await Promise.allSettled([
-      refreshDashboard(6),
-      loadLeaderboard('global', 'today', 5),
-      loadLeaderboard('city', 'weekly', 5),
-    ]);
-  }, [loadLeaderboard, refreshDashboard]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadHome();
-    }, [loadHome]),
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await loadHome();
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const lastRun = recentRuns[0];
-  const dailyDistance = Number(dailyStats?.totalDistance || 0);
-  const weeklyHours = Number(weeklyStats?.totalDuration || 0) / 3600;
-  const displayDistance = formatDistance(dailyDistance, true);
-  const activeHours = weeklyHours;
-  const activeProgress = Math.min(100, (activeHours / weeklyHoursGoal) * 100);
-  const rank = leaderboardRanks['global:today'] ?? null;
-  const lastPace = lastRun
-    ? formatPace(
-        lastRun.averagePace || (lastRun.avgSpeed ? 60 / lastRun.avgSpeed : 0),
-      )
-    : '--';
-
-  if (isLoading && !profile) {
-    return (
-      <View style={styles.loadingState}>
-        <ActivityIndicator size="large" color={Colors.primaryContainer} />
-      </View>
-    );
+  if (dashboard.isInitialLoading) {
+    return <HomeSkeleton />;
   }
 
   return (
@@ -99,16 +44,34 @@ const HomeScreen = ({navigation}: any) => {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
+              refreshing={dashboard.refreshing}
+              onRefresh={dashboard.onRefresh}
               tintColor={Colors.primaryContainer}
             />
           }>
+          {dashboard.dashboardStatus === 'ERROR' ? (
+            <View style={styles.retryBanner}>
+              <View style={styles.retryCopy}>
+                <Text style={styles.retryTitle}>Dashboard not refreshed</Text>
+                <Text style={styles.retryText}>
+                  {dashboard.dashboardError ||
+                    'Showing saved data from your last refresh.'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.retryButton}
+                onPress={dashboard.onRetryDashboard}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           <View style={styles.hero}>
             <Text style={styles.heroLabel}>TODAY'S DISTANCE</Text>
             <View style={styles.distanceRow}>
               <Text adjustsFontSizeToFit numberOfLines={1} style={styles.distance}>
-                {displayDistance}
+                {dashboard.displayDistance}
               </Text>
               <Text style={styles.distanceUnit}>KM</Text>
             </View>
@@ -133,12 +96,12 @@ const HomeScreen = ({navigation}: any) => {
             <View>
               <Text style={styles.cardLabel}>LAST SAVED RUN</Text>
               <Text style={styles.runName}>
-                {lastRun ? `${formatDistance(Number(lastRun.distance || 0))} km` : 'No runs yet'}
+                {dashboard.lastRunLabel}
               </Text>
             </View>
             <View style={styles.cardFooter}>
               <View>
-                <Text style={styles.paceValue}>{lastPace}</Text>
+                <Text style={styles.paceValue}>{dashboard.lastPace}</Text>
                 <Text style={styles.microLabel}>PACE / KM</Text>
               </View>
               <View style={styles.trendButton}>
@@ -151,36 +114,36 @@ const HomeScreen = ({navigation}: any) => {
             <View>
               <Text style={styles.cardLabel}>ACTIVE TIME / WEEK</Text>
               <Text style={styles.hoursValue}>
-                {activeHours.toFixed(1)} <Text style={styles.hoursUnit}>HRS</Text>
+                {dashboard.activeHours.toFixed(1)} <Text style={styles.hoursUnit}>HRS</Text>
               </Text>
             </View>
             <View>
               <View style={styles.goalHeader}>
-                <Text style={styles.microLabel}>GOAL: {weeklyHoursGoal.toFixed(1)} HRS</Text>
+                <Text style={styles.microLabel}>GOAL: {dashboard.weeklyHoursGoal.toFixed(1)} HRS</Text>
                 <View style={styles.goalControls}>
                   <TouchableOpacity
                     activeOpacity={0.8}
                     style={styles.goalButton}
-                    onPress={decreaseWeeklyGoal}
+                    onPress={dashboard.decreaseWeeklyGoal}
                     accessibilityLabel="Decrease weekly active time goal">
                     <Ionicons name="remove" size={16} color={Colors.secondary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     activeOpacity={0.8}
                     style={styles.goalButton}
-                    onPress={increaseWeeklyGoal}
+                    onPress={dashboard.increaseWeeklyGoal}
                     accessibilityLabel="Increase weekly active time goal">
                     <Ionicons name="add" size={16} color={Colors.secondary} />
                   </TouchableOpacity>
                 </View>
               </View>
               <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, {width: `${activeProgress}%`}]} />
+                <View style={[styles.progressFill, {width: `${dashboard.activeProgress}%`}]} />
               </View>
               <View style={styles.progressMeta}>
                 <Text style={styles.microLabel}>THIS WEEK</Text>
                 <Text style={styles.progressPercent}>
-                  {Math.round(activeProgress)}% ACHIEVED
+                  {Math.round(dashboard.activeProgress)}% ACHIEVED
                 </Text>
               </View>
             </View>
@@ -189,10 +152,10 @@ const HomeScreen = ({navigation}: any) => {
           <View style={styles.card}>
             <View>
               <Text style={styles.cardLabel}>GLOBAL RANK</Text>
-              <Text style={styles.rankValue}>{rank ? `#${rank}` : '--'}</Text>
+              <Text style={styles.rankValue}>{dashboard.rank ? `#${dashboard.rank}` : '--'}</Text>
             </View>
             <Text style={styles.rankHelp}>
-              {rank
+              {dashboard.rank
                 ? 'Based on your verified saved runs.'
                 : 'Join the global board now, then run to climb higher.'}
             </Text>
@@ -222,12 +185,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.surface,
   },
-  loadingState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-  },
   shell: {
     flex: 1,
   },
@@ -242,6 +199,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 26,
     paddingBottom: 28,
+  },
+  retryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 18,
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: Colors.surfaceContainerHigh + 'F2',
+    borderWidth: 1,
+    borderColor: Colors.primary + '44',
+  },
+  retryCopy: {
+    flex: 1,
+  },
+  retryTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Inter-Bold',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  retryText: {
+    marginTop: 4,
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  retryButton: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: Colors.primary,
+  },
+  retryButtonText: {
+    color: Colors.onPrimaryFixed,
+    fontFamily: 'Inter-Bold',
+    fontSize: 12,
+    fontWeight: '900',
   },
   hero: {
     marginBottom: 34,

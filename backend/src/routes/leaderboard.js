@@ -9,6 +9,7 @@ const {
   getStateLeaderboard,
   getCountryLeaderboard
 } = require('../controllers/leaderboardController');
+const asyncWrapper = require('../utils/asyncWrapper');
 
 const router = express.Router();
 
@@ -20,36 +21,36 @@ router.use(leaderboardLimiter);
  * GET /api/leaderboard/global
  * Get global leaderboard
  */
-router.get('/global', getGlobalLeaderboard);
+router.get('/global', asyncWrapper(getGlobalLeaderboard));
 
 /**
  * GET /api/leaderboard/local
  * Get local (city) leaderboard
  */
-router.get('/local', getLocalLeaderboard);
+router.get('/local', asyncWrapper(getLocalLeaderboard));
 
 /**
  * GET /api/leaderboard/city
  * Get city leaderboard
  */
-router.get('/city', getCityLeaderboard);
+router.get('/city', asyncWrapper(getCityLeaderboard));
 
 /**
  * GET /api/leaderboard/district
  * Get district leaderboard
  */
-router.get('/district', getDistrictLeaderboard);
+router.get('/district', asyncWrapper(getDistrictLeaderboard));
 
 /**
  * GET /api/leaderboard/state
  * Get state leaderboard
  */
-router.get('/state', getStateLeaderboard);
+router.get('/state', asyncWrapper(getStateLeaderboard));
 
 /**
  * GET /api/leaderboard/country
  * Get country leaderboard
  */
-router.get('/country', getCountryLeaderboard);
+router.get('/country', asyncWrapper(getCountryLeaderboard));
 
 module.exports = router;

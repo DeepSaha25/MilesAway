@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {createJSONStorage, devtools, persist} from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import ApiClient from '../services/apiClient';
+import ApiClient, {ApiError} from '../services/apiClient';
 import UserService from '../services/userService';
 import AuthService, {
   LoginPayload,
@@ -19,15 +19,36 @@ const getPersistedAuthToken = async () => {
     const raw = await AsyncStorage.getItem(AUTH_STORE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
     return parsed?.state?.token || null;
-  } catch {
-    return null;
+  } catch (error) {
+    throw new ApiError(
+      'Secure storage read token failed.',
+      0,
+      undefined,
+      {
+        code: 'STORAGE_FAILURE',
+        data: {
+          operation: 'read persisted auth token',
+          message:
+            error instanceof Error ? error.message : 'Storage operation failed',
+        },
+      },
+    );
   }
 };
+
+const isStorageFailure = (error: unknown) =>
+  error instanceof ApiError && error.code === 'STORAGE_FAILURE';
+
+const getStorageFailureMessage = (error: unknown) =>
+  error instanceof Error && error.message
+    ? error.message
+    : 'Secure storage failed. Please restart the app and try again.';
 
 interface AuthState {
   token: string | null;
   user: AuthUser;
   hydrated: boolean;
+  storageFailureError: string | null;
   bootstrap: () => Promise<void>;
   login: (payload: LoginPayload) => Promise<AuthResponse>;
   loginAsGuest: () => Promise<AuthResponse>;
@@ -48,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
         token: null,
         user: null,
         hydrated: false,
+        storageFailureError: null,
         bootstrap: async () => {
           try {
             await ApiClient.init();
@@ -58,6 +80,7 @@ export const useAuthStore = create<AuthState>()(
                 token: null,
                 user: null,
                 hydrated: true,
+                storageFailureError: null,
               });
               return;
             }
@@ -68,6 +91,7 @@ export const useAuthStore = create<AuthState>()(
                 token: null,
                 user: null,
                 hydrated: true,
+                storageFailureError: null,
               });
               return;
             }
@@ -91,14 +115,26 @@ export const useAuthStore = create<AuthState>()(
                   token,
                   user: profile,
                   hydrated: true,
+                  storageFailureError: null,
                 });
                 return;
-              } catch {
+              } catch (error) {
+                if (isStorageFailure(error)) {
+                  set({
+                    token: null,
+                    user: null,
+                    hydrated: true,
+                    storageFailureError: getStorageFailureMessage(error),
+                  });
+                  return;
+                }
+
                 await ApiClient.clearAuth();
                 set({
                   token: null,
                   user: null,
                   hydrated: true,
+                  storageFailureError: null,
                 });
                 return;
               }
@@ -108,66 +144,117 @@ export const useAuthStore = create<AuthState>()(
               token,
               user: token ? storedUser : null,
               hydrated: true,
+              storageFailureError: null,
             });
-          } catch {
+          } catch (error) {
             ApiClient.token = null;
             set({
               token: null,
               user: null,
               hydrated: true,
+              storageFailureError: isStorageFailure(error)
+                ? getStorageFailureMessage(error)
+                : null,
             });
           }
         },
         login: async payload => {
-          const response = await AuthService.login(payload);
-          set({
-            token: response.token,
-            user: response.user,
-            hydrated: true,
-          });
-          return response;
+          try {
+            const response = await AuthService.login(payload);
+            set({
+              token: response.token,
+              user: response.user,
+              hydrated: true,
+              storageFailureError: null,
+            });
+            return response;
+          } catch (error) {
+            if (isStorageFailure(error)) {
+              set({storageFailureError: getStorageFailureMessage(error)});
+            }
+            throw error;
+          }
         },
         loginAsGuest: async () => {
-          const response = await AuthService.loginAsGuest();
-          set({
-            token: response.token,
-            user: response.user,
-            hydrated: true,
-          });
-          return response;
+          try {
+            const response = await AuthService.loginAsGuest();
+            set({
+              token: response.token,
+              user: response.user,
+              hydrated: true,
+              storageFailureError: null,
+            });
+            return response;
+          } catch (error) {
+            if (isStorageFailure(error)) {
+              set({storageFailureError: getStorageFailureMessage(error)});
+            }
+            throw error;
+          }
         },
         signup: async payload => {
-          const response = await AuthService.signup(payload);
-          set({
-            token: response.token,
-            user: response.user,
-            hydrated: true,
-          });
-          return response;
+          try {
+            const response = await AuthService.signup(payload);
+            set({
+              token: response.token,
+              user: response.user,
+              hydrated: true,
+              storageFailureError: null,
+            });
+            return response;
+          } catch (error) {
+            if (isStorageFailure(error)) {
+              set({storageFailureError: getStorageFailureMessage(error)});
+            }
+            throw error;
+          }
         },
         resetPassword: async payload => {
-          const response = await AuthService.resetPassword(payload);
-          set({
-            token: response.token,
-            user: response.user,
-            hydrated: true,
-          });
-          return response;
+          try {
+            const response = await AuthService.resetPassword(payload);
+            set({
+              token: response.token,
+              user: response.user,
+              hydrated: true,
+              storageFailureError: null,
+            });
+            return response;
+          } catch (error) {
+            if (isStorageFailure(error)) {
+              set({storageFailureError: getStorageFailureMessage(error)});
+            }
+            throw error;
+          }
         },
         logout: async () => {
-          await AuthService.logout();
-          set({
-            token: null,
-            user: null,
-            hydrated: true,
-          });
+          try {
+            await AuthService.logout();
+            set({
+              token: null,
+              user: null,
+              hydrated: true,
+              storageFailureError: null,
+            });
+          } catch (error) {
+            if (isStorageFailure(error)) {
+              set({storageFailureError: getStorageFailureMessage(error)});
+            }
+            throw error;
+          }
         },
         setUser: async user => {
           const token = get().token;
-          if (token && user) {
-            await ApiClient.setAuth(token, user);
+          try {
+            if (token && user) {
+              await ApiClient.setAuth(token, user);
+            }
+            set({user, storageFailureError: null});
+          } catch (error) {
+            if (isStorageFailure(error)) {
+              set({storageFailureError: getStorageFailureMessage(error)});
+            }
+            throw error;
           }
-          set({user});
         },
       }),
       {name: 'milesaway-auth-store'},

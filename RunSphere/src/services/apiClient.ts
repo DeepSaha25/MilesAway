@@ -3,8 +3,68 @@ import * as SecureStore from 'expo-secure-store';
 import {API_BASE_URL} from '../config/api';
 import {GUEST_TOKEN} from './guestSession';
 
-const TOKEN_KEY = '@milesaway_token';
+const TOKEN_KEY = 'milesaway_token';
 const USER_KEY = '@milesaway_user';
+
+export interface ApiResponse<T> {
+  data: T;
+  status: number;
+  ok: boolean;
+}
+
+export type ApiErrorMetadata<TError = unknown> = {
+  data?: TError;
+  endpoint?: string;
+  method?: string;
+  code?: string;
+};
+
+type LogMetadata = {
+  method?: string;
+  endpoint?: string;
+  status?: number;
+  message?: string;
+  tokenPresent?: boolean;
+  code?: string;
+};
+
+const isDev = () =>
+  typeof __DEV__ !== 'undefined' ? Boolean(__DEV__) : false;
+
+const toSafeMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const createStorageError = (operation: string, error: unknown) =>
+  new ApiError(
+    `Secure storage ${operation} failed.`,
+    0,
+    undefined,
+    {
+      code: 'STORAGE_FAILURE',
+      data: {operation, message: toSafeMessage(error, 'Storage operation failed')},
+    },
+  );
+
+const devLogError = (label: string, metadata: LogMetadata) => {
+  if (!isDev()) {
+    return;
+  }
+
+  console.error(label, metadata);
+};
+
+const devLogInfo = (label: string, metadata: LogMetadata) => {
+  if (!isDev()) {
+    return;
+  }
+
+  console.log(label, metadata);
+};
 
 class ApiClient {
   static token: string | null = null;
@@ -13,33 +73,33 @@ class ApiClient {
   static async init() {
     try {
       this.token = (await SecureStore.getItemAsync(TOKEN_KEY)) || null;
-    } catch {}
-    try {
-      // eslint-disable-next-line no-console
-      console.log('ApiClient initialized. API_BASE_URL=', API_BASE_URL, 'tokenPresent=', !!this.token);
-    } catch {}
+      devLogInfo('ApiClient initialized', {tokenPresent: !!this.token});
+    } catch (error) {
+      this.token = null;
+      throw createStorageError('read token', error);
+    }
   }
 
   static async setAuth(token: string, user: any) {
     this.token = token;
-    try {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
-    } catch {}
 
     try {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-    } catch {}
+    } catch (error) {
+      throw createStorageError('write auth session', error);
+    }
   }
 
   static async clearAuth() {
     this.token = null;
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-    } catch {}
 
     try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
       await AsyncStorage.removeItem(USER_KEY);
-    } catch {}
+    } catch (error) {
+      throw createStorageError('clear auth session', error);
+    }
   }
 
   static setUnauthorizedHandler(handler: (() => void | Promise<void>) | null) {
@@ -50,8 +110,8 @@ class ApiClient {
     try {
       const raw = await AsyncStorage.getItem(USER_KEY);
       return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
+    } catch (error) {
+      throw createStorageError('read stored user', error);
     }
   }
 
@@ -83,18 +143,22 @@ class ApiClient {
     let response: Response;
     try {
       response = await fetch(url, options);
-    } catch (error: any) {
-      // log full error for debugging on device/emulator
-      try {
-        // eslint-disable-next-line no-console
-        console.error('ApiClient network error', {url, options, error});
-      } catch {}
+    } catch (error) {
+      const message =
+        'Network error. Please check your internet connection and try again.';
+      devLogError('ApiClient network error', {
+        method,
+        endpoint,
+        message: toSafeMessage(error, message),
+        tokenPresent: !!this.token,
+      });
 
-      throw new ApiError(
-        'Network error. Please check your internet connection and try again.',
-        0,
-        {url, originalMessage: error?.message, rawError: error},
-      );
+      throw new ApiError(message, 0, undefined, {
+        endpoint,
+        method,
+        code: 'NETWORK_ERROR',
+        data: {message: toSafeMessage(error, message)},
+      });
     }
 
     const rawText = await response.text();
@@ -111,11 +175,20 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      throw new ApiError(
-        data.message || 'Request failed',
-        response.status,
+      const message = data?.message || response.statusText || 'Request failed';
+      devLogError('ApiClient response error', {
+        method,
+        endpoint,
+        status: response.status,
+        message,
+        tokenPresent: !!this.token,
+      });
+
+      throw new ApiError(message, response.status, data, {
+        endpoint,
+        method,
         data,
-      );
+      });
     }
 
     return data;
@@ -138,15 +211,26 @@ class ApiClient {
   }
 }
 
-class ApiError extends Error {
+class ApiError<TError = unknown> extends Error {
   status: number;
-  data: any;
+  data?: TError;
+  endpoint?: string;
+  method?: string;
+  code?: string;
 
-  constructor(message: string, status: number, data?: any) {
+  constructor(
+    message: string,
+    status: number,
+    data?: TError,
+    metadata: ApiErrorMetadata<TError> = {},
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
-    this.data = data;
+    this.data = metadata.data ?? data;
+    this.endpoint = metadata.endpoint;
+    this.method = metadata.method;
+    this.code = metadata.code;
   }
 }
 

@@ -27,7 +27,6 @@ class RunService {
 
     const existingRun = await Run.findOne({ userId, clientRunId });
     if (existingRun) {
-      await this.rebuildUserDerivedStats(userId);
       return { run: existingRun, created: false };
     }
 
@@ -41,7 +40,7 @@ class RunService {
     const locationData = await getLocationFromCoordinates(lastCoordinate.latitude, lastCoordinate.longitude);
     const caloriesBurned = this.calculateCalories(trustedMetrics.distanceKm, user.weightKg);
 
-    const run = new Run({
+    const runPayload = {
       userId,
       clientRunId,
       distance: trustedMetrics.distanceKm,
@@ -65,21 +64,9 @@ class RunService {
           coordinates: [locationData.longitude, locationData.latitude]
         }
       }
-    });
+    };
 
-    try {
-      await run.save();
-    } catch (error) {
-      if (error.code === 11000) {
-        const duplicate = await Run.findOne({ userId, clientRunId });
-        if (duplicate) {
-          return { run: duplicate, created: false };
-        }
-      }
-      throw error;
-    }
-
-    await User.findByIdAndUpdate(userId, {
+    const locationUpdate = {
       'location.latitude': locationData.latitude,
       'location.longitude': locationData.longitude,
       'location.city': locationData.city,
@@ -88,9 +75,68 @@ class RunService {
       'location.country': locationData.country,
       'location.point.type': 'Point',
       'location.point.coordinates': [locationData.longitude, locationData.latitude]
-    });
+    };
 
-    await this.rebuildUserDerivedStats(userId, run.endTime);
+    const session = await mongoose.startSession();
+    let run;
+    let duplicateKeyError = null;
+
+    try {
+      session.startTransaction();
+
+      const [createdRun] = await Run.create([runPayload], { session });
+      run = createdRun;
+
+      const updateResult = await User.updateOne(
+        { _id: userId },
+        locationUpdate,
+        { session }
+      );
+
+      if (updateResult?.matchedCount === 0) {
+        throw ApiError.notFound('User not found');
+      }
+
+      await session.commitTransaction();
+    } catch (error) {
+      try {
+        await session.abortTransaction();
+      } catch (abortError) {
+        console.error('[MilesAway] Failed to abort run submission transaction', {
+          userId: String(userId),
+          clientRunId: String(clientRunId),
+          error: abortError?.message || 'Unknown transaction abort error'
+        });
+      }
+
+      if (error.code === 11000) {
+        duplicateKeyError = error;
+      } else {
+        throw error;
+      }
+    } finally {
+      await session.endSession();
+    }
+
+    if (duplicateKeyError) {
+      const duplicate = await Run.findOne({ userId, clientRunId });
+      if (duplicate) {
+        return { run: duplicate, created: false };
+      }
+
+      throw duplicateKeyError;
+    }
+
+    try {
+      await this.rebuildUserDerivedStats(userId, run.endTime);
+    } catch (error) {
+      console.error('[MilesAway] Failed to rebuild run aggregates after submit', {
+        userId: String(userId),
+        runId: String(run._id),
+        error: error?.message || 'Unknown aggregate rebuild error'
+      });
+    }
+
     LeaderboardService.clearCache();
 
     return { run, created: true };
@@ -160,8 +206,6 @@ class RunService {
   }
 
   static async getUserAggregatedStats(userId) {
-    await this.rebuildUserDerivedStats(userId);
-
     const totalRunsStats = await Run.aggregate([
       { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {
@@ -170,10 +214,32 @@ class RunService {
           totalDistance: { $sum: '$distance' },
           totalDuration: { $sum: '$duration' },
           totalRuns: { $sum: 1 },
-          avgSpeed: { $avg: '$avgSpeed' },
-          averagePace: { $avg: '$averagePace' },
           caloriesBurned: { $sum: '$caloriesBurned' },
           elevationGain: { $sum: '$elevationGain' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          totalDistance: 1,
+          totalDuration: 1,
+          totalRuns: 1,
+          avgSpeed: {
+            $cond: [
+              { $gt: ['$totalDuration', 0] },
+              { $divide: ['$totalDistance', { $divide: ['$totalDuration', 3600] }] },
+              0
+            ]
+          },
+          averagePace: {
+            $cond: [
+              { $gt: ['$totalDistance', 0] },
+              { $divide: [{ $divide: ['$totalDuration', 60] }, '$totalDistance'] },
+              0
+            ]
+          },
+          caloriesBurned: 1,
+          elevationGain: 1
         }
       }
     ]);
@@ -200,9 +266,34 @@ class RunService {
         $group: {
           _id: null,
           totalDistance: { $sum: '$distance' },
+          totalDuration: { $sum: '$duration' },
           totalRuns: { $sum: 1 },
-          avgSpeed: { $avg: '$avgSpeed' },
-          averagePace: { $avg: '$averagePace' }
+          caloriesBurned: { $sum: '$caloriesBurned' },
+          elevationGain: { $sum: '$elevationGain' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          totalDistance: 1,
+          totalDuration: 1,
+          totalRuns: 1,
+          avgSpeed: {
+            $cond: [
+              { $gt: ['$totalDuration', 0] },
+              { $divide: ['$totalDistance', { $divide: ['$totalDuration', 3600] }] },
+              0
+            ]
+          },
+          averagePace: {
+            $cond: [
+              { $gt: ['$totalDistance', 0] },
+              { $divide: [{ $divide: ['$totalDuration', 60] }, '$totalDistance'] },
+              0
+            ]
+          },
+          caloriesBurned: 1,
+          elevationGain: 1
         }
       }
     ]);
@@ -227,9 +318,34 @@ class RunService {
         $group: {
           _id: null,
           totalDistance: { $sum: '$distance' },
+          totalDuration: { $sum: '$duration' },
           totalRuns: { $sum: 1 },
-          avgSpeed: { $avg: '$avgSpeed' },
-          averagePace: { $avg: '$averagePace' }
+          caloriesBurned: { $sum: '$caloriesBurned' },
+          elevationGain: { $sum: '$elevationGain' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          totalDistance: 1,
+          totalDuration: 1,
+          totalRuns: 1,
+          avgSpeed: {
+            $cond: [
+              { $gt: ['$totalDuration', 0] },
+              { $divide: ['$totalDistance', { $divide: ['$totalDuration', 3600] }] },
+              0
+            ]
+          },
+          averagePace: {
+            $cond: [
+              { $gt: ['$totalDistance', 0] },
+              { $divide: [{ $divide: ['$totalDuration', 60] }, '$totalDistance'] },
+              0
+            ]
+          },
+          caloriesBurned: 1,
+          elevationGain: 1
         }
       }
     ]);
@@ -544,9 +660,12 @@ class RunService {
   static emptyPeriodStats() {
     return {
       totalDistance: 0,
+      totalDuration: 0,
       totalRuns: 0,
       avgSpeed: 0,
-      averagePace: 0
+      averagePace: 0,
+      caloriesBurned: 0,
+      elevationGain: 0
     };
   }
 }

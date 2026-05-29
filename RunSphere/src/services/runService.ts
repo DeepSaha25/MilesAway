@@ -1,4 +1,5 @@
 import ApiClient from './apiClient';
+import {buildQuery} from '../utils/url';
 
 export interface RunPayload {
   clientRunId: string;
@@ -22,10 +23,8 @@ const RunService = {
   },
 
   async getHistory(limit = 50, startDate?: string, endDate?: string) {
-    let endpoint = `/run/history?limit=${limit}`;
-    if (startDate) endpoint += `&startDate=${startDate}`;
-    if (endDate) endpoint += `&endDate=${endDate}`;
-    return ApiClient.get(endpoint);
+    const query = buildQuery({limit, startDate, endDate});
+    return ApiClient.get(`/run/history${query}`);
   },
 
   async getStats() {
@@ -37,9 +36,8 @@ const RunService = {
   },
 
   async getDailyStats(date?: string) {
-    let endpoint = '/run/daily-stats';
-    if (date) endpoint += `?date=${date}`;
-    return ApiClient.get(endpoint);
+    const query = buildQuery({date});
+    return ApiClient.get(`/run/daily-stats${query}`);
   },
 };
 

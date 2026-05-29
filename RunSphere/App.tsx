@@ -13,6 +13,7 @@ import {
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
+import AppErrorBoundary from './src/components/AppErrorBoundary';
 import AppNavigator from './src/navigation/AppNavigator';
 import {Colors} from './src/theme/colors';
 
@@ -37,7 +38,9 @@ const App = () => {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor={Colors.surface} />
-        <AppNavigator />
+        <AppErrorBoundary>
+          {resetKey => <AppNavigator key={resetKey} />}
+        </AppErrorBoundary>
         <Toast />
       </SafeAreaProvider>
     </GestureHandlerRootView>

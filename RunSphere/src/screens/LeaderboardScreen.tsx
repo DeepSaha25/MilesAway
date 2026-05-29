@@ -1,6 +1,5 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -12,6 +11,7 @@ import {
 import {useFocusEffect} from '@react-navigation/native';
 import AppHeader from '../components/AppHeader';
 import Avatar from '../components/Avatar';
+import LeaderboardSkeleton from '../components/LeaderboardSkeleton';
 import {LeaderboardLevel, TimePeriod} from '../services/leaderboardService';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {Colors} from '../theme/colors';
@@ -93,11 +93,7 @@ const LeaderboardScreen = () => {
   }, [entries]);
 
   if (loading && entries.length === 0) {
-    return (
-      <View style={styles.loadingState}>
-        <ActivityIndicator size="large" color={Colors.primaryContainer} />
-      </View>
-    );
+    return <LeaderboardSkeleton />;
   }
 
   return (
@@ -178,12 +174,18 @@ const LeaderboardScreen = () => {
                         <Avatar
                           uri={entry.avatar}
                           name={entry.name}
-                          size={isWinner ? 96 : 68}
+                          size={isWinner ? 84 : 62}
                           borderColor={Colors.transparent}
                         />
                       </View>
                       <View style={[styles.rankBadge, isWinner && styles.winnerBadge]}>
-                        <Text style={styles.rankBadgeText}>{entry.rank}</Text>
+                        <Text
+                          style={[
+                            styles.rankBadgeText,
+                            isWinner && styles.winnerBadgeText,
+                          ]}>
+                          {entry.rank}
+                        </Text>
                       </View>
                       <Text
                         numberOfLines={2}
@@ -251,37 +253,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.surface,
   },
-  loadingState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-  },
   content: {
     paddingHorizontal: 28,
-    paddingTop: 36,
+    paddingTop: 18,
     paddingBottom: 24,
   },
   headingWrap: {
-    minHeight: 128,
+    minHeight: 88,
     justifyContent: 'flex-end',
-    marginBottom: 34,
+    marginBottom: 22,
   },
   ghostTitle: {
     position: 'absolute',
-    left: -34,
-    top: 0,
-    color: Colors.onSurface + '12',
+    left: -24,
+    top: 2,
+    color: Colors.onSurface + '09',
     fontFamily: 'Lexend-Black',
-    fontSize: 76,
+    fontSize: 58,
+    lineHeight: 66,
     fontWeight: '900',
     fontStyle: 'italic',
   },
   title: {
-    color: Colors.onSurface,
+    color: Colors.onSurface + 'E0',
     fontFamily: 'Lexend-Black',
-    fontSize: 42,
-    lineHeight: 46,
+    fontSize: 34,
+    lineHeight: 38,
     fontWeight: '900',
     fontStyle: 'italic',
     textShadowColor: '#000000',
@@ -303,7 +300,7 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 18,
     backgroundColor: Colors.surfaceContainerLow,
-    marginBottom: 42,
+    marginBottom: 24,
   },
   tab: {
     flex: 1,
@@ -315,7 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   tabActive: {
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: Colors.surfaceContainerHigh + 'B8',
   },
   tabText: {
     color: Colors.onSurfaceVariant,
@@ -365,70 +362,71 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   podium: {
-    minHeight: 204,
+    minHeight: 184,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 34,
+    gap: 8,
+    marginBottom: 24,
   },
   podiumItem: {
     flex: 1,
-    minHeight: 174,
+    minHeight: 158,
     alignItems: 'center',
     justifyContent: 'flex-end',
+    position: 'relative',
   },
   winnerItem: {
-    minHeight: 200,
+    minHeight: 184,
   },
   podiumGlow: {
     position: 'absolute',
-    top: 24,
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: Colors.outlineVariant + '22',
+    top: 20,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: Colors.outlineVariant + '16',
     shadowColor: Colors.outlineVariant,
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
   },
   winnerGlow: {
-    top: 8,
-    width: 126,
-    height: 126,
-    borderRadius: 63,
-    backgroundColor: Colors.primary + '24',
+    top: 6,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: Colors.primary + '16',
     shadowColor: Colors.primary,
-    shadowOpacity: 0.45,
-    shadowRadius: 28,
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
   },
   thirdGlow: {
-    backgroundColor: Colors.tertiary + '20',
+    backgroundColor: Colors.tertiary + '14',
     shadowColor: Colors.tertiary,
   },
   podiumAvatarShell: {
     borderRadius: 999,
-    padding: 4,
-    backgroundColor: Colors.outlineVariant,
+    padding: 3,
+    backgroundColor: Colors.outlineVariant + 'D0',
   },
   winnerAvatarShell: {
-    padding: 5,
-    backgroundColor: Colors.primary,
-    borderWidth: 3,
+    padding: 4,
+    backgroundColor: Colors.primary + 'D8',
+    borderWidth: 2,
     borderColor: Colors.secondary,
   },
   secondAvatarShell: {
-    backgroundColor: '#9AA4B2',
+    backgroundColor: '#9AA4B2CC',
   },
   thirdAvatarShell: {
-    backgroundColor: Colors.tertiary,
+    backgroundColor: Colors.tertiary + 'D8',
   },
   rankBadge: {
-    marginTop: -16,
-    marginLeft: 48,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    marginTop: -13,
+    marginLeft: 44,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -436,24 +434,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerHighest,
   },
   winnerBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginLeft: 66,
-    borderWidth: 3,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    marginLeft: 58,
+    borderWidth: 2,
     borderColor: Colors.surface,
     backgroundColor: Colors.primary,
   },
   rankBadgeText: {
-    color: Colors.onSurface,
+    color: Colors.onSurface + 'E8',
     fontFamily: 'Lexend-Black',
     fontSize: 13,
     fontWeight: '900',
     fontStyle: 'italic',
   },
+  winnerBadgeText: {
+    color: Colors.onPrimaryFixed,
+    fontSize: 14,
+  },
   podiumName: {
-    marginTop: 10,
-    minHeight: 30,
+    marginTop: 8,
+    minHeight: 28,
     color: Colors.onSurfaceVariant,
     fontFamily: 'Inter-Bold',
     fontSize: 10,
@@ -480,7 +482,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   podiumDistance: {
-    color: Colors.onSurface,
+    color: Colors.onSurface + 'E0',
     fontFamily: 'Lexend-Black',
     fontSize: 18,
     fontWeight: '900',
@@ -488,8 +490,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   winnerDistance: {
-    fontSize: 24,
-    color: Colors.onSurface,
+    fontSize: 22,
+    color: Colors.onSurface + 'E8',
   },
   podiumDistanceUnit: {
     fontSize: 10,
@@ -502,7 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: Colors.surfaceContainerHigh + 'E8',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -511,7 +513,7 @@ const styles = StyleSheet.create({
   youRow: {
     borderWidth: 1,
     borderColor: Colors.primary + '55',
-    backgroundColor: Colors.surfaceContainerHigh + 'DD',
+    backgroundColor: Colors.surfaceContainerHigh + 'C8',
   },
   rowGlow: {
     position: 'absolute',
@@ -541,7 +543,7 @@ const styles = StyleSheet.create({
   },
   rowName: {
     flexShrink: 1,
-    color: Colors.onSurface,
+    color: Colors.onSurface + 'E8',
     fontFamily: 'Inter-Bold',
     fontSize: 16,
     lineHeight: 20,
@@ -571,14 +573,14 @@ const styles = StyleSheet.create({
     minWidth: 58,
   },
   rowDistance: {
-    color: Colors.onSurface,
+    color: Colors.onSurface + 'E0',
     fontFamily: 'Lexend-Black',
     fontSize: 24,
     fontWeight: '900',
     fontStyle: 'italic',
   },
   rowUnit: {
-    color: Colors.onSurface,
+    color: Colors.onSurface + 'D8',
     fontFamily: 'Lexend-Black',
     fontSize: 10,
     fontWeight: '900',

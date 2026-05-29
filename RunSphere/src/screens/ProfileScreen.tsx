@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -10,16 +10,11 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {useFocusEffect} from '@react-navigation/native';
 import AppHeader from '../components/AppHeader';
 import Avatar from '../components/Avatar';
 import MiniRoutePreview from '../components/MiniRoutePreview';
-import {useUserStore} from '../store/userStore';
+import {useProfileLocation} from '../hooks/useProfileLocation';
 import {Colors} from '../theme/colors';
-import {
-  getCurrentLocation,
-  requestLocationPermission,
-} from '../utils/location';
 import {
   formatClock,
   formatDistance,
@@ -28,108 +23,9 @@ import {
 } from '../utils/runMetrics';
 
 const ProfileScreen = () => {
-  const profile = useUserStore(state => state.profile);
-  const stats = useUserStore(state => state.stats);
-  const weeklyStats = useUserStore(state => state.weeklyStats);
-  const recentRuns = useUserStore(state => state.recentRuns);
-  const isLoading = useUserStore(state => state.isLoading);
-  const refreshDashboard = useUserStore(state => state.refreshDashboard);
-  const updateBackendLocation = useUserStore(state => state.updateBackendLocation);
-  const [refreshing, setRefreshing] = useState(false);
-  const [locating, setLocating] = useState(false);
+  const profileData = useProfileLocation();
 
-  const loadProfile = useCallback(async () => {
-    await refreshDashboard(8);
-  }, [refreshDashboard]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadProfile();
-    }, [loadProfile]),
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await loadProfile();
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const refreshLocation = async () => {
-    setLocating(true);
-    try {
-      const granted = await requestLocationPermission();
-      if (!granted) {
-        return;
-      }
-
-      const position = await getCurrentLocation();
-      if (
-        typeof position.coords.accuracy === 'number' &&
-        position.coords.accuracy > 100
-      ) {
-        return;
-      }
-
-      await updateBackendLocation(
-        position.coords.latitude,
-        position.coords.longitude,
-      );
-      await refreshDashboard(8);
-    } finally {
-      setLocating(false);
-    }
-  };
-
-  const displayName = (profile?.name || 'Runner').toUpperCase();
-  const location = profile?.location?.city
-    ? `${profile.location.city}${profile.location.state ? `, ${profile.location.state}` : ''}`
-    : 'LOCATION NOT SYNCED';
-  const joined = profile?.createdAt
-    ? new Date(profile.createdAt).toLocaleDateString(undefined, {
-        month: 'short',
-        year: 'numeric',
-      }).toUpperCase()
-    : 'RECENTLY';
-  const totalDistance = Number(stats?.totalDistance || profile?.totalDistance || 0);
-  const totalRuns = Number(stats?.totalRuns || 0);
-  const weeklyDistance = Number(weeklyStats?.totalDistance || 0);
-  const streak = Number(profile?.streak || 0);
-  const averagePace = stats?.averagePace ? formatPace(stats.averagePace) : '--';
-
-  const statTiles = useMemo(
-    () => [
-      {
-        label: 'FASTEST 5K',
-        value: '--',
-        caption: 'SYNCED FROM RUNS',
-        color: Colors.tertiary,
-      },
-      {
-        label: 'STREAK',
-        value: `${streak}\nDAYS`,
-        caption: 'PERSONAL BEST',
-        color: Colors.secondary,
-      },
-      {
-        label: 'AVG PACE',
-        value: averagePace,
-        caption: 'STEADY CLIMB',
-        color: Colors.outlineVariant,
-      },
-      {
-        label: 'RUNS',
-        value: String(totalRuns),
-        caption: 'TOTAL SESSIONS',
-        color: Colors.outlineVariant,
-      },
-    ],
-    [averagePace, streak, totalRuns],
-  );
-
-  if (isLoading && !profile) {
+  if (profileData.isInitialLoading) {
     return (
       <View style={styles.loadingState}>
         <ActivityIndicator size="large" color={Colors.primaryContainer} />
@@ -147,8 +43,8 @@ const ProfileScreen = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+            refreshing={profileData.refreshing}
+            onRefresh={profileData.onRefresh}
             tintColor={Colors.primaryContainer}
           />
         }>
@@ -156,41 +52,48 @@ const ProfileScreen = () => {
           <View style={styles.avatarGlow} />
           <View style={styles.avatarRing}>
             <Avatar
-              uri={profile?.avatar}
-              name={profile?.name}
-              size={146}
+              uri={profileData.profile?.avatar}
+              name={profileData.profile?.name}
+              size={104}
               borderColor={Colors.transparent}
             />
-          </View>
-          <View style={styles.boltBadge}>
-            <Ionicons name="flash" size={18} color={Colors.surface} />
           </View>
         </View>
 
         <View style={styles.identity}>
-       
           <Text adjustsFontSizeToFit numberOfLines={2} style={styles.name}>
-            {displayName}
+            {profileData.displayName}
           </Text>
           <View style={styles.metaRow}>
             <View style={styles.metaBlock}>
-              <Text style={styles.metaLabel}>LOCATION</Text>
-              <Text style={styles.metaValue}>{location}</Text>
+              <View style={styles.metaLabelRow}>
+                <Text style={styles.metaLabel}>LOCATION</Text>
+                <TouchableOpacity
+                  activeOpacity={0.78}
+                  style={styles.locationIconButton}
+                  onPress={profileData.refreshLocation}
+                  disabled={profileData.locating}
+                  accessibilityLabel="Refresh location">
+                  {profileData.locating ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <Ionicons
+                      name="refresh"
+                      size={14}
+                      color={Colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
+              <Text numberOfLines={1} style={styles.metaValue}>
+                {profileData.location}
+              </Text>
             </View>
             <View style={styles.metaBlock}>
               <Text style={styles.metaLabel}>JOINED</Text>
-              <Text style={styles.metaValue}>{joined}</Text>
+              <Text style={styles.metaValue}>{profileData.joined}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.locationButton}
-            onPress={refreshLocation}
-            disabled={locating}>
-            <Text style={styles.locationButtonText}>
-              {locating ? 'UPDATING LOCATION...' : 'REFRESH LOCATION'}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.lifetimeCard}>
@@ -200,18 +103,20 @@ const ProfileScreen = () => {
           </View>
           <View style={styles.distanceLine}>
             <Text adjustsFontSizeToFit numberOfLines={1} style={styles.lifetimeValue}>
-              {formatDistance(totalDistance, true)}
+              {formatDistance(profileData.totalDistance, true)}
             </Text>
             <Text style={styles.kmUnit}>KM</Text>
           </View>
           <View style={styles.trendLine}>
             <Ionicons name="calendar" size={14} color={Colors.secondary} />
-            <Text style={styles.trendText}>{formatDistance(weeklyDistance, true)} km this week</Text>
+            <Text style={styles.trendText}>
+              {formatDistance(profileData.weeklyDistance, true)} km this week
+            </Text>
           </View>
         </View>
 
         <View style={styles.statGrid}>
-          {statTiles.map(tile => (
+          {profileData.statTiles.map(tile => (
             <View
               key={tile.label}
               style={[styles.statTile, {borderLeftColor: tile.color}]}>
@@ -235,9 +140,11 @@ const ProfileScreen = () => {
             </View>
           </View>
           <View style={styles.barRow}>
-            {weeklyDistance > 0 ? (
+            {profileData.weeklyDistance > 0 ? (
               <View style={styles.weeklyTotalBlock}>
-                <Text style={styles.weeklyTotalValue}>{formatDistance(weeklyDistance, true)}</Text>
+                <Text style={styles.weeklyTotalValue}>
+                  {formatDistance(profileData.weeklyDistance, true)}
+                </Text>
                 <Text style={styles.weeklyTotalLabel}>KM THIS WEEK</Text>
               </View>
             ) : (
@@ -255,7 +162,7 @@ const ProfileScreen = () => {
           <Text style={styles.recentTitle}>RECENT{'\n'}RUNS</Text>
         </View>
 
-        {recentRuns.length === 0 ? (
+        {profileData.recentRuns.length === 0 ? (
           <View style={styles.recentEmpty}>
             <Ionicons name="footsteps" size={28} color={Colors.primary} />
             <Text style={styles.recentEmptyTitle}>NO SAVED RUNS YET</Text>
@@ -264,7 +171,7 @@ const ProfileScreen = () => {
             </Text>
           </View>
         ) : (
-          recentRuns.slice(0, 4).map((run, index) => {
+          profileData.recentRuns.slice(0, 4).map((run, index) => {
             const pace =
               run.averagePace || (run.avgSpeed ? 60 / run.avgSpeed : 0);
 
@@ -330,54 +237,41 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 18,
-    paddingTop: 28,
+    paddingTop: 6,
     paddingBottom: 24,
   },
   hero: {
     alignSelf: 'center',
-    width: 176,
-    height: 176,
+    width: 118,
+    height: 118,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 0,
   },
   avatarGlow: {
     position: 'absolute',
-    width: 174,
-    height: 174,
-    borderRadius: 87,
-    backgroundColor: Colors.secondary + '12',
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    backgroundColor: Colors.secondary + '0D',
     shadowColor: Colors.primary,
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
   },
   avatarRing: {
-    width: 154,
-    height: 154,
-    borderRadius: 77,
-    padding: 4,
-    borderWidth: 4,
-    borderColor: Colors.primary + '99',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: Colors.primary + '80',
     backgroundColor: Colors.surfaceContainerLowest,
     overflow: 'hidden',
   },
-  boltBadge: {
-    position: 'absolute',
-    right: 18,
-    bottom: 18,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.secondary,
-    borderWidth: 3,
-    borderColor: Colors.surface,
-  },
   identity: {
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 36,
+    marginTop: 6,
+    marginBottom: 22,
   },
   tierChip: {
     overflow: 'hidden',
@@ -394,11 +288,11 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   name: {
-    marginTop: 14,
+    marginTop: 4,
     color: Colors.onSurface,
     fontFamily: 'Lexend-Black',
-    fontSize: 36,
-    lineHeight: 42,
+    fontSize: 30,
+    lineHeight: 36,
     fontWeight: '900',
     fontStyle: 'italic',
     textAlign: 'center',
@@ -408,11 +302,22 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
-    gap: 34,
-    marginTop: 14,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 20,
+    marginTop: 12,
+    width: '100%',
   },
   metaBlock: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
+  },
+  metaLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   metaLabel: {
     color: Colors.onSurfaceVariant,
@@ -425,24 +330,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: Colors.onSurface,
     fontFamily: 'Inter-Bold',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
+    textAlign: 'center',
   },
-  locationButton: {
-    marginTop: 18,
-    borderRadius: 999,
+  locationIconButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary + '12',
     borderWidth: 1,
-    borderColor: Colors.primary + '55',
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    backgroundColor: Colors.primary + '10',
-  },
-  locationButtonText: {
-    color: Colors.primary,
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.4,
+    borderColor: Colors.primary + '3D',
   },
   lifetimeCard: {
     borderRadius: 24,

@@ -20,6 +20,312 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.15 - 2026-05-29
+
+### Summary
+- Replaced legacy centered loading spinners on Home and Community with shimmer-based screen skeletons.
+- Kept stale dashboard/feed content visible during pull-to-refresh and background refreshes.
+- Preserved existing domain hook ownership while making screens consume the new loading presentation components.
+- Replaced the Reanimated shimmer implementation with React Native core `Animated` to keep Expo Go and OTA testing compatible without a new native binary.
+- Renamed the SecureStore token key to a device-safe identifier to prevent Expo Go auth session write failures.
+- Aligned Home and post-save summary rank display with the global weekly leaderboard period used by the Leaderboard screen.
+- Tightened the Leaderboard screen vertical rhythm, reduced oversized heading text, lifted the scope tabs/podium, and improved podium avatar/badge fit.
+- Reduced the Leaderboard screen and bottom navigation glow/white opacity for a darker glass-style presentation without adding native blur dependencies.
+- Replaced the Ranks screen cold-load circular spinner with a leaderboard-shaped shimmer skeleton.
+- Tightened the Profile header layout by shrinking the avatar/name area, removing the lightning badge, and replacing the large refresh-location button with a compact clickable refresh icon.
+
+### Files Changed
+- `RunSphere/src/screens/HomeScreen.tsx`: mounts `HomeSkeleton` for cold dashboard loads and removes the old `ActivityIndicator` fallback.
+- `RunSphere/src/screens/CommunityFeedScreen.tsx`: mounts `CommunitySkeleton` for cold feed loads while preserving refresh-visible content.
+- `RunSphere/src/hooks/useDashboard.ts`: loads and displays the global weekly rank instead of the global daily rank.
+- `RunSphere/src/hooks/useRunSummary.ts`: refreshes and displays the global weekly rank after saving a run.
+- `RunSphere/src/screens/LeaderboardScreen.tsx`: reduced header height, moved the tab/podium area upward, resized podium avatar rings, and improved winner rank badge contrast.
+- `RunSphere/src/screens/ProfileScreen.tsx`: compressed the profile identity section, removed the photo lightning badge, and moved location refresh into a small icon beside the location label.
+- `RunSphere/src/components/LeaderboardSkeleton.tsx`: added a Ranks-shaped shimmer loading frame for cold leaderboard loads.
+- `RunSphere/__tests__/Skeletons.test.tsx`: added render coverage for the leaderboard skeleton.
+- `RunSphere/src/navigation/BottomTabNavigator.tsx`: softened the bottom navigation translucent layer and active glow opacity.
+- `RunSphere/src/components/ShimmerPlaceholder.tsx`: now uses core `Animated` for the shimmer sweep instead of loading native Worklets.
+- `RunSphere/src/services/apiClient.ts`: uses `milesaway_token` as the SecureStore token key instead of the legacy `@milesaway_token` key.
+- `RunSphere/package.json`, `RunSphere/package-lock.json`: removed `react-native-reanimated` after Expo Go Worklets runtime incompatibility.
+- `RunSphere/babel.config.js`, `RunSphere/jest.setup.js`: removed Reanimated-specific setup.
+- `CHANGELOG.md`: documented the skeleton mounting pass.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Skeletons only render for clean initial loads; refresh controls continue to operate over already-rendered content.
+- This keeps the loading UI eligible for Expo Go and EAS Update testing without requiring a fresh native build.
+
+## v0.2.14 - 2026-05-29
+
+### Summary
+- Added dedicated Home dashboard and Community feed skeleton layouts using the reusable shimmer placeholder.
+- Mirrored production screen gutters, card radii, vertical spacing, and feed/card proportions to reduce loading-to-content layout shift.
+- Added render coverage for both skeleton frames.
+
+### Files Changed
+- `RunSphere/src/components/HomeSkeleton.tsx`: added a full-screen dashboard loading skeleton with header avatar, metric blocks, cards, and chart placeholder.
+- `RunSphere/src/components/CommunitySkeleton.tsx`: added a full-screen community loading skeleton with event panel and repeated feed card placeholders.
+- `RunSphere/__tests__/Skeletons.test.tsx`: added render coverage for the new skeleton components.
+- `CHANGELOG.md`: documented the isolated screen skeleton layouts.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Skeletons are not connected to screen loading branches yet; Step 14 will wire them into `HomeScreen.tsx` and `CommunityFeedScreen.tsx`.
+
+## v0.2.13 - 2026-05-29
+
+### Summary
+- Added a reusable native-driven shimmer placeholder component for loading skeletons.
+- Installed and configured `react-native-reanimated` for UI-thread placeholder animation.
+- Added smoke coverage for the shimmer placeholder render path.
+
+### Files Changed
+- `RunSphere/src/components/ShimmerPlaceholder.tsx`: added typed shimmer placeholder with native Reanimated opacity loop.
+- `RunSphere/package.json`, `RunSphere/package-lock.json`: added Expo-compatible `react-native-reanimated`.
+- `RunSphere/babel.config.js`: added the Reanimated Babel plugin.
+- `RunSphere/jest.setup.js`: initialized Reanimated test setup.
+- `RunSphere/__tests__/ShimmerPlaceholder.test.tsx`: added render coverage.
+- `CHANGELOG.md`: documented the reusable shimmer layer.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- The component uses a soft `#E1E9EE` placeholder base with a repeating opacity sheen.
+
+## v0.2.12 - 2026-05-29
+
+### Summary
+- Moved backend async error forwarding to route-level `asyncWrapper(...)` usage.
+- Removed repeated `try/catch(next)` boilerplate from auth, community, run, user, and leaderboard controllers.
+- Added regression coverage for async wrapper success and rejection forwarding behavior.
+
+### Files Changed
+- `backend/src/routes/auth.js`, `backend/src/routes/community.js`, `backend/src/routes/run.js`, `backend/src/routes/user.js`, `backend/src/routes/leaderboard.js`: wrapped async controller handlers at route definitions.
+- `backend/src/controllers/authController.js`, `backend/src/controllers/communityController.js`, `backend/src/controllers/runController.js`, `backend/src/controllers/userController.js`, `backend/src/controllers/leaderboardController.js`: simplified controller bodies to direct async logic without local error forwarding.
+- `backend/test/asyncWrapper.test.js`: added coverage for async wrapper error forwarding and successful completion.
+- `CHANGELOG.md`: documented the backend async exception consolidation.
+
+### Verification
+- `cd backend && npm test`
+
+### Notes
+- Route middleware and validators remain explicit; only async controller handlers are wrapped.
+
+## v0.2.11 - 2026-05-29
+
+### Summary
+- Added a global React Native error boundary around the root navigator.
+- Added a friendly recovery screen for uncaught render/layout crashes.
+- Added a tap-to-reload recovery action that resets boundary state and remounts the app navigator.
+
+### Files Changed
+- `RunSphere/src/components/AppErrorBoundary.tsx`: added class-based error boundary using `getDerivedStateFromError` and `componentDidCatch`.
+- `RunSphere/App.tsx`: wrapped `AppNavigator` in `AppErrorBoundary` and remounts it with a reset key.
+- `RunSphere/__tests__/AppErrorBoundary.test.tsx`: added fallback rendering and reset behavior coverage.
+- `CHANGELOG.md`: documented the global mobile error boundary.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- The boundary logs sanitized crash metadata only in development.
+- The recovery button remounts the navigator shell without forcing a physical app restart.
+
+## v0.2.10 - 2026-05-29
+
+### Summary
+- Extracted dense frontend screen orchestration into domain hooks for dashboard, community feed, profile location, and run summary save flows.
+- Slimmed core screens so they consume hook-provided state and callbacks instead of directly owning store wiring, lifecycle effects, service calls, and permission checks.
+- Preserved existing user-facing layouts and save/refresh behavior while moving business logic out of JSX-heavy components.
+
+### Files Changed
+- `RunSphere/src/hooks/useDashboard.ts`: centralizes Home dashboard loading, refresh state, leaderboard loading, goal controls, and display mappers.
+- `RunSphere/src/hooks/useCommunityFeed.ts`: centralizes community feed/events loading, location permission lookup, likes, refresh, external event links, and date formatting.
+- `RunSphere/src/hooks/useProfileLocation.ts`: centralizes profile dashboard refresh, location permission/update flow, and profile statistics mapping.
+- `RunSphere/src/hooks/useRunSummary.ts`: centralizes run summary auto-save, save-first navigation guards, Android back handling, and saved-run result mapping.
+- `RunSphere/src/screens/HomeScreen.tsx`, `RunSphere/src/screens/CommunityFeedScreen.tsx`, `RunSphere/src/screens/ProfileScreen.tsx`, `RunSphere/src/screens/RunSummaryScreen.tsx`: refactored to presentation-focused hook consumers.
+- `CHANGELOG.md`: documented the domain hook extraction.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+- Screen layouts were intentionally preserved; this step only moved orchestration out of the screen components.
+
+## v0.2.9 - 2026-05-29
+
+### Summary
+- Added a shared frontend `buildQuery` helper for safe URL query construction.
+- Replaced manual query string concatenation in run, leaderboard, and community services.
+- Added query helper coverage for nullish filtering and URL encoding.
+
+### Files Changed
+- `RunSphere/src/utils/url.ts`: added `buildQuery(params)` using native `URLSearchParams`.
+- `RunSphere/src/services/runService.ts`: refactored history and daily stats query construction.
+- `RunSphere/src/services/leaderboardService.ts`: refactored leaderboard query construction.
+- `RunSphere/src/services/communityService.ts`: refactored feed and running-events query construction.
+- `RunSphere/__tests__/url.test.ts`: added query helper regression coverage.
+- `CHANGELOG.md`: documented the shared frontend query builder refactor.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Service method signatures remain unchanged.
+
+## v0.2.8 - 2026-05-29
+
+### Summary
+- Centralized backend community/auth input validation for MongoDB ObjectIds, pagination, text bodies, and password reset flows.
+- Wired community routes through reusable validators so controllers trust normalized request data.
+- Added password reset validators to auth routes to cover forgot-password and reset-password inputs before controllers run.
+
+### Files Changed
+- `backend/src/middlewares/validators.js`: added ObjectId, pagination, community post/comment, running-events query, forgot-password, and reset-password validators.
+- `backend/src/routes/community.js`: attached validators to feed, events, post, like, and comment routes.
+- `backend/src/routes/auth.js`: attached forgot-password and reset-password validation middleware.
+- `backend/src/controllers/communityController.js`: removed local validation/parsing and now consumes middleware-normalized request values.
+- `backend/test/validators.test.js`: added regression coverage for ObjectId rejection, pagination clamping, text trimming/limits, email normalization, and reset token/password validation.
+- `CHANGELOG.md`: documented the backend validator consolidation.
+
+### Verification
+- `cd backend && npm test`
+
+### Notes
+- Community post text is limited to 500 characters and comments to 280 characters.
+- Community pagination limits are clamped to a maximum of 50 records.
+
+## v0.2.7 - 2026-05-29
+
+### Summary
+- Sanitized API client logging so development diagnostics never include authorization headers, request bodies, or raw network objects.
+- Added typed `ApiResponse<T>` and `ApiError<TError>` metadata for clean API failure handling.
+- Exposed SecureStore/AsyncStorage auth persistence failures through `storageFailureError` instead of silently dropping sessions.
+
+### Files Changed
+- `RunSphere/src/services/apiClient.ts`: added dev-only sanitized logging, typed API errors, and explicit storage failure propagation.
+- `RunSphere/src/store/authStore.ts`: added `storageFailureError` and surfaced storage failures during bootstrap, auth actions, logout, and user persistence.
+- `RunSphere/__tests__/apiClient.test.ts`: added coverage for log redaction, typed API errors, storage failure propagation, and production logging silence.
+- `RunSphere/__tests__/authStore.test.ts`: added coverage for bootstrap, login, logout, setUser storage failures, and clearing storage errors after success.
+- `CHANGELOG.md`: documented the mobile security infrastructure hardening.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Existing service methods still receive raw response data to avoid a broad API shape migration.
+- UI rendering for `storageFailureError` is exposed for a later shell-level handling pass.
+
+## v0.2.6 - 2026-05-28
+
+### Summary
+- Locked backend dashboard/stat responses to one explicit numeric aggregation contract including total duration, calories, and elevation.
+- Added frontend stats normalization and a dashboard network state machine with `IDLE`, `LOADING`, `SUCCESS`, and `ERROR`.
+- Preserved stale dashboard data on refresh failure and surfaced an actionable retry banner on Home.
+
+### Files Changed
+- `backend/src/services/runService.js`: expanded weekly/daily stats pipelines to output the full stats contract and derive speed/pace from summed facts.
+- `backend/test/runService.test.js`: added contract coverage for period stats defaults and aggregation output stages.
+- `RunSphere/src/store/userStore.ts`: added strict stats/status types, normalization helpers, fail-fast dashboard refresh, stale-data preservation, and error metadata.
+- `RunSphere/src/screens/HomeScreen.tsx`: renders dashboard refresh failures with a retry banner while keeping cached stats visible.
+- `RunSphere/src/screens/ProfileScreen.tsx`, `RunSphere/src/screens/HistoryScreen.tsx`: switched loading checks to the new dashboard status field.
+- `RunSphere/__tests__/userStore.test.ts`: added normalization, success, error-preservation, and reset coverage.
+- `CHANGELOG.md`: documented the aggregation contract and network state cleanup.
+
+### Verification
+- `cd backend && npm test`
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Dashboard refresh failures no longer merge partial authenticated responses into cached state.
+- Leaderboard refresh remains isolated from dashboard stats refresh behavior.
+
+## v0.2.5 - 2026-05-28
+
+### Summary
+- Refactored active run tracking into a fact-only frontend state machine with explicit `IDLE`, `TRACKING`, `PAUSED`, and `COMPLETED` transitions.
+- Removed mutable live metric counters from the run store; duration, distance, pace, calories, elevation, and API coordinates are now derived through pure selectors.
+- Made pause-safe duration calculations subtract closed and active pause intervals, preventing timer drift when the JS thread pauses or the app backgrounds.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: replaced derived counter storage with raw timestamps, pause intervals, GPS points, guarded state actions, selector-derived metrics, and persisted-state migration.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: removed the store-mutating timer, derives live UI metrics from selectors, and completes runs through the guarded state machine.
+- `RunSphere/src/screens/RunSummaryScreen.tsx`: derives save payloads and summary metrics from selectors, preserving save-first navigation behavior.
+- `RunSphere/__tests__/runStore.test.ts`: added selector, transition guard, completion, save-threshold, and migration coverage.
+- `CHANGELOG.md`: documented the fact-only run ledger refactor.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Backend run validation remains the final authority for persisted run submissions.
+- The ledger preserves optional raw GPS facts such as altitude, speed, and heading, but keeps all calculated metrics out of persisted state.
+
+## v0.2.4 - 2026-05-28
+
+### Summary
+- Wrapped new run creation and user location updates in a single Mongoose transaction.
+- Preserved idempotent duplicate run submissions before and during transactional creation.
+- Kept aggregate rebuilds outside the transaction so post-save repair failures remain non-fatal.
+
+### Files Changed
+- `backend/src/services/runService.js`: replaced sequential run/user writes with `mongoose.startSession()`, `Run.create(..., { session })`, `User.updateOne(..., { session })`, explicit commit/abort handling, and post-commit aggregate rebuild.
+- `backend/test/runService.test.js`: added transaction coverage for successful commits, aborts on user update failure, duplicate-key idempotency, and duplicate pre-check behavior.
+- `CHANGELOG.md`: documented the transactional run submission hardening.
+
+### Verification
+- `cd backend && npm test`
+- `rg -n "startSession|startTransaction|commitTransaction|abortTransaction|Run\\.create|User\\.updateOne|run\\.save|findByIdAndUpdate" backend/src/services/runService.js`
+
+### Notes
+- MongoDB transactions require production MongoDB to run as a replica set or sharded cluster.
+- Dashboard/stat reads remain passive from `v0.2.3`; this entry only hardens the write path.
+
+## v0.2.3 - 2026-05-28
+
+### Summary
+- Made backend dashboard/stat reads passive by removing aggregate rebuilds from the GET stats path.
+- Kept user aggregate rebuilds write-triggered after new run submissions, with non-fatal logging if rebuild fails after the run is saved.
+- Preserved idempotent duplicate run submissions without forcing expensive aggregate recalculation.
+
+### Files Changed
+- `backend/src/services/runService.js`: removed `rebuildUserDerivedStats()` from read and duplicate-submit paths, wrapped post-save aggregate rebuilds in a safe `try/catch`, and kept leaderboard cache invalidation write-driven.
+- `backend/test/runService.test.js`: added regression coverage for passive stats reads, empty stats defaults, and duplicate run submission idempotency.
+- `CHANGELOG.md`: documented the backend destructive dashboard read fix.
+
+### Verification
+- `cd backend && npm test`
+- `rg -n "rebuildUserDerivedStats\\(" backend/src/services/runService.js`
+- `rg -n "deleteMany\\(\\{ userId \\}\\)" backend/src/services/runService.js`
+
+### Notes
+- Dashboard/stat GET requests no longer execute `DailyAggregate.deleteMany({ userId })`.
+- Transactional consistency for the write path remains deferred to the next roadmap step.
+
 ## v0.2.2 - 2026-05-27
 
 ### Summary

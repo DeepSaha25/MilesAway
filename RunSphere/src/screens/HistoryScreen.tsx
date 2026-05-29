@@ -23,7 +23,7 @@ import {
 const HistoryScreen = () => {
   const recentRuns = useUserStore(state => state.recentRuns);
   const refreshDashboard = useUserStore(state => state.refreshDashboard);
-  const isLoading = useUserStore(state => state.isLoading);
+  const dashboardStatus = useUserStore(state => state.status);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadHistory = useCallback(async () => {
@@ -50,7 +50,7 @@ const HistoryScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor={Colors.surfaceDim} />
       <AppHeader />
 
-      {isLoading && recentRuns.length === 0 ? (
+      {dashboardStatus === 'LOADING' && recentRuns.length === 0 ? (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Colors.primaryContainer} />
         </View>

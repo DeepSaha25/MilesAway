@@ -106,95 +106,71 @@ const buildLeaderboardPayload = async (req, level, fetcher) => {
 /**
  * Get global leaderboard
  */
-const getGlobalLeaderboard = async (req, res, next) => {
-  try {
-    const payload = await buildLeaderboardPayload(
-      req,
-      'global',
-      LeaderboardService.getGlobalLeaderboard.bind(LeaderboardService)
-    );
-    res.status(payload.statusCode).json(payload.body);
-  } catch (err) {
-    next(err);
-  }
+const getGlobalLeaderboard = async (req, res) => {
+  const payload = await buildLeaderboardPayload(
+    req,
+    'global',
+    LeaderboardService.getGlobalLeaderboard.bind(LeaderboardService)
+  );
+  res.status(payload.statusCode).json(payload.body);
 };
 
 /**
  * Get local (city) leaderboard
  */
-const getLocalLeaderboard = async (req, res, next) => {
-  try {
-    const payload = await buildLeaderboardPayload(req, 'local', LeaderboardService.getLocalLeaderboard.bind(LeaderboardService));
-    res.status(payload.statusCode).json(payload.body);
-  } catch (err) {
-    next(err);
-  }
+const getLocalLeaderboard = async (req, res) => {
+  const payload = await buildLeaderboardPayload(req, 'local', LeaderboardService.getLocalLeaderboard.bind(LeaderboardService));
+  res.status(payload.statusCode).json(payload.body);
 };
 
 /**
  * Get city leaderboard
  */
-const getCityLeaderboard = async (req, res, next) => {
-  try {
-    const payload = await buildLeaderboardPayload(req, 'city', LeaderboardService.getCityLeaderboard.bind(LeaderboardService));
-    res.status(payload.statusCode).json(payload.body);
-  } catch (err) {
-    next(err);
-  }
+const getCityLeaderboard = async (req, res) => {
+  const payload = await buildLeaderboardPayload(req, 'city', LeaderboardService.getCityLeaderboard.bind(LeaderboardService));
+  res.status(payload.statusCode).json(payload.body);
 };
 
 /**
  * Get district leaderboard
  */
-const getDistrictLeaderboard = async (req, res, next) => {
-  try {
-    const payload = await buildLeaderboardPayload(req, 'district', LeaderboardService.getDistrictLeaderboard.bind(LeaderboardService));
-    res.status(payload.statusCode).json(payload.body);
-  } catch (err) {
-    next(err);
-  }
+const getDistrictLeaderboard = async (req, res) => {
+  const payload = await buildLeaderboardPayload(req, 'district', LeaderboardService.getDistrictLeaderboard.bind(LeaderboardService));
+  res.status(payload.statusCode).json(payload.body);
 };
 
 /**
  * Get state leaderboard
  */
-const getStateLeaderboard = async (req, res, next) => {
-  try {
-    const payload = await buildLeaderboardPayload(req, 'state', LeaderboardService.getStateLeaderboard.bind(LeaderboardService));
-    res.status(payload.statusCode).json(payload.body);
-  } catch (err) {
-    next(err);
-  }
+const getStateLeaderboard = async (req, res) => {
+  const payload = await buildLeaderboardPayload(req, 'state', LeaderboardService.getStateLeaderboard.bind(LeaderboardService));
+  res.status(payload.statusCode).json(payload.body);
 };
 
 /**
  * Get country leaderboard
  */
-const getCountryLeaderboard = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.userId);
-    const { timePeriod = 'today', limit = 100 } = req.query;
-    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 100);
-    const leaderboard = await LeaderboardService.getCountryLeaderboard(
-      user?.location || {},
-      timePeriod,
-      parsedLimit,
-      user?.timezone || 'Asia/Kolkata'
-    );
+const getCountryLeaderboard = async (req, res) => {
+  const user = await User.findById(req.userId);
+  const { timePeriod = 'today', limit = 100 } = req.query;
+  const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 100);
+  const leaderboard = await LeaderboardService.getCountryLeaderboard(
+    user?.location || {},
+    timePeriod,
+    parsedLimit,
+    user?.timezone || 'Asia/Kolkata'
+  );
 
-    res.status(200).json({
-      status: 'success',
-      message: 'Country leaderboard retrieved successfully',
-      timePeriod,
-      level: 'country',
-      location: user?.location?.country || 'Worldwide',
-      count: leaderboard.length,
-      yourRank: user ? (await LeaderboardService.getUserRank(req.userId, 'country', user.location || {}, timePeriod, user.timezone || 'Asia/Kolkata'))?.rank || null : null,
-      data: leaderboard
-    });
-  } catch (err) {
-    next(err);
-  }
+  res.status(200).json({
+    status: 'success',
+    message: 'Country leaderboard retrieved successfully',
+    timePeriod,
+    level: 'country',
+    location: user?.location?.country || 'Worldwide',
+    count: leaderboard.length,
+    yourRank: user ? (await LeaderboardService.getUserRank(req.userId, 'country', user.location || {}, timePeriod, user.timezone || 'Asia/Kolkata'))?.rank || null : null,
+    data: leaderboard
+  });
 };
 
 module.exports = {

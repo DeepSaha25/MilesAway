@@ -1,11 +1,13 @@
 import ApiClient from './apiClient';
+import {buildQuery} from '../utils/url';
 
 export type LeaderboardLevel = 'global' | 'city' | 'district' | 'state' | 'country';
 export type TimePeriod = 'today' | 'weekly' | 'monthly';
 
 const LeaderboardService = {
   async getLeaderboard(level: LeaderboardLevel, timePeriod: TimePeriod = 'weekly', limit = 100) {
-    return ApiClient.get(`/leaderboard/${level}?timePeriod=${timePeriod}&limit=${limit}`);
+    const query = buildQuery({timePeriod, limit});
+    return ApiClient.get(`/leaderboard/${level}${query}`);
   },
 
   async getGlobal(timePeriod: TimePeriod = 'weekly') {

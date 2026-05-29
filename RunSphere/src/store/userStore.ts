@@ -1,23 +1,37 @@
-import { create } from 'zustand';
+import {create} from 'zustand';
 import RunService from '../services/runService';
 import UserService from '../services/userService';
 import GuestRunStorage from '../services/guestRunStorage';
-import { guestUser, isGuestUser } from '../services/guestSession';
-import { useAuthStore } from './authStore';
+import {guestUser, isGuestUser} from '../services/guestSession';
+import {useAuthStore} from './authStore';
+
+export type DashboardStatus = 'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR';
+
+export interface PeriodStats {
+  totalDistance: number;
+  totalDuration: number;
+  totalRuns: number;
+  avgSpeed: number;
+  averagePace: number;
+  caloriesBurned: number;
+  elevationGain: number;
+}
 
 interface UserState {
   profile: any | null;
-  stats: any;
-  dailyStats: any;
-  weeklyStats: any;
+  stats: PeriodStats;
+  dailyStats: PeriodStats;
+  weeklyStats: PeriodStats;
   recentRuns: any[];
-  isLoading: boolean;
+  status: DashboardStatus;
+  error: string | null;
+  lastUpdatedAt: number | null;
   refreshDashboard: (historyLimit?: number) => Promise<void>;
   updateBackendLocation: (latitude: number, longitude: number) => Promise<any>;
   reset: () => void;
 }
 
-const emptyStats = {
+export const emptyPeriodStats: PeriodStats = {
   totalDistance: 0,
   totalDuration: 0,
   totalRuns: 0,
@@ -27,30 +41,60 @@ const emptyStats = {
   elevationGain: 0,
 };
 
-const emptyPeriodStats = {
-  totalDistance: 0,
-  totalRuns: 0,
-  avgSpeed: 0,
-  averagePace: 0,
+const toNumber = (value: unknown): number => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
 };
 
-const sumRuns = (runs: any[]) => {
+const roundDistance = (value: number): number => Math.round(value * 100) / 100;
+
+const roundMetric = (value: number): number => Math.round(value * 100) / 100;
+
+export const normalizePeriodStats = (raw: unknown): PeriodStats => {
+  const source = (raw || {}) as Partial<PeriodStats>;
+
+  return {
+    totalDistance: roundDistance(toNumber(source.totalDistance)),
+    totalDuration: toNumber(source.totalDuration),
+    totalRuns: toNumber(source.totalRuns),
+    avgSpeed: roundMetric(toNumber(source.avgSpeed)),
+    averagePace: roundMetric(toNumber(source.averagePace)),
+    caloriesBurned: roundMetric(toNumber(source.caloriesBurned)),
+    elevationGain: roundMetric(toNumber(source.elevationGain)),
+  };
+};
+
+export const summarizeRuns = (runs: any[]): PeriodStats => {
   const totalDistance = runs.reduce(
-    (total, run) => total + Number(run.distance || 0),
+    (total, run) => total + toNumber(run.distance),
     0,
   );
   const totalDuration = runs.reduce(
-    (total, run) => total + Number(run.duration || 0),
+    (total, run) => total + toNumber(run.duration),
     0,
   );
+  const caloriesBurned = runs.reduce(
+    (total, run) => total + toNumber(run.caloriesBurned),
+    0,
+  );
+  const elevationGain = runs.reduce(
+    (total, run) => total + toNumber(run.elevationGain),
+    0,
+  );
+  const avgSpeed =
+    totalDuration > 0 ? totalDistance / (totalDuration / 3600) : 0;
+  const averagePace =
+    totalDistance > 0 ? totalDuration / 60 / totalDistance : 0;
 
-  return {
-    totalDistance: Math.round(totalDistance * 100) / 100,
+  return normalizePeriodStats({
+    totalDistance,
     totalDuration,
     totalRuns: runs.length,
-    avgSpeed: totalDuration > 0 ? totalDistance / (totalDuration / 3600) : 0,
-    averagePace: totalDistance > 0 ? totalDuration / 60 / totalDistance : 0,
-  };
+    avgSpeed,
+    averagePace,
+    caloriesBurned,
+    elevationGain,
+  });
 };
 
 const sameLocalDay = (dateA: Date, dateB: Date) =>
@@ -59,6 +103,14 @@ const sameLocalDay = (dateA: Date, dateB: Date) =>
   dateA.getDate() === dateB.getDate();
 
 const getRunDate = (run: any) => new Date(run.date || run.endTime || run.createdAt);
+
+const getDashboardErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return 'Could not refresh dashboard. Check your connection and try again.';
+};
 
 const guestProfile = {
   ...guestUser,
@@ -69,35 +121,42 @@ const guestProfile = {
 
 export const useUserStore = create<UserState>()((set, get) => ({
   profile: null,
-  stats: emptyStats,
+  stats: emptyPeriodStats,
   dailyStats: emptyPeriodStats,
   weeklyStats: emptyPeriodStats,
   recentRuns: [],
-  isLoading: false,
+  status: 'IDLE',
+  error: null,
+  lastUpdatedAt: null,
   refreshDashboard: async (historyLimit = 10) => {
-    set({ isLoading: true });
+    set({status: 'LOADING', error: null});
 
     try {
       if (isGuestUser(useAuthStore.getState().user)) {
         const currentProfile = get().profile;
         const dashboard = await GuestRunStorage.getDashboard(historyLimit);
+        const stats = normalizePeriodStats(dashboard.stats);
+
         set({
           profile: {
             ...guestProfile,
             location: currentProfile?.location,
-            totalDistance: dashboard.stats.totalDistance,
-            totalRuns: dashboard.stats.totalRuns,
+            totalDistance: stats.totalDistance,
+            totalRuns: stats.totalRuns,
           },
-          stats: dashboard.stats,
-          dailyStats: dashboard.dailyStats,
-          weeklyStats: dashboard.weeklyStats,
-          recentRuns: dashboard.recentRuns,
+          stats,
+          dailyStats: normalizePeriodStats(dashboard.dailyStats),
+          weeklyStats: normalizePeriodStats(dashboard.weeklyStats),
+          recentRuns: dashboard.recentRuns || [],
+          status: 'SUCCESS',
+          error: null,
+          lastUpdatedAt: Date.now(),
         });
         return;
       }
 
       const [profileRes, statsRes, dailyRes, weeklyRes, historyRes] =
-        await Promise.allSettled([
+        await Promise.all([
           UserService.getProfile(),
           RunService.getStats(),
           RunService.getDailyStats(),
@@ -105,33 +164,22 @@ export const useUserStore = create<UserState>()((set, get) => ({
           RunService.getHistory(historyLimit),
         ]);
 
-      const nextProfile =
-        profileRes.status === 'fulfilled'
-          ? profileRes.value.data
-          : get().profile;
-      const recentRuns =
-        historyRes.status === 'fulfilled'
-          ? historyRes.value.data || []
-          : get().recentRuns;
+      const nextProfile = profileRes.data;
+      const recentRuns = historyRes.data || [];
       const now = new Date();
       const weekStart = new Date();
       weekStart.setDate(now.getDate() - 6);
       weekStart.setHours(0, 0, 0, 0);
-      const historyStats = sumRuns(recentRuns);
-      const historyDailyStats = sumRuns(
+      const historyStats = summarizeRuns(recentRuns);
+      const historyDailyStats = summarizeRuns(
         recentRuns.filter((run: any) => sameLocalDay(getRunDate(run), now)),
       );
-      const historyWeeklyStats = sumRuns(
+      const historyWeeklyStats = summarizeRuns(
         recentRuns.filter((run: any) => getRunDate(run) >= weekStart),
       );
-      const serverStats =
-        statsRes.status === 'fulfilled' ? statsRes.value.data : get().stats;
-      const serverDailyStats =
-        dailyRes.status === 'fulfilled' ? dailyRes.value.data : get().dailyStats;
-      const serverWeeklyStats =
-        weeklyRes.status === 'fulfilled'
-          ? weeklyRes.value.data
-          : get().weeklyStats;
+      const serverStats = normalizePeriodStats(statsRes.data);
+      const serverDailyStats = normalizePeriodStats(dailyRes.data);
+      const serverWeeklyStats = normalizePeriodStats(weeklyRes.data);
 
       if (nextProfile) {
         await useAuthStore.getState().setUser(nextProfile);
@@ -139,48 +187,53 @@ export const useUserStore = create<UserState>()((set, get) => ({
 
       set({
         profile: nextProfile,
-        stats:
-          Number(serverStats?.totalDistance || 0) > 0
-            ? serverStats
-            : historyStats,
+        stats: serverStats.totalDistance > 0 ? serverStats : historyStats,
         dailyStats:
-          Number(serverDailyStats?.totalDistance || 0) > 0
+          serverDailyStats.totalDistance > 0
             ? serverDailyStats
             : historyDailyStats,
         weeklyStats:
-          Number(serverWeeklyStats?.totalDistance || 0) > 0
+          serverWeeklyStats.totalDistance > 0
             ? serverWeeklyStats
             : historyWeeklyStats,
         recentRuns,
+        status: 'SUCCESS',
+        error: null,
+        lastUpdatedAt: Date.now(),
       });
-    } finally {
-      set({ isLoading: false });
+    } catch (error) {
+      set({
+        status: 'ERROR',
+        error: getDashboardErrorMessage(error),
+      });
     }
   },
   updateBackendLocation: async (latitude, longitude) => {
     if (isGuestUser(useAuthStore.getState().user)) {
       const profile = {
         ...guestProfile,
-        location: { latitude, longitude },
+        location: {latitude, longitude},
       };
 
-      set({ profile });
+      set({profile});
       await useAuthStore.getState().setUser(profile);
       return profile;
     }
 
     const response = await UserService.updateLocation(latitude, longitude);
-    set({ profile: response.data });
+    set({profile: response.data});
     await useAuthStore.getState().setUser(response.data);
     return response.data;
   },
   reset: () =>
     set({
       profile: null,
-      stats: emptyStats,
+      stats: emptyPeriodStats,
       dailyStats: emptyPeriodStats,
       weeklyStats: emptyPeriodStats,
       recentRuns: [],
-      isLoading: false,
+      status: 'IDLE',
+      error: null,
+      lastUpdatedAt: null,
     }),
 }));

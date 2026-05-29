@@ -4,12 +4,15 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import LiveRunMap from '../components/LiveRunMap';
-import {useRunStore} from '../store/runStore';
-import {useUserStore} from '../store/userStore';
 import {
-  RunCoordinate,
-  estimateCalories,
-} from '../utils/runMetrics';
+  RunStatus,
+  RunTrackPoint,
+  selectCanSaveRun,
+  selectRunCoordinates,
+  selectRunMetrics,
+  useRunStore,
+} from '../store/runStore';
+import {useUserStore} from '../store/userStore';
 import {
   getCurrentLocation,
   requestLocationPermission,
@@ -17,35 +20,44 @@ import {
   stopLocationWatch,
 } from '../utils/location';
 
+const toLiveRunStatus = (
+  status: RunStatus,
+): 'idle' | 'running' | 'paused' | 'summary' => {
+  switch (status) {
+    case 'TRACKING':
+      return 'running';
+    case 'PAUSED':
+      return 'paused';
+    case 'COMPLETED':
+      return 'summary';
+    case 'IDLE':
+    default:
+      return 'idle';
+  }
+};
+
 const RunTrackingScreen = ({navigation}: any) => {
   const updateBackendLocation = useUserStore(state => state.updateBackendLocation);
-  const status = useRunStore(state => state.status);
-  const coordinates = useRunStore(state => state.coordinates);
-  const distanceKm = useRunStore(state => state.distanceKm);
-  const elapsedSeconds = useRunStore(state => state.elapsedSeconds);
-  const elevationGain = useRunStore(state => state.elevationGain);
+  const runState = useRunStore();
   const profile = useUserStore(state => state.profile);
   const pauseRun = useRunStore(state => state.pauseRun);
   const resumeRun = useRunStore(state => state.resumeRun);
-  const prepareSummary = useRunStore(state => state.prepareSummary);
+  const completeRun = useRunStore(state => state.completeRun);
   const resetRun = useRunStore(state => state.resetRun);
   const watchRef = useRef<ReturnType<typeof startLocationWatch> | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [now, setNow] = useState(Date.now());
   const [locationStatus, setLocationStatus] = useState('Acquiring GPS lock...');
+  const metrics = selectRunMetrics(runState, profile?.weightKg, now);
+  const route = selectRunCoordinates(runState);
 
   const clearTrackingArtifacts = useCallback(() => {
     stopLocationWatch(watchRef.current);
     watchRef.current = null;
-
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
   }, []);
 
   const syncLocationToBackend = useCallback(
-    async (coordinate: RunCoordinate) => {
+    async (coordinate: RunTrackPoint) => {
       if (
         typeof coordinate.accuracy === 'number' &&
         coordinate.accuracy > 100
@@ -71,7 +83,7 @@ const RunTrackingScreen = ({navigation}: any) => {
 
   const ingestPosition = useCallback(
     async (position: any, syncProfile = false) => {
-      const coordinate: RunCoordinate = {
+      const coordinate: RunTrackPoint = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         altitude:
@@ -90,13 +102,14 @@ const RunTrackingScreen = ({navigation}: any) => {
           typeof position.coords.heading === 'number'
             ? position.coords.heading
             : null,
-        timestamp: new Date(position.timestamp || Date.now()).toISOString(),
+        timestamp:
+          typeof position.timestamp === 'number' ? position.timestamp : Date.now(),
       };
 
       const store = useRunStore.getState();
-      if (store.status === 'idle') {
+      if (store.status === 'IDLE') {
         store.startRun(coordinate);
-      } else {
+      } else if (store.status === 'TRACKING') {
         store.addCoordinate(coordinate);
       }
 
@@ -114,7 +127,7 @@ const RunTrackingScreen = ({navigation}: any) => {
 
     const bootstrap = async () => {
       const currentRun = useRunStore.getState();
-      if (currentRun.status === 'summary') {
+      if (currentRun.status === 'COMPLETED') {
         if (currentRun.coordinates.length >= 2) {
           navigation.replace('RunSummary');
           return;
@@ -123,7 +136,7 @@ const RunTrackingScreen = ({navigation}: any) => {
         resetRun();
       }
 
-      if (currentRun.status === 'idle') {
+      if (currentRun.status === 'IDLE') {
         resetRun();
       }
 
@@ -169,20 +182,30 @@ const RunTrackingScreen = ({navigation}: any) => {
   }, [clearTrackingArtifacts, ingestPosition, navigation, resetRun]);
 
   useEffect(() => {
-    if (initializing || status === 'idle' || status === 'summary') {
+    if (runState.status !== 'TRACKING' && runState.status !== 'PAUSED') {
+      return undefined;
+    }
+
+    const intervalId = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [runState.status]);
+
+  useEffect(() => {
+    if (
+      initializing ||
+      runState.status === 'IDLE' ||
+      runState.status === 'COMPLETED'
+    ) {
       clearTrackingArtifacts();
       return;
     }
 
-    if (status === 'paused') {
+    if (runState.status === 'PAUSED') {
       clearTrackingArtifacts();
       return;
-    }
-
-    if (!timerRef.current) {
-      timerRef.current = setInterval(() => {
-        useRunStore.getState().tick();
-      }, 1000);
     }
 
     if (watchRef.current === null) {
@@ -195,10 +218,10 @@ const RunTrackingScreen = ({navigation}: any) => {
         },
       );
     }
-  }, [clearTrackingArtifacts, ingestPosition, initializing, status]);
+  }, [clearTrackingArtifacts, ingestPosition, initializing, runState.status]);
 
   const pauseOrResume = () => {
-    if (status === 'running') {
+    if (runState.status === 'TRACKING') {
       pauseRun();
       setLocationStatus('Run paused');
       return;
@@ -220,28 +243,22 @@ const RunTrackingScreen = ({navigation}: any) => {
       {
         text: 'Finish',
         onPress: () => {
-          if (distanceKm < 0.01 || elapsedSeconds < 30) {
+          const currentRun = useRunStore.getState();
+          if (!selectCanSaveRun(currentRun)) {
             Toast.show({
               type: 'error',
               text1: 'Run discarded',
-              text2: 'A saved run needs at least 0.01 km and 30 seconds.',
-            });
-            discardRun();
-            return;
-          }
-
-          if (coordinates.length < 2) {
-            Toast.show({
-              type: 'error',
-              text1: 'Run discarded',
-              text2: 'A saved run needs at least two GPS samples.',
+              text2:
+                currentRun.coordinates.length < 2
+                  ? 'A saved run needs at least two GPS samples.'
+                  : 'A saved run needs at least 0.01 km and 30 seconds.',
             });
             discardRun();
             return;
           }
 
           clearTrackingArtifacts();
-          prepareSummary();
+          completeRun();
           navigation.navigate('RunSummary');
         },
       },
@@ -250,13 +267,13 @@ const RunTrackingScreen = ({navigation}: any) => {
 
   return (
     <LiveRunMap
-      route={coordinates}
-      elapsedSeconds={elapsedSeconds}
-      distanceKm={distanceKm}
-      elevationGain={elevationGain}
-      calories={estimateCalories(distanceKm, profile?.weightKg)}
+      route={route}
+      elapsedSeconds={metrics.elapsedSeconds}
+      distanceKm={metrics.distanceKm}
+      elevationGain={metrics.elevationGain}
+      calories={metrics.caloriesBurned}
       gpsStatus={locationStatus}
-      status={initializing ? 'idle' : status}
+      status={initializing ? 'idle' : toLiveRunStatus(runState.status)}
       onPauseResume={pauseOrResume}
       onFinish={finishRun}
       onCancel={discardRun}

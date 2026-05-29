@@ -1,8 +1,6 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React from 'react';
 import {
-  ActivityIndicator,
   ImageBackground,
-  Linking,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -14,152 +12,16 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AppHeader from '../components/AppHeader';
 import Avatar from '../components/Avatar';
-import CommunityService from '../services/communityService';
-import {isGuestUser} from '../services/guestSession';
-import {useAuthStore} from '../store/authStore';
+import CommunitySkeleton from '../components/CommunitySkeleton';
+import {useCommunityFeed} from '../hooks/useCommunityFeed';
 import {Colors} from '../theme/colors';
-import {getCurrentLocation, requestLocationPermission} from '../utils/location';
 import {formatDistance} from '../utils/runMetrics';
 
-const COUNTRY_CODE_BY_NAME: Record<string, string> = {
-  india: 'IN',
-  'united states': 'US',
-  usa: 'US',
-  'united kingdom': 'GB',
-  uk: 'GB',
-  canada: 'CA',
-  australia: 'AU',
-};
-
-const getUserCountryCode = (country?: string | null) => {
-  const normalized = String(country || '').trim();
-  if (/^[a-z]{2}$/i.test(normalized)) {
-    return normalized.toUpperCase();
-  }
-
-  return COUNTRY_CODE_BY_NAME[normalized.toLowerCase()] || 'IN';
-};
-
 const CommunityFeedScreen = () => {
-  const authUser = useAuthStore(state => state.user);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [eventsError, setEventsError] = useState<string | null>(null);
+  const community = useCommunityFeed();
 
-  const loadEvents = useCallback(async () => {
-    try {
-      const countryCode = getUserCountryCode(authUser?.location?.country);
-      const hasPermission = await requestLocationPermission();
-      const position = hasPermission ? await getCurrentLocation().catch(() => null) : null;
-      const res = await CommunityService.getRunningEvents({
-        countryCode,
-        keyword: 'running',
-        limit: 8,
-        radiusKm: 75,
-        latitude: position?.coords.latitude,
-        longitude: position?.coords.longitude,
-      });
-      setEvents(res.events || []);
-      setEventsError(null);
-    } catch (loadError: any) {
-      setEvents([]);
-      setEventsError(loadError?.message || 'Unable to load running events.');
-    }
-  }, [authUser?.location?.country]);
-
-  const loadFeed = useCallback(async () => {
-    if (isGuestUser(authUser)) {
-      setPosts([]);
-      setError(null);
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-
-    try {
-      const res = await CommunityService.getFeed(1, 20);
-      setPosts(res.posts || []);
-      setError(null);
-    } catch (loadError: any) {
-      setPosts([]);
-      setError(loadError?.message || 'Unable to load community feed.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [authUser]);
-
-  useEffect(() => {
-    Promise.all([loadEvents(), loadFeed()]).finally(() => setLoading(false));
-  }, [loadEvents, loadFeed]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    Promise.all([loadEvents(), loadFeed()]).finally(() => setRefreshing(false));
-  };
-
-  const handleLike = async (postId?: string) => {
-    if (!postId) {
-      return;
-    }
-
-    try {
-      await CommunityService.toggleLike(postId);
-      loadFeed();
-    } catch {}
-  };
-
-  const feed = useMemo(() => posts.slice(0, 6), [posts]);
-  const liveEvents = useMemo(() => events.slice(0, 4), [events]);
-
-  const openEventDetails = async (url?: string) => {
-    if (!url) {
-      return;
-    }
-
-    await Linking.openURL(url).catch(() => undefined);
-  };
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) {
-      return 'JUST NOW';
-    }
-
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffHrs = Math.floor(diffMs / 3600000);
-    if (diffHrs < 1) {
-      return 'JUST NOW';
-    }
-    if (diffHrs < 24) {
-      return `${diffHrs}H AGO`;
-    }
-    return `${Math.floor(diffHrs / 24)}D AGO`;
-  };
-
-  const formatEventDate = (dateStr?: string) => {
-    if (!dateStr) {
-      return 'DATE TBA';
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    }).format(new Date(dateStr)).toUpperCase();
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingState}>
-        <ActivityIndicator size="large" color={Colors.primaryContainer} />
-      </View>
-    );
+  if (community.loading && !community.refreshing) {
+    return <CommunitySkeleton />;
   }
 
   return (
@@ -172,8 +34,8 @@ const CommunityFeedScreen = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+            refreshing={community.refreshing}
+            onRefresh={community.onRefresh}
             tintColor={Colors.primaryContainer}
           />
         }>
@@ -191,19 +53,21 @@ const CommunityFeedScreen = () => {
             <Ionicons name="radio" size={22} color={Colors.primaryContainer} />
           </View>
 
-          {eventsError ? (
-            <Text style={styles.eventsHint}>{eventsError}</Text>
-          ) : liveEvents.length === 0 ? (
+          {community.eventsError ? (
+            <Text style={styles.eventsHint}>{community.eventsError}</Text>
+          ) : community.liveEvents.length === 0 ? (
             <Text style={styles.eventsHint}>
               Add an events API key on the backend to stream nearby running
               event details.
             </Text>
           ) : (
-            liveEvents.map((event) => (
+            community.liveEvents.map((event) => (
               <TouchableOpacity
                 key={event.id}
                 style={styles.eventCard}
-                onPress={() => openEventDetails(event.detailsUrl || event.url)}
+                onPress={() =>
+                  community.onOpenEventDetails(event.detailsUrl || event.url)
+                }
                 activeOpacity={0.84}>
                 <ImageBackground
                   source={
@@ -221,7 +85,9 @@ const CommunityFeedScreen = () => {
                         {String(event.status || 'LIVE').toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={styles.eventDate}>{formatEventDate(event.date)}</Text>
+                    <Text style={styles.eventDate}>
+                      {community.formatEventDate(event.date)}
+                    </Text>
                   </View>
                   <View style={styles.eventCopy}>
                     <Text numberOfLines={2} style={styles.eventTitle}>
@@ -261,12 +127,12 @@ const CommunityFeedScreen = () => {
           )}
         </View>
 
-        {error ? (
+        {community.error ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>COMMUNITY UNAVAILABLE</Text>
-            <Text style={styles.emptyText}>{error}</Text>
+            <Text style={styles.emptyText}>{community.error}</Text>
           </View>
-        ) : isGuestUser(authUser) ? (
+        ) : community.isGuest ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>SIGN IN TO JOIN</Text>
             <Text style={styles.emptyText}>
@@ -274,7 +140,7 @@ const CommunityFeedScreen = () => {
               community activity.
             </Text>
           </View>
-        ) : feed.length === 0 ? (
+        ) : community.feed.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>NO ACTIVITY YET</Text>
             <Text style={styles.emptyText}>
@@ -282,7 +148,7 @@ const CommunityFeedScreen = () => {
             </Text>
           </View>
         ) : (
-          feed.map((post, index) =>
+          community.feed.map((post, index) =>
             index % 2 === 0 ? (
               <View key={post._id || index} style={styles.routeCard}>
                 <View style={styles.cardBody}>
@@ -299,7 +165,7 @@ const CommunityFeedScreen = () => {
                           {post.userId?.name || 'Runner'}
                         </Text>
                         <Text style={styles.userMeta}>
-                          {formatDate(post.createdAt)}
+                          {community.formatDate(post.createdAt)}
                         </Text>
                       </View>
                     </View>
@@ -332,7 +198,7 @@ const CommunityFeedScreen = () => {
                   <View style={styles.engagementRow}>
                     <TouchableOpacity
                       style={styles.engageBtn}
-                      onPress={() => handleLike(post._id)}>
+                      onPress={() => community.onToggleLike(post._id)}>
                       <Ionicons name="heart" size={18} color={Colors.onSurfaceVariant} />
                       <Text style={styles.engageCount}>{post.likesCount || 0}</Text>
                     </TouchableOpacity>
@@ -363,7 +229,9 @@ const CommunityFeedScreen = () => {
                     <Text numberOfLines={1} style={styles.featureName}>
                       {post.userId?.name || 'Runner'}
                     </Text>
-                    <Text style={styles.featureMeta}>{formatDate(post.createdAt)}</Text>
+                    <Text style={styles.featureMeta}>
+                      {community.formatDate(post.createdAt)}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.scenePanel}>
@@ -399,7 +267,7 @@ const CommunityFeedScreen = () => {
                 <View style={styles.engagementRow}>
                   <TouchableOpacity
                     style={styles.engageBtn}
-                    onPress={() => handleLike(post._id)}>
+                    onPress={() => community.onToggleLike(post._id)}>
                     <Ionicons name="heart" size={18} color={Colors.onSurfaceVariant} />
                     <Text style={styles.engageCount}>{post.likesCount || 0}</Text>
                   </TouchableOpacity>
@@ -428,12 +296,6 @@ const CommunityFeedScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  loadingState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: Colors.surface,
   },
   content: {
