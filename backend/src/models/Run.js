@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const RUN_POLICY = require('../config/runPolicy');
 
 const RunSchema = new mongoose.Schema(
   {
@@ -176,16 +177,16 @@ RunSchema.index({ 'location.country': 1, date: -1 });
 RunSchema.statics.validateRunData = function (distance, duration) {
   const errors = [];
 
-  if (distance < 0.01) {
-    errors.push('Distance must be at least 0.01 km');
+  if (distance < RUN_POLICY.MIN_SAVE_DISTANCE_KM) {
+    errors.push(`Distance must be at least ${RUN_POLICY.MIN_SAVE_DISTANCE_KM} km`);
   }
 
   if (duration <= 0) {
     errors.push('Duration must be greater than 0');
   }
 
-  if (duration < 30) {
-    errors.push('Run duration must be at least 30 seconds');
+  if (duration < RUN_POLICY.MIN_SAVE_DURATION_SECONDS) {
+    errors.push(`Run duration must be at least ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds`);
   }
 
   const speedKmh = (distance / (duration / 3600));

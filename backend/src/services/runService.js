@@ -6,15 +6,17 @@ const mongoose = require('mongoose');
 const { getLocationFromCoordinates } = require('../utils/geocoding');
 const LeaderboardService = require('./leaderboardService');
 const ApiError = require('../utils/ApiError');
+const RUN_POLICY = require('../config/runPolicy');
 
-const MIN_RUN_DISTANCE_KM = 0.01;
-const MIN_RUN_DURATION_SECONDS = 30;
+const MIN_RUN_DISTANCE_KM = RUN_POLICY.MIN_SAVE_DISTANCE_KM;
+const MIN_RUN_DURATION_SECONDS = RUN_POLICY.MIN_SAVE_DURATION_SECONDS;
+const MIN_RUN_COORDINATES = RUN_POLICY.MIN_SAVE_COORDINATES;
 const MAX_AVERAGE_SPEED_KMH = 25;
-const MAX_SEGMENT_SPEED_KMH = 30;
-const MAX_ACCEPTED_ACCURACY_METERS = 80;
+const MAX_SEGMENT_SPEED_KMH = RUN_POLICY.MAX_SEGMENT_SPEED_KMH;
+const MAX_ACCEPTED_ACCURACY_METERS = RUN_POLICY.MAX_ACCURACY_METERS;
 const MAX_FUTURE_SKEW_MS = 2 * 60 * 1000;
 const MAX_BACKDATE_DAYS = 7;
-const JITTER_DISTANCE_METERS = 3;
+const JITTER_DISTANCE_METERS = RUN_POLICY.JITTER_DISTANCE_METERS;
 const ROUTE_SIMPLIFY_DISTANCE_METERS = 20;
 const EARTH_RADIUS_METERS = 6371e3;
 
@@ -382,8 +384,8 @@ class RunService {
   }
 
   static calculateTrustedMetrics(coordinates, timing = {}) {
-    if (coordinates.length < 2) {
-      throw ApiError.badRequest('At least two valid GPS samples are required');
+    if (coordinates.length < MIN_RUN_COORDINATES) {
+      throw ApiError.badRequest(`At least ${MIN_RUN_COORDINATES} valid GPS samples are required`);
     }
 
     const now = Date.now();
@@ -403,7 +405,7 @@ class RunService {
       (Number.isFinite(coordinate.accuracy) && coordinate.accuracy <= MAX_ACCEPTED_ACCURACY_METERS)
     );
 
-    if (usableCoordinates.length < 2) {
+    if (usableCoordinates.length < MIN_RUN_COORDINATES) {
       throw ApiError.badRequest('GPS accuracy is too low to save this run');
     }
 
@@ -451,7 +453,7 @@ class RunService {
       acceptedCoordinates.push(current);
     }
 
-    if (acceptedCoordinates.length < 2) {
+    if (acceptedCoordinates.length < MIN_RUN_COORDINATES) {
       throw ApiError.badRequest('Not enough movement after GPS drift filtering');
     }
 

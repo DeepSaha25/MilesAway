@@ -5,6 +5,7 @@ const RunService = require('../src/services/runService');
 const Run = require('../src/models/Run');
 const User = require('../src/models/User');
 const LeaderboardService = require('../src/services/leaderboardService');
+const RUN_POLICY = require('../src/config/runPolicy');
 
 const sample = (offsetSeconds, latitude, longitude, extra = {}) => ({
   latitude,
@@ -28,11 +29,15 @@ const validRunInput = () => ({
   clientRunId: `client-${Date.now()}`,
   coordinates: [
     sample(0, 22.57, 88.36),
-    sample(40, 22.5702, 88.3602)
+    sample(15, 22.5702, 88.3602),
+    sample(30, 22.5704, 88.3604),
+    sample(45, 22.5706, 88.3606),
+    sample(60, 22.5708, 88.3608),
+    sample(75, 22.571, 88.361)
   ],
   startedAt: sample(0, 22.57, 88.36).timestamp,
-  finishedAt: sample(40, 22.5702, 88.3602).timestamp,
-  elapsedSeconds: 40
+  finishedAt: sample(75, 22.571, 88.361).timestamp,
+  elapsedSeconds: 75
 });
 
 const fetchGeocodeResponse = async () => ({
@@ -70,13 +75,16 @@ const withPatchedStatics = async (patches, assertion) => {
 test('calculates trusted run metrics from GPS samples', () => {
   const metrics = RunService.calculateTrustedMetrics(RunService.normalizeCoordinates([
     sample(0, 28.7041, 77.1025),
-    sample(90, 28.7054, 77.1038, {altitude: 18}),
-    sample(180, 28.7068, 77.1052, {altitude: 22})
+    sample(36, 28.7045, 77.1029, {altitude: 12}),
+    sample(72, 28.7049, 77.1033, {altitude: 15}),
+    sample(108, 28.7053, 77.1037, {altitude: 17}),
+    sample(144, 28.7057, 77.1041, {altitude: 20}),
+    sample(180, 28.7061, 77.1045, {altitude: 23})
   ]));
 
   assert.equal(metrics.durationSeconds, 180);
-  assert.ok(metrics.distanceKm >= 0.35);
-  assert.ok(metrics.elevationGain >= 12);
+  assert.ok(metrics.distanceKm >= 0.25);
+  assert.ok(metrics.elevationGain >= 13);
 });
 
 test('rejects GPS teleport jumps', () => {
@@ -84,6 +92,10 @@ test('rejects GPS teleport jumps', () => {
     () =>
       RunService.calculateTrustedMetrics([
         sample(0, 28.7041, 77.1025),
+        sample(20, 28.7043, 77.1027),
+        sample(40, 28.7045, 77.1029),
+        sample(60, 28.7047, 77.1031),
+        sample(80, 28.7049, 77.1033),
         sample(90, 28.9041, 77.3025)
       ].map((coordinate) => ({
         ...coordinate,
@@ -100,7 +112,11 @@ test('rejects duplicate GPS timestamps', () => {
     () =>
       RunService.calculateTrustedMetrics([
         sample(0, 28.7041, 77.1025, {timestamp}),
-        sample(90, 28.7051, 77.1035, {timestamp})
+        sample(30, 28.7043, 77.1027, {timestamp}),
+        sample(60, 28.7045, 77.1029),
+        sample(90, 28.7047, 77.1031),
+        sample(120, 28.7049, 77.1033),
+        sample(150, 28.7051, 77.1035)
       ].map((coordinate) => ({
         ...coordinate,
         timestamp: new Date(coordinate.timestamp)
@@ -114,7 +130,11 @@ test('rejects low accuracy-only tracks', () => {
     () =>
       RunService.calculateTrustedMetrics([
         sample(0, 28.7041, 77.1025, {accuracy: 150}),
-        sample(120, 28.7061, 77.1045, {accuracy: 150})
+        sample(30, 28.7045, 77.1029, {accuracy: 150}),
+        sample(60, 28.7049, 77.1033, {accuracy: 150}),
+        sample(90, 28.7053, 77.1037, {accuracy: 150}),
+        sample(120, 28.7057, 77.1041, {accuracy: 150}),
+        sample(150, 28.7061, 77.1045, {accuracy: 150})
       ].map((coordinate) => ({
         ...coordinate,
         timestamp: new Date(coordinate.timestamp)
@@ -123,33 +143,49 @@ test('rejects low accuracy-only tracks', () => {
   );
 });
 
-test('run model validation helper accepts temporary short-run threshold', () => {
-  assert.deepEqual(Run.validateRunData(0.01, 30), []);
-  assert.match(
-    Run.validateRunData(0.009, 30).join(' '),
-    /Distance must be at least 0\.01 km/
+test('run model validation helper enforces production save thresholds', () => {
+  assert.deepEqual(
+    Run.validateRunData(
+      RUN_POLICY.MIN_SAVE_DISTANCE_KM,
+      RUN_POLICY.MIN_SAVE_DURATION_SECONDS
+    ),
+    []
   );
   assert.match(
-    Run.validateRunData(0.01, 29).join(' '),
-    /Run duration must be at least 30 seconds/
+    Run.validateRunData(
+      RUN_POLICY.MIN_SAVE_DISTANCE_KM - 0.001,
+      RUN_POLICY.MIN_SAVE_DURATION_SECONDS
+    ).join(' '),
+    /Distance must be at least 0\.1 km/
+  );
+  assert.match(
+    Run.validateRunData(
+      RUN_POLICY.MIN_SAVE_DISTANCE_KM,
+      RUN_POLICY.MIN_SAVE_DURATION_SECONDS - 1
+    ).join(' '),
+    /Run duration must be at least 60 seconds/
   );
 });
 
-test('uses sane client elapsed time for short saved runs', () => {
+test('uses sane client elapsed time for accepted saved runs', () => {
   const metrics = RunService.calculateTrustedMetrics(
     RunService.normalizeCoordinates([
       sample(0, 22.57, 88.36),
-      sample(20, 22.5702, 88.3602)
+      sample(13, 22.5702, 88.3602),
+      sample(26, 22.5704, 88.3604),
+      sample(39, 22.5706, 88.3606),
+      sample(52, 22.5708, 88.3608),
+      sample(65, 22.571, 88.361)
     ]),
     {
       startedAt: sample(0, 22.57, 88.36).timestamp,
-      finishedAt: sample(37, 22.5702, 88.3602).timestamp,
-      elapsedSeconds: 37
+      finishedAt: sample(65, 22.571, 88.361).timestamp,
+      elapsedSeconds: 65
     }
   );
 
-  assert.equal(metrics.durationSeconds, 37);
-  assert.ok(metrics.distanceKm >= 0.01);
+  assert.equal(metrics.durationSeconds, 65);
+  assert.ok(metrics.distanceKm >= RUN_POLICY.MIN_SAVE_DISTANCE_KM);
 });
 
 test('aggregated stats read is passive and returns empty totals', async () => {
@@ -361,7 +397,7 @@ test('new run submission commits run and user writes in one transaction', async 
         value: async (query, update, options) => {
           events.push('User.updateOne');
           assert.deepEqual(query, { _id: TEST_USER_ID });
-          assert.equal(update['location.latitude'], 22.5702);
+          assert.equal(update['location.latitude'], 22.571);
           userUpdateOptions = options;
           return { matchedCount: 1 };
         }

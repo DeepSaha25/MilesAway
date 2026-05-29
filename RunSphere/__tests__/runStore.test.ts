@@ -4,8 +4,11 @@ import {
   initialRunFacts,
   migrateRunState,
   selectCanSaveRun,
+  selectCurrentPace,
+  selectMotionState,
   selectRunDistance,
   selectRunDuration,
+  selectRunMetrics,
   useRunStore,
 } from '../src/store/runStore';
 
@@ -13,6 +16,15 @@ const makeState = (overrides: Partial<RunFacts>): RunFacts => ({
   ...initialRunFacts,
   ...overrides,
 });
+
+const productionSaveCoordinates = () => [
+  {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
+  {latitude: 0, longitude: 0.0002, timestamp: 13_000, accuracy: 5},
+  {latitude: 0, longitude: 0.0004, timestamp: 25_000, accuracy: 5},
+  {latitude: 0, longitude: 0.0006, timestamp: 37_000, accuracy: 5},
+  {latitude: 0, longitude: 0.0008, timestamp: 49_000, accuracy: 5},
+  {latitude: 0, longitude: 0.001, timestamp: 61_000, accuracy: 5},
+];
 
 describe('runStore fact-only selectors', () => {
   it('excludes closed pause intervals from duration', () => {
@@ -40,30 +52,110 @@ describe('runStore fact-only selectors', () => {
     const state = makeState({
       coordinates: [
         {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
-        {latitude: 0, longitude: 0.001, timestamp: 2_000, accuracy: 5},
+        {latitude: 0, longitude: 0.001, timestamp: 61_000, accuracy: 5},
       ],
     });
 
     expect(selectRunDistance(state)).toBeGreaterThan(0.1);
   });
 
+  it('drops poor accuracy and stationary drift from distance accumulation', () => {
+    const state = makeState({
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
+        {latitude: 0, longitude: 0.00002, timestamp: 10_000, accuracy: 5},
+        {latitude: 0, longitude: 0.00004, timestamp: 20_000, accuracy: 5},
+        {latitude: 0, longitude: 0.001, timestamp: 30_000, accuracy: 80},
+      ],
+    });
+
+    expect(selectRunDistance(state)).toBe(0);
+  });
+
+  it('exposes acquiring, stationary, and moving motion states', () => {
+    expect(
+      selectMotionState(
+        makeState({
+          coordinates: productionSaveCoordinates().slice(0, 2),
+        }),
+        25_000,
+      ),
+    ).toBe('ACQUIRING_GPS');
+
+    expect(
+      selectMotionState(
+        makeState({
+          coordinates: [
+            {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
+            {latitude: 0, longitude: 0.00001, timestamp: 8_000, accuracy: 5},
+            {latitude: 0, longitude: 0.00002, timestamp: 16_000, accuracy: 5},
+          ],
+        }),
+        16_000,
+      ),
+    ).toBe('STATIONARY');
+
+    expect(
+      selectMotionState(
+        makeState({
+          coordinates: [
+            {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
+            {latitude: 0, longitude: 0.00014, timestamp: 8_000, accuracy: 5},
+            {latitude: 0, longitude: 0.00028, timestamp: 16_000, accuracy: 5},
+          ],
+        }),
+        16_000,
+      ),
+    ).toBe('MOVING');
+  });
+
+  it('returns null current pace until movement is confident', () => {
+    const stationaryState = makeState({
+      status: 'TRACKING',
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
+        {latitude: 0, longitude: 0.00001, timestamp: 8_000, accuracy: 5},
+        {latitude: 0, longitude: 0.00002, timestamp: 16_000, accuracy: 5},
+      ],
+    });
+
+    expect(selectCurrentPace(stationaryState, 16_000)).toBeNull();
+    expect(selectRunMetrics(stationaryState, 70, 16_000).currentPace).toBeNull();
+  });
+
+  it('derives current pace from the trailing 45-second movement window', () => {
+    const movingState = makeState({
+      status: 'TRACKING',
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 0, accuracy: 5},
+        {latitude: 0, longitude: 0.0003, timestamp: 15_000, accuracy: 5},
+        {latitude: 0, longitude: 0.0006, timestamp: 30_000, accuracy: 5},
+        {latitude: 0, longitude: 0.0009, timestamp: 45_000, accuracy: 5},
+        {latitude: 0, longitude: 0.0012, timestamp: 60_000, accuracy: 5},
+      ],
+    });
+
+    const currentPace = selectCurrentPace(movingState, 60_000);
+
+    expect(currentPace).not.toBeNull();
+    expect(currentPace as number).toBeGreaterThan(7);
+    expect(currentPace as number).toBeLessThan(8);
+  });
+
   it('enforces save thresholds for distance, duration, and samples', () => {
     const validState = makeState({
       status: 'COMPLETED',
       startTime: 1_000,
-      endTime: 31_000,
-      coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
-        {latitude: 0, longitude: 0.001, timestamp: 31_000, accuracy: 5},
-      ],
+      endTime: 61_000,
+      coordinates: productionSaveCoordinates(),
     });
 
     expect(selectCanSaveRun(validState)).toBe(true);
-    expect(selectCanSaveRun({...validState, endTime: 30_000})).toBe(false);
+    expect(selectCanSaveRun({...validState, endTime: 60_000})).toBe(false);
     expect(
       selectCanSaveRun({
         ...validState,
-        coordinates: validState.coordinates.slice(0, 1),
+        coordinates: validState.coordinates.slice(0, 5),
       }),
     ).toBe(false);
   });

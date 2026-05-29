@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import LiveRunMap from '../components/LiveRunMap';
+import {RUN_POLICY} from '../config/runPolicy';
 import {
   RunStatus,
   RunTrackPoint,
@@ -36,6 +37,15 @@ const toLiveRunStatus = (
   }
 };
 
+const saveRequirementToastText = `A saved run needs at least ${RUN_POLICY.MIN_SAVE_DISTANCE_KM.toFixed(
+  2,
+)} km, ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds, and ${
+  RUN_POLICY.MIN_SAVE_COORDINATES
+} GPS samples.`;
+
+const tooShortAlertMessage =
+  'Run is too short to save. Cover at least 100 meters to log this workout.';
+
 const RunTrackingScreen = ({navigation}: any) => {
   const updateBackendLocation = useUserStore(state => state.updateBackendLocation);
   const runState = useRunStore();
@@ -50,6 +60,7 @@ const RunTrackingScreen = ({navigation}: any) => {
   const [locationStatus, setLocationStatus] = useState('Acquiring GPS lock...');
   const metrics = selectRunMetrics(runState, profile?.weightKg, now);
   const route = selectRunCoordinates(runState);
+  const canSaveRun = selectCanSaveRun(runState, now);
 
   const clearTrackingArtifacts = useCallback(() => {
     stopLocationWatch(watchRef.current);
@@ -238,22 +249,29 @@ const RunTrackingScreen = ({navigation}: any) => {
   };
 
   const finishRun = () => {
+    const currentRun = useRunStore.getState();
+    if (!selectCanSaveRun(currentRun, Date.now())) {
+      Alert.alert('Keep moving', tooShortAlertMessage, [
+        {text: 'OK', style: 'default'},
+      ]);
+      return;
+    }
+
     Alert.alert('Finish run?', 'Your run will be saved and shown on the summary.', [
       {text: 'Keep running', style: 'cancel'},
       {
         text: 'Finish',
         onPress: () => {
-          const currentRun = useRunStore.getState();
-          if (!selectCanSaveRun(currentRun)) {
+          const latestRun = useRunStore.getState();
+          if (!selectCanSaveRun(latestRun, Date.now())) {
             Toast.show({
               type: 'error',
-              text1: 'Run discarded',
+              text1: 'Run is too short',
               text2:
-                currentRun.coordinates.length < 2
-                  ? 'A saved run needs at least two GPS samples.'
-                  : 'A saved run needs at least 0.01 km and 30 seconds.',
+                latestRun.coordinates.length < RUN_POLICY.MIN_SAVE_COORDINATES
+                  ? `A saved run needs at least ${RUN_POLICY.MIN_SAVE_COORDINATES} GPS samples.`
+                  : saveRequirementToastText,
             });
-            discardRun();
             return;
           }
 
@@ -272,6 +290,9 @@ const RunTrackingScreen = ({navigation}: any) => {
       distanceKm={metrics.distanceKm}
       elevationGain={metrics.elevationGain}
       calories={metrics.caloriesBurned}
+      currentPace={metrics.currentPace}
+      motionState={metrics.motionState}
+      canSaveRun={canSaveRun}
       gpsStatus={locationStatus}
       status={initializing ? 'idle' : toLiveRunStatus(runState.status)}
       onPauseResume={pauseOrResume}

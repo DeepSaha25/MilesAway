@@ -2,9 +2,9 @@ import React, {useEffect, useMemo, useRef} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MapView, {Marker, Polyline, Region} from 'react-native-maps';
 import {Colors} from '../theme/colors';
+import type {MotionState} from '../store/runStore';
 import {
   RunCoordinate,
-  calculatePaceMinutesPerKm,
   estimateCalories,
   formatClock,
   formatDistance,
@@ -16,6 +16,9 @@ interface LiveRunMapProps {
   elapsedSeconds: number;
   distanceKm: number;
   elevationGain: number;
+  currentPace: number | null;
+  motionState: MotionState;
+  canSaveRun: boolean;
   calories?: number;
   gpsStatus?: string;
   status: 'idle' | 'running' | 'paused' | 'summary';
@@ -45,6 +48,9 @@ const LiveRunMap = ({
   elapsedSeconds,
   distanceKm,
   elevationGain,
+  currentPace,
+  motionState,
+  canSaveRun,
   calories,
   gpsStatus,
   status,
@@ -55,7 +61,6 @@ const LiveRunMap = ({
   const mapRef = useRef<MapView>(null);
   const isPaused = status === 'paused';
   const hasRouteLine = route.length >= 2;
-  const currentPace = calculatePaceMinutesPerKm(distanceKm, elapsedSeconds);
   const caloriesBurned = calories ?? estimateCalories(distanceKm);
   const latest = route[route.length - 1] || null;
   const start = route[0] || null;
@@ -74,6 +79,12 @@ const LiveRunMap = ({
     () => route.map(point => ({latitude: point.latitude, longitude: point.longitude})),
     [route],
   );
+  const motionBannerText =
+    motionState === 'ACQUIRING_GPS'
+      ? 'GPS Settling...'
+      : motionState === 'STATIONARY'
+      ? 'Waiting for movement...'
+      : null;
 
   const initialRegion: Region = {
     latitude: latest?.latitude ?? 20.5937,
@@ -166,6 +177,11 @@ const LiveRunMap = ({
             <Text style={styles.primaryLabel}>km</Text>
           </View>
           <Text style={styles.timer}>{formatClock(elapsedSeconds)}</Text>
+          {motionBannerText ? (
+            <View style={styles.motionBanner}>
+              <Text style={styles.motionBannerText}>{motionBannerText}</Text>
+            </View>
+          ) : null}
           <View style={styles.pacePanel}>
             <Text style={styles.paceLabel}>Pace</Text>
             <Text style={styles.paceValue}>{formatPace(currentPace)}</Text>
@@ -197,8 +213,21 @@ const LiveRunMap = ({
               <Text style={styles.primaryButtonText}>Resume</Text>
             </TouchableOpacity>
             <View style={styles.pausedSecondaryRow}>
-              <TouchableOpacity style={styles.finishButton} onPress={onFinish}>
-                <Text style={styles.finishButtonText}>Finish Run</Text>
+              <TouchableOpacity
+                style={[
+                  styles.finishButton,
+                  !canSaveRun && styles.finishButtonDisabled,
+                ]}
+                activeOpacity={canSaveRun ? 0.7 : 1}
+                accessibilityState={{disabled: !canSaveRun}}
+                onPress={onFinish}>
+                <Text
+                  style={[
+                    styles.finishButtonText,
+                    !canSaveRun && styles.finishButtonTextDisabled,
+                  ]}>
+                  Finish Run
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.discardButton} onPress={onCancel}>
                 <Text style={styles.discardButtonText}>Discard Run</Text>
@@ -210,8 +239,21 @@ const LiveRunMap = ({
             <TouchableOpacity style={styles.primaryButton} onPress={onPauseResume}>
               <Text style={styles.primaryButtonText}>Pause</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.finishButton} onPress={onFinish}>
-              <Text style={styles.finishButtonText}>Finish</Text>
+            <TouchableOpacity
+              style={[
+                styles.finishButton,
+                !canSaveRun && styles.finishButtonDisabled,
+              ]}
+              activeOpacity={canSaveRun ? 0.7 : 1}
+              accessibilityState={{disabled: !canSaveRun}}
+              onPress={onFinish}>
+              <Text
+                style={[
+                  styles.finishButtonText,
+                  !canSaveRun && styles.finishButtonTextDisabled,
+                ]}>
+                Finish
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -358,6 +400,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainerHigh,
     alignItems: 'center',
   },
+  motionBanner: {
+    marginTop: 10,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: Colors.primary + '16',
+    borderWidth: 1,
+    borderColor: Colors.primary + '35',
+  },
+  motionBannerText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
   paceLabel: {
     color: Colors.onSurfaceVariant,
     fontSize: 12,
@@ -457,11 +514,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  finishButtonDisabled: {
+    opacity: 0.45,
+  },
   finishButtonText: {
     color: Colors.onSurface,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
+  },
+  finishButtonTextDisabled: {
+    color: Colors.onSurfaceVariant,
   },
   pausedControls: {
     marginTop: 18,

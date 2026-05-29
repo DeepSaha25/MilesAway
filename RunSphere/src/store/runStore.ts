@@ -4,12 +4,17 @@ import {createJSONStorage, devtools, persist} from 'zustand/middleware';
 import {
   RunCoordinate,
   calculatePaceMinutesPerKm,
+  calculateSegmentSpeedKmh,
   estimateCalories,
+  getCoordinateTimestampMs,
+  hasUsableAccuracy,
   haversineMeters,
   shouldAcceptCoordinate,
 } from '../utils/runMetrics';
+import {RUN_POLICY} from '../config/runPolicy';
 
 export type RunStatus = 'IDLE' | 'TRACKING' | 'PAUSED' | 'COMPLETED';
+export type MotionState = 'ACQUIRING_GPS' | 'STATIONARY' | 'MOVING';
 
 export type PauseInterval = {
   pausedAt: number;
@@ -41,6 +46,8 @@ export type RunMetrics = {
   distanceKm: number;
   elevationGain: number;
   averagePace: number;
+  currentPace: number | null;
+  motionState: MotionState;
   caloriesBurned: number;
 };
 
@@ -69,9 +76,11 @@ type LegacyRunState = Partial<
   }
 >;
 
-const MIN_SAVE_DISTANCE_KM = 0.01;
-const MIN_SAVE_DURATION_SECONDS = 30;
-const MIN_SAVE_COORDINATES = 2;
+const MIN_SAVE_DISTANCE_KM = RUN_POLICY.MIN_SAVE_DISTANCE_KM;
+const MIN_SAVE_DURATION_SECONDS = RUN_POLICY.MIN_SAVE_DURATION_SECONDS;
+const MIN_SAVE_COORDINATES = RUN_POLICY.MIN_SAVE_COORDINATES;
+const STATIONARY_WINDOW_MS = 15 * 1000;
+const ROLLING_PACE_WINDOW_MS = 45 * 1000;
 
 export const initialRunFacts: RunFacts = {
   status: 'IDLE',
@@ -234,20 +243,199 @@ export const selectRunDuration = (
   return Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
 };
 
-export const selectRunDistance = (state: RunFacts): number => {
-  if (state.coordinates.length < 2) {
+type MovementSegment = {
+  previous: RunTrackPoint;
+  current: RunTrackPoint;
+  distanceMeters: number;
+  speedKmh: number | null;
+};
+
+const isPausedAt = (state: RunFacts, timestamp: number) =>
+  state.pauseIntervals.some(interval => {
+    const resumedAt = interval.resumedAt ?? Number.POSITIVE_INFINITY;
+    return timestamp >= interval.pausedAt && timestamp <= resumedAt;
+  });
+
+const sortCoordinatesByTime = (coordinates: RunTrackPoint[]) =>
+  [...coordinates].sort((a, b) => a.timestamp - b.timestamp);
+
+const selectUsableCoordinates = (state: RunFacts): RunTrackPoint[] =>
+  sortCoordinatesByTime(state.coordinates).filter(coordinate =>
+    hasUsableAccuracy(toRunCoordinate(coordinate)),
+  );
+
+const getSegment = (
+  previous: RunTrackPoint,
+  current: RunTrackPoint,
+): MovementSegment | null => {
+  const previousCoordinate = toRunCoordinate(previous);
+  const currentCoordinate = toRunCoordinate(current);
+  const distanceMeters = haversineMeters(previousCoordinate, currentCoordinate);
+  const speedKmh = calculateSegmentSpeedKmh(
+    previousCoordinate,
+    currentCoordinate,
+    distanceMeters,
+  );
+
+  if (
+    speedKmh !== null &&
+    speedKmh > RUN_POLICY.MAX_SEGMENT_SPEED_KMH
+  ) {
+    return null;
+  }
+
+  return {
+    previous,
+    current,
+    distanceMeters,
+    speedKmh,
+  };
+};
+
+const isMovementSegment = (segment: MovementSegment) =>
+  segment.distanceMeters >= RUN_POLICY.JITTER_DISTANCE_METERS &&
+  (segment.speedKmh === null ||
+    segment.speedKmh >= RUN_POLICY.STATIONARY_SPEED_THRESHOLD_KMH);
+
+const calculateTrustedDistanceMeters = (
+  coordinates: RunTrackPoint[],
+): number => {
+  if (coordinates.length < 2) {
     return 0;
   }
 
-  let meters = 0;
-  for (let index = 1; index < state.coordinates.length; index += 1) {
-    meters += haversineMeters(
-      toRunCoordinate(state.coordinates[index - 1]),
-      toRunCoordinate(state.coordinates[index]),
-    );
+  let totalMeters = 0;
+  let anchor = coordinates[0];
+
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const current = coordinates[index];
+    const segment = getSegment(anchor, current);
+    if (!segment) {
+      anchor = current;
+      continue;
+    }
+
+    if (!isMovementSegment(segment)) {
+      anchor = current;
+      continue;
+    }
+
+    totalMeters += segment.distanceMeters;
+    anchor = current;
   }
 
+  return totalMeters;
+};
+
+const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
+  const coordinates = selectUsableCoordinates(state);
+  if (coordinates.length < 2) {
+    return coordinates;
+  }
+
+  const acceptedCoordinates = [coordinates[0]];
+  let anchor = coordinates[0];
+
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const current = coordinates[index];
+    const segment = getSegment(anchor, current);
+    if (!segment) {
+      anchor = current;
+      continue;
+    }
+
+    if (!isMovementSegment(segment)) {
+      anchor = current;
+      continue;
+    }
+
+    acceptedCoordinates.push(current);
+    anchor = current;
+  }
+
+  return acceptedCoordinates;
+};
+
+export const selectRunDistance = (state: RunFacts): number => {
+  const meters = calculateTrustedDistanceMeters(selectUsableCoordinates(state));
+
   return Math.round((meters / 1000) * 1000) / 1000;
+};
+
+export const selectMotionState = (
+  state: RunFacts,
+  now = state.endTime ?? Date.now(),
+): MotionState => {
+  const coordinates = selectUsableCoordinates(state);
+  if (coordinates.length < 3) {
+    return 'ACQUIRING_GPS';
+  }
+
+  const lastThree = coordinates.slice(-3);
+  const firstTimestamp = lastThree[0].timestamp;
+  const lastTimestamp = lastThree[lastThree.length - 1].timestamp;
+  const elapsedSeconds = Math.max(0, (lastTimestamp - firstTimestamp) / 1000);
+  const lastThreeDistanceMeters = calculateTrustedDistanceMeters(lastThree);
+  const averageSpeedKmh =
+    elapsedSeconds > 0
+      ? (lastThreeDistanceMeters / 1000) / (elapsedSeconds / 3600)
+      : 0;
+
+  const windowStart = now - STATIONARY_WINDOW_MS;
+  const recentCoordinates = coordinates.filter(
+    coordinate =>
+      coordinate.timestamp >= windowStart &&
+      coordinate.timestamp <= now &&
+      !isPausedAt(state, coordinate.timestamp),
+  );
+  const recentDistanceMeters = calculateTrustedDistanceMeters(recentCoordinates);
+
+  if (
+    averageSpeedKmh < RUN_POLICY.STATIONARY_SPEED_THRESHOLD_KMH ||
+    recentDistanceMeters < RUN_POLICY.JITTER_DISTANCE_METERS
+  ) {
+    return 'STATIONARY';
+  }
+
+  return 'MOVING';
+};
+
+export const selectCurrentPace = (
+  state: RunFacts,
+  now = state.endTime ?? Date.now(),
+): number | null => {
+  if (state.status !== 'TRACKING' || selectMotionState(state, now) !== 'MOVING') {
+    return null;
+  }
+
+  const windowStart = now - ROLLING_PACE_WINDOW_MS;
+  const windowCoordinates = selectUsableCoordinates(state).filter(coordinate => {
+    const timestamp = getCoordinateTimestampMs(toRunCoordinate(coordinate));
+    return (
+      timestamp !== null &&
+      timestamp >= windowStart &&
+      timestamp <= now &&
+      !isPausedAt(state, timestamp)
+    );
+  });
+
+  if (windowCoordinates.length < 3) {
+    return null;
+  }
+
+  const distanceMeters = calculateTrustedDistanceMeters(windowCoordinates);
+  if (distanceMeters < RUN_POLICY.JITTER_DISTANCE_METERS) {
+    return null;
+  }
+
+  const firstTimestamp = windowCoordinates[0].timestamp;
+  const lastTimestamp = windowCoordinates[windowCoordinates.length - 1].timestamp;
+  const elapsedSeconds = (lastTimestamp - firstTimestamp) / 1000;
+  if (elapsedSeconds <= 0) {
+    return null;
+  }
+
+  return calculatePaceMinutesPerKm(distanceMeters / 1000, elapsedSeconds);
 };
 
 export const selectRunElevationGain = (state: RunFacts): number => {
@@ -281,6 +469,7 @@ export const selectRunMetrics = (
 ): RunMetrics => {
   const elapsedSeconds = selectRunDuration(state, now);
   const distanceKm = selectRunDistance(state);
+  const motionState = selectMotionState(state, now);
 
   return {
     coordinates: selectRunCoordinates(state),
@@ -288,14 +477,23 @@ export const selectRunMetrics = (
     distanceKm,
     elevationGain: selectRunElevationGain(state),
     averagePace: calculatePaceMinutesPerKm(distanceKm, elapsedSeconds),
+    currentPace: selectCurrentPace(state, now),
+    motionState,
     caloriesBurned: estimateCalories(distanceKm, weightKg),
   };
 };
 
-export const selectCanSaveRun = (state: RunFacts, now = Date.now()): boolean =>
-  state.coordinates.length >= MIN_SAVE_COORDINATES &&
-  selectRunDistance(state) >= MIN_SAVE_DISTANCE_KM &&
-  selectRunDuration(state, now) >= MIN_SAVE_DURATION_SECONDS;
+export const selectCanSaveRun = (state: RunFacts, now = Date.now()): boolean => {
+  const trustedCoordinateCount = selectTrustedMovementCoordinates(state).length;
+  const distanceKm = selectRunDistance(state);
+  const durationSeconds = selectRunDuration(state, now);
+
+  return (
+    trustedCoordinateCount >= MIN_SAVE_COORDINATES &&
+    distanceKm >= MIN_SAVE_DISTANCE_KM &&
+    durationSeconds >= MIN_SAVE_DURATION_SECONDS
+  );
+};
 
 export const selectRunTiming = (
   state: RunFacts,

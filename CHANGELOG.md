@@ -20,6 +20,78 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.18 - 2026-05-29
+
+### Summary
+- Wired live run tracking UI to selector-derived motion confidence and rolling current pace.
+- Shows `GPS Settling...` or `Waiting for movement...` feedback when telemetry is not ready for reliable pacing.
+- Blocks early Finish attempts from saving junk runs and surfaces a gentle 100-meter minimum alert.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: made `selectCanSaveRun` explicitly evaluate trusted coordinate count, accumulated distance, and active duration against production policy limits.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: passes selector-derived current pace, motion state, and save eligibility to the live map; early finish attempts now show a non-destructive alert instead of discarding the run.
+- `RunSphere/src/components/LiveRunMap.tsx`: renders motion-state banners, uses rolling current pace instead of full-run average pace, and visually/accessibly marks Finish controls disabled until save gates pass.
+- `RunSphere/__tests__/LiveRunMap.test.tsx`: added coverage for stationary feedback, hidden pace, and disabled finish controls.
+- `CHANGELOG.md`: documented the run tracking UI wiring and save-gate hardening.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+- Finish controls remain pressable enough to explain why saving is blocked, but the save action itself is gated by `selectCanSaveRun` immediately before completion.
+
+## v0.2.17 - 2026-05-29
+
+### Summary
+- Added typed frontend motion confidence states for GPS acquisition, stationary drift, and confident movement.
+- Added a 45-second rolling current pace selector that returns `null` while stationary or still acquiring GPS.
+- Made live distance selectors defensively ignore poor-accuracy points, jitter segments, high-speed jumps, and stationary drift blocks.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: added `MotionState`, `selectMotionState`, `selectCurrentPace`, trusted movement distance accumulation, and selector-derived `currentPace` / `motionState` metrics.
+- `RunSphere/src/utils/runMetrics.ts`: added reusable timestamp, accuracy, and segment-speed helpers backed by the centralized run policy.
+- `RunSphere/__tests__/runStore.test.ts`: added coverage for defensive distance accumulation, motion confidence states, stationary pace hiding, and rolling pace calculation.
+- `CHANGELOG.md`: documented the movement confidence and rolling pace selector pass.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+- Step 17 should wire `motionState` and `currentPace` into `RunTrackingScreen` / `LiveRunMap` so the UI stops rendering full-run average pace during stationary periods.
+
+## v0.2.16 - 2026-05-29
+
+### Summary
+- Centralized running telemetry thresholds into shared frontend and backend policy modules.
+- Unified GPS acceptance rules for save distance, duration, sample count, accuracy, jitter distance, and segment speed.
+- Tightened production save gates to require 0.10 km, 60 seconds, and 6 accepted GPS samples before a run can be saved.
+
+### Files Changed
+- `RunSphere/src/config/runPolicy.ts`: added immutable frontend telemetry policy constants.
+- `backend/src/config/runPolicy.js`: added matching CommonJS telemetry policy constants for backend validation.
+- `RunSphere/src/utils/runMetrics.ts`: reads GPS jitter, accuracy, and max segment speed from the shared policy.
+- `RunSphere/src/store/runStore.ts`: reads save-gate distance, duration, and coordinate-count thresholds from the shared policy.
+- `RunSphere/src/hooks/useRunSummary.ts`, `RunSphere/src/screens/RunTrackingScreen.tsx`: updated save-rejection copy to reflect production thresholds.
+- `backend/src/services/runService.js`, `backend/src/models/Run.js`, `backend/src/middlewares/validators.js`: consume shared policy values for run submission validation and trusted metric calculation.
+- `backend/test/runService.test.js`, `RunSphere/__tests__/runStore.test.ts`: updated regression coverage for the stricter production thresholds.
+- `CHANGELOG.md`: documented telemetry policy unification.
+
+### Verification
+- `cd backend && npm test`
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+- Phase 4 follow-up work can now build movement confidence and rolling pace selectors on top of one shared policy contract.
+
 ## v0.2.15 - 2026-05-29
 
 ### Summary

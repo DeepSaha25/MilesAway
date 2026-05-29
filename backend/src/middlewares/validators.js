@@ -1,4 +1,5 @@
 const ApiError = require('../utils/ApiError');
+const RUN_POLICY = require('../config/runPolicy');
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const RESET_TOKEN_REGEX = /^[a-f\d]{64}$/i;
@@ -244,8 +245,8 @@ const validateRunSubmission = (req, res, next) => {
     errors.push('clientRunId is required and must be stable for retry safety');
   }
 
-  if (!Array.isArray(coordinates) || coordinates.length < 2) {
-    errors.push('Coordinates array must include at least two GPS samples');
+  if (!Array.isArray(coordinates) || coordinates.length < RUN_POLICY.MIN_SAVE_COORDINATES) {
+    errors.push(`Coordinates array must include at least ${RUN_POLICY.MIN_SAVE_COORDINATES} GPS samples`);
   } else if (coordinates.length > 10000) {
     errors.push('Coordinates array cannot exceed 10000 samples');
   } else if (!coordinates.every(isValidCoordinateShape)) {

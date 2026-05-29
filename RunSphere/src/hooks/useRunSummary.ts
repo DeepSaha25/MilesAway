@@ -4,6 +4,7 @@ import Toast from 'react-native-toast-message';
 import GuestRunStorage from '../services/guestRunStorage';
 import {isGuestUser} from '../services/guestSession';
 import RunService from '../services/runService';
+import {RUN_POLICY} from '../config/runPolicy';
 import {useAuthStore} from '../store/authStore';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {
@@ -26,6 +27,16 @@ export type SavedRunResult = {
   elevationGain: number;
   routePoints: number;
 };
+
+const saveRequirementText = `Track at least ${RUN_POLICY.MIN_SAVE_DISTANCE_KM.toFixed(
+  2,
+)} km, ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds, and ${
+  RUN_POLICY.MIN_SAVE_COORDINATES
+} GPS points before saving a run.`;
+
+const saveRequirementToastText = `A saved run needs at least ${RUN_POLICY.MIN_SAVE_DISTANCE_KM.toFixed(
+  2,
+)} km and ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds.`;
 
 export const useRunSummary = (navigation: any) => {
   const [saving, setSaving] = useState(true);
@@ -78,13 +89,11 @@ export const useRunSummary = (navigation: any) => {
     const saveTask = (async () => {
       if (!selectCanSaveRun(runState)) {
         setSaving(false);
-        setSaveError(
-          'Track at least 0.01 km, 30 seconds, and two GPS points before saving a run.',
-        );
+        setSaveError(saveRequirementText);
         Toast.show({
           type: 'error',
           text1: 'Run is too short',
-          text2: 'A saved run needs at least 0.01 km and 30 seconds.',
+          text2: saveRequirementToastText,
         });
         return false;
       }

@@ -1,4 +1,5 @@
 import {format, formatDistanceToNow} from 'date-fns';
+import {RUN_POLICY} from '../config/runPolicy';
 
 export interface RunCoordinate {
   latitude: number;
@@ -13,6 +14,18 @@ export interface RunCoordinate {
 const EARTH_RADIUS_METERS = 6371e3;
 
 const toRadians = (value: number) => (value * Math.PI) / 180;
+
+export const getCoordinateTimestampMs = (coordinate: RunCoordinate) => {
+  const timestampMs = new Date(coordinate.timestamp).getTime();
+  return Number.isFinite(timestampMs) ? timestampMs : null;
+};
+
+export const hasUsableAccuracy = (coordinate: RunCoordinate) =>
+  !(
+    typeof coordinate.accuracy === 'number' &&
+    Number.isFinite(coordinate.accuracy) &&
+    coordinate.accuracy > RUN_POLICY.MAX_ACCURACY_METERS
+  );
 
 export const haversineMeters = (from: RunCoordinate, to: RunCoordinate) => {
   const phi1 = toRadians(from.latitude);
@@ -34,13 +47,9 @@ export const haversineMeters = (from: RunCoordinate, to: RunCoordinate) => {
 export const shouldAcceptCoordinate = (
   previous: RunCoordinate | null,
   next: RunCoordinate,
-  minDistanceMeters = 5,
+  minDistanceMeters = RUN_POLICY.JITTER_DISTANCE_METERS,
 ) => {
-  if (
-    typeof next.accuracy === 'number' &&
-    Number.isFinite(next.accuracy) &&
-    next.accuracy > 80
-  ) {
+  if (!hasUsableAccuracy(next)) {
     return false;
   }
 
@@ -49,18 +58,33 @@ export const shouldAcceptCoordinate = (
   }
 
   const distanceMeters = haversineMeters(previous, next);
-  const elapsedSeconds =
-    (new Date(next.timestamp).getTime() - new Date(previous.timestamp).getTime()) /
-    1000;
+  const speedKmh = calculateSegmentSpeedKmh(previous, next, distanceMeters);
 
-  if (elapsedSeconds > 0) {
-    const speedKmh = (distanceMeters / 1000) / (elapsedSeconds / 3600);
-    if (speedKmh > 30) {
-      return false;
-    }
+  if (speedKmh !== null && speedKmh > RUN_POLICY.MAX_SEGMENT_SPEED_KMH) {
+    return false;
   }
 
   return distanceMeters >= minDistanceMeters;
+};
+
+export const calculateSegmentSpeedKmh = (
+  previous: RunCoordinate,
+  next: RunCoordinate,
+  distanceMeters = haversineMeters(previous, next),
+) => {
+  const previousTimestamp = getCoordinateTimestampMs(previous);
+  const nextTimestamp = getCoordinateTimestampMs(next);
+
+  if (previousTimestamp === null || nextTimestamp === null) {
+    return null;
+  }
+
+  const elapsedSeconds = (nextTimestamp - previousTimestamp) / 1000;
+  if (elapsedSeconds <= 0) {
+    return null;
+  }
+
+  return (distanceMeters / 1000) / (elapsedSeconds / 3600);
 };
 
 export const calculateRouteDistanceKm = (coordinates: RunCoordinate[]) => {
@@ -122,7 +146,7 @@ export const formatClock = (elapsedSeconds: number) => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
-export const formatPace = (paceMinutesPerKm: number) => {
+export const formatPace = (paceMinutesPerKm: number | null) => {
   if (!paceMinutesPerKm || !Number.isFinite(paceMinutesPerKm)) {
     return '--:-- /km';
   }
