@@ -174,10 +174,13 @@ const HomeScreen = ({navigation}: any) => {
             </View>
           </View>
 
-          <Text style={styles.versionLabel}>Version {APP_CHANGELOG_LABEL}</Text>
           <View style={styles.footerSpace} />
         </ScrollView>
       </ImageBackground>
+
+      <View pointerEvents="none" style={styles.versionBadge}>
+        <Text style={styles.versionLabel}>Version {APP_CHANGELOG_LABEL}</Text>
+      </View>
     </View>
   );
 };
@@ -503,13 +506,23 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   versionLabel: {
-    alignSelf: 'center',
-    marginBottom: 18,
-    color: Colors.onSurfaceVariant + '9A',
+    color: Colors.onSurfaceVariant + 'C8',
     fontFamily: 'Inter-Medium',
     fontSize: 11,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
+  },
+  versionBadge: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    bottom: 104,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: Colors.surfaceContainer + 'D0',
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant + '32',
   },
   liveCard: {
     height: 300,

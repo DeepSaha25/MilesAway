@@ -20,6 +20,25 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.23 - 2026-06-04
+
+### Summary
+- Moved the Home version label into a fixed lower-screen badge so it remains visible without scrolling to the deepest dashboard content.
+- Bumped the visible changelog version marker to verify the latest OTA update is loaded in installed APKs.
+
+### Files Changed
+- `RunSphere/src/config/appVersion.ts`: updated the visible app changelog version to `v0.2.23`.
+- `RunSphere/src/screens/HomeScreen.tsx`: renders the version badge above the bottom navigation area instead of burying it in scroll content.
+- `CHANGELOG.md`: documented the version badge visibility fix.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- The badge is pointer-disabled so it never blocks Home interactions or the tab bar.
+
 ## v0.2.22 - 2026-06-03
 
 ### Summary
