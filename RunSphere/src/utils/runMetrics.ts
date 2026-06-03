@@ -20,11 +20,14 @@ export const getCoordinateTimestampMs = (coordinate: RunCoordinate) => {
   return Number.isFinite(timestampMs) ? timestampMs : null;
 };
 
-export const hasUsableAccuracy = (coordinate: RunCoordinate) =>
+export const hasUsableAccuracy = (
+  coordinate: RunCoordinate,
+  maxAccuracyMeters: number = RUN_POLICY.MAX_ACCURACY_METERS,
+) =>
   !(
     typeof coordinate.accuracy === 'number' &&
     Number.isFinite(coordinate.accuracy) &&
-    coordinate.accuracy > RUN_POLICY.MAX_ACCURACY_METERS
+    coordinate.accuracy > maxAccuracyMeters
   );
 
 export const haversineMeters = (from: RunCoordinate, to: RunCoordinate) => {
@@ -47,9 +50,10 @@ export const haversineMeters = (from: RunCoordinate, to: RunCoordinate) => {
 export const shouldAcceptCoordinate = (
   previous: RunCoordinate | null,
   next: RunCoordinate,
-  minDistanceMeters = RUN_POLICY.JITTER_DISTANCE_METERS,
+  minDistanceMeters: number = RUN_POLICY.JITTER_DISTANCE_METERS,
+  maxAccuracyMeters: number = RUN_POLICY.MAX_ACCURACY_METERS,
 ) => {
-  if (!hasUsableAccuracy(next)) {
+  if (!hasUsableAccuracy(next, maxAccuracyMeters)) {
     return false;
   }
 

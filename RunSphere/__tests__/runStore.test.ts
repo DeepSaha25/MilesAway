@@ -113,9 +113,9 @@ describe('runStore fact-only selectors', () => {
     const stationaryState = makeState({
       status: 'TRACKING',
       coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
-        {latitude: 0, longitude: 0.00001, timestamp: 8_000, accuracy: 5},
-        {latitude: 0, longitude: 0.00002, timestamp: 16_000, accuracy: 5},
+        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5, speed: 2.5},
+        {latitude: 0, longitude: 0.00001, timestamp: 8_000, accuracy: 5, speed: 2.5},
+        {latitude: 0, longitude: 0.00002, timestamp: 16_000, accuracy: 5, speed: 2.5},
       ],
     });
 
@@ -123,22 +123,78 @@ describe('runStore fact-only selectors', () => {
     expect(selectRunMetrics(stationaryState, 70, 16_000).currentPace).toBeNull();
   });
 
-  it('derives current pace from the trailing 45-second movement window', () => {
+  it('derives current pace from averaged native speed samples while moving', () => {
     const movingState = makeState({
       status: 'TRACKING',
       coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 0, accuracy: 5},
-        {latitude: 0, longitude: 0.0003, timestamp: 15_000, accuracy: 5},
-        {latitude: 0, longitude: 0.0006, timestamp: 30_000, accuracy: 5},
-        {latitude: 0, longitude: 0.0009, timestamp: 45_000, accuracy: 5},
-        {latitude: 0, longitude: 0.0012, timestamp: 60_000, accuracy: 5},
+        {latitude: 0, longitude: 0, timestamp: 48_000, accuracy: 5, speed: 2.5},
+        {latitude: 0, longitude: 0.00008, timestamp: 52_000, accuracy: 5, speed: 2.5},
+        {latitude: 0, longitude: 0.00016, timestamp: 56_000, accuracy: 5, speed: 2.5},
+        {latitude: 0, longitude: 0.00024, timestamp: 60_000, accuracy: 5, speed: 2.5},
+      ],
+    });
+
+    const currentPace = selectCurrentPace(movingState, 60_000);
+
+    expect(selectMotionState(movingState, 60_000)).toBe('MOVING');
+    expect(currentPace).not.toBeNull();
+    expect(currentPace as number).toBeGreaterThan(6.6);
+    expect(currentPace as number).toBeLessThan(6.7);
+  });
+
+  it('ignores invalid native speed samples before using rolling pace fallback', () => {
+    const movingState = makeState({
+      status: 'TRACKING',
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 48_000, accuracy: 5, speed: null},
+        {latitude: 0, longitude: 0.00008, timestamp: 52_000, accuracy: 5, speed: 0},
+        {latitude: 0, longitude: 0.00016, timestamp: 56_000, accuracy: 5, speed: Number.NaN},
+        {latitude: 0, longitude: 0.00024, timestamp: 60_000, accuracy: 5, speed: 20},
       ],
     });
 
     const currentPace = selectCurrentPace(movingState, 60_000);
 
     expect(currentPace).not.toBeNull();
-    expect(currentPace as number).toBeGreaterThan(7);
+    expect(currentPace as number).toBeGreaterThan(6);
+    expect(currentPace as number).toBeLessThan(8);
+  });
+
+  it('allows relaxed accuracy points to contribute to live motion and current pace', () => {
+    const movingState = makeState({
+      status: 'TRACKING',
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 48_000, accuracy: 45},
+        {latitude: 0, longitude: 0.00008, timestamp: 52_000, accuracy: 45},
+        {latitude: 0, longitude: 0.00016, timestamp: 56_000, accuracy: 45},
+        {latitude: 0, longitude: 0.00024, timestamp: 60_000, accuracy: 45},
+      ],
+    });
+
+    const currentPace = selectCurrentPace(movingState, 60_000);
+
+    expect(selectMotionState(movingState, 60_000)).toBe('MOVING');
+    expect(currentPace).not.toBeNull();
+    expect(currentPace as number).toBeGreaterThan(6);
+    expect(currentPace as number).toBeLessThan(8);
+  });
+
+  it('uses a 12-second current pace window and ignores older points', () => {
+    const movingState = makeState({
+      status: 'TRACKING',
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 0, accuracy: 5},
+        {latitude: 0, longitude: 0.0006, timestamp: 44_000, accuracy: 5},
+        {latitude: 0, longitude: 0.00068, timestamp: 52_000, accuracy: 5},
+        {latitude: 0, longitude: 0.00076, timestamp: 56_000, accuracy: 5},
+        {latitude: 0, longitude: 0.00084, timestamp: 60_000, accuracy: 5},
+      ],
+    });
+
+    const currentPace = selectCurrentPace(movingState, 60_000);
+
+    expect(currentPace).not.toBeNull();
+    expect(currentPace as number).toBeGreaterThan(6);
     expect(currentPace as number).toBeLessThan(8);
   });
 
@@ -156,6 +212,15 @@ describe('runStore fact-only selectors', () => {
       selectCanSaveRun({
         ...validState,
         coordinates: validState.coordinates.slice(0, 5),
+      }),
+    ).toBe(false);
+    expect(
+      selectCanSaveRun({
+        ...validState,
+        coordinates: productionSaveCoordinates().map(coordinate => ({
+          ...coordinate,
+          accuracy: 45,
+        })),
       }),
     ).toBe(false);
   });

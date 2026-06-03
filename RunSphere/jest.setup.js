@@ -24,7 +24,7 @@ jest.mock('expo-secure-store', () => ({
 }));
 
 jest.mock('expo-location', () => ({
-  Accuracy: {Highest: 6},
+  Accuracy: {Highest: 6, BestForNavigation: 6},
   getForegroundPermissionsAsync: jest.fn(async () => ({status: 'granted'})),
   requestForegroundPermissionsAsync: jest.fn(async () => ({
     status: 'granted',

@@ -20,6 +20,72 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.21 - 2026-06-03
+
+### Summary
+- Added native hardware speed support for live current pace once motion confidence is `MOVING`.
+- Smooths `coords.speed` over the latest three samples for instant, stable live pace feedback.
+- Keeps stationary protection and strict saved-run ledger calculations unchanged, with rolling Haversine pace as fallback.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: `selectCurrentPace` now prefers averaged native speed samples and falls back to the existing live rolling window when speed is unavailable or invalid.
+- `RunSphere/__tests__/runStore.test.ts`: added native-speed, stationary guard, invalid-speed fallback, and rolling fallback coverage.
+- `CHANGELOG.md`: documented the hybrid native-speed current pace selector.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Native speed affects only live `currentPace`; final saved run distance, duration, and summary remain ledger-derived.
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+
+## v0.2.20 - 2026-06-03
+
+### Summary
+- Increased foreground GPS tracking density for active run sessions.
+- Switched the native watcher to `BestForNavigation` accuracy with 1.5-second and 1.5-meter update thresholds.
+- Added regression coverage for the high-density Expo Location watch configuration.
+
+### Files Changed
+- `RunSphere/src/utils/location.ts`: updated `Location.watchPositionAsync` options for denser sports telemetry updates.
+- `RunSphere/jest.setup.js`: added `BestForNavigation` to the Expo Location test mock.
+- `RunSphere/__tests__/location.test.ts`: verifies the foreground watch uses the high-density GPS profile and returns a removable watch handle.
+- `CHANGELOG.md`: documented the hardware position density update.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Backend save validation and strict ledger filtering remain unchanged.
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+
+## v0.2.19 - 2026-06-03
+
+### Summary
+- Split frontend run telemetry policy into strict ledger/save rules and relaxed live-display rules.
+- Let live motion and current pace use up to 55m GPS accuracy while keeping save eligibility strict at 30m.
+- Reduced the live rolling pace window from 45 seconds to 12 seconds for more responsive in-run feedback.
+
+### Files Changed
+- `RunSphere/src/config/runPolicy.ts`: added `RUN_LEDGER_POLICY`, `RUN_LIVE_POLICY`, compatibility `RUN_POLICY`, and explicit accuracy/window aliases.
+- `RunSphere/src/utils/runMetrics.ts`: widened GPS accuracy helpers so callers can choose ledger or live accuracy limits.
+- `RunSphere/src/store/runStore.ts`: uses live accuracy/window for motion/current pace and ledger accuracy for saved distance/save gates.
+- `RunSphere/__tests__/runStore.test.ts`: added coverage for relaxed live accuracy, strict save rejection, and the 12-second current pace window.
+- `CHANGELOG.md`: documented the dual-track frontend telemetry policy split.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Backend save policy remains unchanged and strict.
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+
 ## v0.2.18 - 2026-05-29
 
 ### Summary

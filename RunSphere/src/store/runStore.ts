@@ -11,7 +11,7 @@ import {
   haversineMeters,
   shouldAcceptCoordinate,
 } from '../utils/runMetrics';
-import {RUN_POLICY} from '../config/runPolicy';
+import {RUN_LEDGER_POLICY, RUN_LIVE_POLICY} from '../config/runPolicy';
 
 export type RunStatus = 'IDLE' | 'TRACKING' | 'PAUSED' | 'COMPLETED';
 export type MotionState = 'ACQUIRING_GPS' | 'STATIONARY' | 'MOVING';
@@ -76,11 +76,11 @@ type LegacyRunState = Partial<
   }
 >;
 
-const MIN_SAVE_DISTANCE_KM = RUN_POLICY.MIN_SAVE_DISTANCE_KM;
-const MIN_SAVE_DURATION_SECONDS = RUN_POLICY.MIN_SAVE_DURATION_SECONDS;
-const MIN_SAVE_COORDINATES = RUN_POLICY.MIN_SAVE_COORDINATES;
+const MIN_SAVE_DISTANCE_KM = RUN_LEDGER_POLICY.MIN_SAVE_DISTANCE_KM;
+const MIN_SAVE_DURATION_SECONDS = RUN_LEDGER_POLICY.MIN_SAVE_DURATION_SECONDS;
+const MIN_SAVE_COORDINATES = RUN_LEDGER_POLICY.MIN_SAVE_COORDINATES;
 const STATIONARY_WINDOW_MS = 15 * 1000;
-const ROLLING_PACE_WINDOW_MS = 45 * 1000;
+const LIVE_PACE_WINDOW_MS = RUN_LIVE_POLICY.LIVE_PACE_WINDOW_SECONDS * 1000;
 
 export const initialRunFacts: RunFacts = {
   status: 'IDLE',
@@ -259,9 +259,20 @@ const isPausedAt = (state: RunFacts, timestamp: number) =>
 const sortCoordinatesByTime = (coordinates: RunTrackPoint[]) =>
   [...coordinates].sort((a, b) => a.timestamp - b.timestamp);
 
-const selectUsableCoordinates = (state: RunFacts): RunTrackPoint[] =>
+const selectLedgerUsableCoordinates = (state: RunFacts): RunTrackPoint[] =>
   sortCoordinatesByTime(state.coordinates).filter(coordinate =>
-    hasUsableAccuracy(toRunCoordinate(coordinate)),
+    hasUsableAccuracy(
+      toRunCoordinate(coordinate),
+      RUN_LEDGER_POLICY.CORE_SAVE_MAX_ACCURACY,
+    ),
+  );
+
+const selectLiveUsableCoordinates = (state: RunFacts): RunTrackPoint[] =>
+  sortCoordinatesByTime(state.coordinates).filter(coordinate =>
+    hasUsableAccuracy(
+      toRunCoordinate(coordinate),
+      RUN_LIVE_POLICY.LIVE_DISPLAY_MAX_ACCURACY,
+    ),
   );
 
 const getSegment = (
@@ -279,7 +290,7 @@ const getSegment = (
 
   if (
     speedKmh !== null &&
-    speedKmh > RUN_POLICY.MAX_SEGMENT_SPEED_KMH
+    speedKmh > RUN_LEDGER_POLICY.MAX_SEGMENT_SPEED_KMH
   ) {
     return null;
   }
@@ -293,9 +304,9 @@ const getSegment = (
 };
 
 const isMovementSegment = (segment: MovementSegment) =>
-  segment.distanceMeters >= RUN_POLICY.JITTER_DISTANCE_METERS &&
+  segment.distanceMeters >= RUN_LEDGER_POLICY.JITTER_DISTANCE_METERS &&
   (segment.speedKmh === null ||
-    segment.speedKmh >= RUN_POLICY.STATIONARY_SPEED_THRESHOLD_KMH);
+    segment.speedKmh >= RUN_LEDGER_POLICY.STATIONARY_SPEED_THRESHOLD_KMH);
 
 const calculateTrustedDistanceMeters = (
   coordinates: RunTrackPoint[],
@@ -327,8 +338,55 @@ const calculateTrustedDistanceMeters = (
   return totalMeters;
 };
 
+const selectLiveWindowCoordinates = (
+  state: RunFacts,
+  now: number,
+  windowMs: number,
+): RunTrackPoint[] => {
+  const windowStart = now - windowMs;
+  return selectLiveUsableCoordinates(state).filter(coordinate => {
+    const timestamp = getCoordinateTimestampMs(toRunCoordinate(coordinate));
+    return (
+      timestamp !== null &&
+      timestamp >= windowStart &&
+      timestamp <= now &&
+      !isPausedAt(state, timestamp)
+    );
+  });
+};
+
+const selectNativeSpeedPace = (
+  state: RunFacts,
+  now: number,
+): number | null => {
+  const maxSpeedMetersPerSecond = RUN_LIVE_POLICY.MAX_SEGMENT_SPEED_KMH / 3.6;
+  const speedSamples = selectLiveUsableCoordinates(state)
+    .filter(coordinate => {
+      const timestamp = getCoordinateTimestampMs(toRunCoordinate(coordinate));
+      return timestamp !== null && timestamp <= now && !isPausedAt(state, timestamp);
+    })
+    .slice(-3)
+    .map(coordinate => coordinate.speed)
+    .filter(
+      (speed): speed is number =>
+        typeof speed === 'number' &&
+        Number.isFinite(speed) &&
+        speed > 0 &&
+        speed <= maxSpeedMetersPerSecond,
+    );
+
+  if (speedSamples.length < 2) {
+    return null;
+  }
+
+  const averageSpeedMetersPerSecond =
+    speedSamples.reduce((sum, speed) => sum + speed, 0) / speedSamples.length;
+
+  return 16.6666667 / averageSpeedMetersPerSecond;
+};
+
 const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
-  const coordinates = selectUsableCoordinates(state);
+  const coordinates = selectLedgerUsableCoordinates(state);
   if (coordinates.length < 2) {
     return coordinates;
   }
@@ -357,7 +415,7 @@ const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
 };
 
 export const selectRunDistance = (state: RunFacts): number => {
-  const meters = calculateTrustedDistanceMeters(selectUsableCoordinates(state));
+  const meters = calculateTrustedDistanceMeters(selectLedgerUsableCoordinates(state));
 
   return Math.round((meters / 1000) * 1000) / 1000;
 };
@@ -366,7 +424,7 @@ export const selectMotionState = (
   state: RunFacts,
   now = state.endTime ?? Date.now(),
 ): MotionState => {
-  const coordinates = selectUsableCoordinates(state);
+  const coordinates = selectLiveUsableCoordinates(state);
   if (coordinates.length < 3) {
     return 'ACQUIRING_GPS';
   }
@@ -391,8 +449,8 @@ export const selectMotionState = (
   const recentDistanceMeters = calculateTrustedDistanceMeters(recentCoordinates);
 
   if (
-    averageSpeedKmh < RUN_POLICY.STATIONARY_SPEED_THRESHOLD_KMH ||
-    recentDistanceMeters < RUN_POLICY.JITTER_DISTANCE_METERS
+    averageSpeedKmh < RUN_LIVE_POLICY.STATIONARY_SPEED_THRESHOLD_KMH ||
+    recentDistanceMeters < RUN_LIVE_POLICY.JITTER_DISTANCE_METERS
   ) {
     return 'STATIONARY';
   }
@@ -408,23 +466,23 @@ export const selectCurrentPace = (
     return null;
   }
 
-  const windowStart = now - ROLLING_PACE_WINDOW_MS;
-  const windowCoordinates = selectUsableCoordinates(state).filter(coordinate => {
-    const timestamp = getCoordinateTimestampMs(toRunCoordinate(coordinate));
-    return (
-      timestamp !== null &&
-      timestamp >= windowStart &&
-      timestamp <= now &&
-      !isPausedAt(state, timestamp)
-    );
-  });
+  const nativeSpeedPace = selectNativeSpeedPace(state, now);
+  if (nativeSpeedPace !== null) {
+    return nativeSpeedPace;
+  }
+
+  const windowCoordinates = selectLiveWindowCoordinates(
+    state,
+    now,
+    LIVE_PACE_WINDOW_MS,
+  );
 
   if (windowCoordinates.length < 3) {
     return null;
   }
 
   const distanceMeters = calculateTrustedDistanceMeters(windowCoordinates);
-  if (distanceMeters < RUN_POLICY.JITTER_DISTANCE_METERS) {
+  if (distanceMeters < RUN_LIVE_POLICY.JITTER_DISTANCE_METERS) {
     return null;
   }
 
@@ -540,6 +598,8 @@ export const useRunStore = create<RunState>()(
             !shouldAcceptCoordinate(
               previous ? toRunCoordinate(previous) : null,
               toRunCoordinate(nextCoordinate),
+              RUN_LIVE_POLICY.JITTER_DISTANCE_METERS,
+              RUN_LIVE_POLICY.LIVE_DISPLAY_MAX_ACCURACY,
             )
           ) {
             return;

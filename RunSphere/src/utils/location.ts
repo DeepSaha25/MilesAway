@@ -52,9 +52,9 @@ export const startLocationWatch = (
 
   Location.watchPositionAsync(
     {
-      accuracy: Location.Accuracy.Highest,
-      timeInterval: 2000,
-      distanceInterval: 5,
+      accuracy: Location.Accuracy.BestForNavigation,
+      timeInterval: 1500,
+      distanceInterval: 1.5,
     },
     position => onSuccess(toPosition(position)),
   )
