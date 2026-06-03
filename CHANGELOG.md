@@ -20,6 +20,26 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.22 - 2026-06-03
+
+### Summary
+- Added a Home screen footer version label so the running app visibly reports the shipped changelog version.
+- Added a bundled app version config and test coverage to keep it aligned with the latest changelog entry.
+
+### Files Changed
+- `RunSphere/src/config/appVersion.ts`: added the changelog-backed app version label used by the mobile UI.
+- `RunSphere/src/screens/HomeScreen.tsx`: renders the current version at the bottom of the Home dashboard.
+- `RunSphere/__tests__/appVersion.test.ts`: verifies the bundled app version matches the newest `CHANGELOG.md` entry.
+- `CHANGELOG.md`: documented the Home version footer.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- React Native bundles cannot directly read markdown at runtime without extra Metro plumbing, so the app uses a tiny version config guarded by a changelog sync test.
+
 ## v0.2.21 - 2026-06-03
 
 ### Summary

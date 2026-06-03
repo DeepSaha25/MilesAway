@@ -13,6 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
 import AppHeader from '../components/AppHeader';
 import HomeSkeleton from '../components/HomeSkeleton';
+import {APP_CHANGELOG_LABEL} from '../config/appVersion';
 import {useDashboard} from '../hooks/useDashboard';
 import {Colors} from '../theme/colors';
 
@@ -173,6 +174,7 @@ const HomeScreen = ({navigation}: any) => {
             </View>
           </View>
 
+          <Text style={styles.versionLabel}>Version {APP_CHANGELOG_LABEL}</Text>
           <View style={styles.footerSpace} />
         </ScrollView>
       </ImageBackground>
@@ -499,6 +501,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 25,
     fontWeight: '800',
+  },
+  versionLabel: {
+    alignSelf: 'center',
+    marginBottom: 18,
+    color: Colors.onSurfaceVariant + '9A',
+    fontFamily: 'Inter-Medium',
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   liveCard: {
     height: 300,
