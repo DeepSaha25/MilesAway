@@ -19,6 +19,6 @@ describe('app changelog version', () => {
     expect(latestEntry).not.toBeNull();
     expect(APP_CHANGELOG_VERSION).toBe(latestEntry?.[1]);
     expect(APP_CHANGELOG_DATE).toBe(latestEntry?.[2]);
-    expect(APP_CHANGELOG_LABEL).toBe(`${latestEntry?.[1]} · ${latestEntry?.[2]}`);
+    expect(APP_CHANGELOG_LABEL).toBe(`${latestEntry?.[1]} - ${latestEntry?.[2]}`);
   });
 });
