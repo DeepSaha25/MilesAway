@@ -4,14 +4,14 @@ import Toast from 'react-native-toast-message';
 import GuestRunStorage from '../services/guestRunStorage';
 import {isGuestUser} from '../services/guestSession';
 import RunService from '../services/runService';
-import {RUN_POLICY} from '../config/runPolicy';
 import {useAuthStore} from '../store/authStore';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {
-  selectCanSaveRun,
-  selectRunCoordinates,
+  selectSaveBlockReason,
   selectRunMetrics,
   selectRunTiming,
+  selectVerifiedCoordinates,
+  selectVerifiedDistance,
   useRunStore,
 } from '../store/runStore';
 import {useUserStore} from '../store/userStore';
@@ -27,16 +27,6 @@ export type SavedRunResult = {
   elevationGain: number;
   routePoints: number;
 };
-
-const saveRequirementText = `Track at least ${RUN_POLICY.MIN_SAVE_DISTANCE_KM.toFixed(
-  2,
-)} km, ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds, and ${
-  RUN_POLICY.MIN_SAVE_COORDINATES
-} GPS points before saving a run.`;
-
-const saveRequirementToastText = `A saved run needs at least ${RUN_POLICY.MIN_SAVE_DISTANCE_KM.toFixed(
-  2,
-)} km and ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds.`;
 
 export const useRunSummary = (navigation: any) => {
   const [saving, setSaving] = useState(true);
@@ -55,15 +45,19 @@ export const useRunSummary = (navigation: any) => {
   const summary = useMemo(() => {
     const metrics = selectRunMetrics(runState, profile?.weightKg);
     const timing = selectRunTiming(runState);
+    const verifiedCoordinates = selectVerifiedCoordinates(runState);
+    const verifiedDistanceKm = selectVerifiedDistance(runState);
 
     return {
       ...metrics,
+      coordinates: verifiedCoordinates,
+      distanceKm: verifiedDistanceKm,
       startedAt: timing.startedAt,
       finishedAt: timing.finishedAt || new Date().toISOString(),
     };
   }, [profile?.weightKg, runState]);
 
-  const route = useMemo(() => selectRunCoordinates(runState), [runState]);
+  const route = useMemo(() => selectVerifiedCoordinates(runState), [runState]);
 
   const goHome = useCallback(() => {
     allowLeavingRef.current = true;
@@ -87,13 +81,14 @@ export const useRunSummary = (navigation: any) => {
     }
 
     const saveTask = (async () => {
-      if (!selectCanSaveRun(runState)) {
+      const saveBlockReason = selectSaveBlockReason(runState);
+      if (saveBlockReason) {
         setSaving(false);
-        setSaveError(saveRequirementText);
+        setSaveError(saveBlockReason);
         Toast.show({
           type: 'error',
           text1: 'Run is too short',
-          text2: saveRequirementToastText,
+          text2: saveBlockReason,
         });
         return false;
       }

@@ -64,9 +64,11 @@ const LiveRunMap = ({
   const caloriesBurned = calories ?? estimateCalories(distanceKm);
   const latest = route[route.length - 1] || null;
   const start = route[0] || null;
-  const gpsNeedsAttention = /acquiring|search|waiting|weak|required|could/i.test(
-    gpsStatus || '',
-  );
+  const gpsNeedsAttention =
+    motionState !== 'GOOD_GPS' ||
+    /acquiring|search|waiting|weak|required|could/i.test(gpsStatus || '');
+  const canShowCurrentPace =
+    motionState === 'GOOD_GPS' || motionState === 'LIVE_ESTIMATE';
 
   const arrowRotation =
     typeof latest?.heading === 'number'
@@ -81,10 +83,24 @@ const LiveRunMap = ({
   );
   const motionBannerText =
     motionState === 'ACQUIRING_GPS'
-      ? 'GPS Settling...'
+      ? 'Finding GPS...'
+      : motionState === 'LIVE_ESTIMATE'
+      ? 'Tracking live estimate'
+      : motionState === 'WEAK_GPS'
+      ? 'GPS signal weak'
+      : motionState === 'GPS_JUMPING'
+      ? 'GPS signal jumping'
       : motionState === 'STATIONARY'
-      ? 'Waiting for movement...'
+      ? 'Waiting for movement'
+      : motionState === 'TOO_FAST_FOR_RUN'
+      ? 'Too fast for a verified run'
       : null;
+  const statusText =
+    motionState === 'GOOD_GPS' && canSaveRun
+      ? 'Ready to save'
+      : motionState === 'GOOD_GPS'
+      ? 'Live GPS tracking'
+      : motionBannerText || gpsStatus || 'Live GPS tracking';
 
   const initialRegion: Region = {
     latitude: latest?.latitude ?? 20.5937,
@@ -170,7 +186,7 @@ const LiveRunMap = ({
               styles.gpsStatus,
               gpsNeedsAttention && styles.gpsStatusWarning,
             ]}>
-            {gpsStatus || 'GPS ready'}
+            {statusText}
           </Text>
           <View style={styles.distanceRow}>
             <Text style={styles.primaryValue}>{formatDistance(distanceKm)}</Text>
@@ -184,7 +200,9 @@ const LiveRunMap = ({
           ) : null}
           <View style={styles.pacePanel}>
             <Text style={styles.paceLabel}>Pace</Text>
-            <Text style={styles.paceValue}>{formatPace(currentPace)}</Text>
+            <Text style={styles.paceValue}>
+              {formatPace(canShowCurrentPace ? currentPace : null)}
+            </Text>
           </View>
         </View>
 

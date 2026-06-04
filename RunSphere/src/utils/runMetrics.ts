@@ -52,6 +52,7 @@ export const shouldAcceptCoordinate = (
   next: RunCoordinate,
   minDistanceMeters: number = RUN_POLICY.JITTER_DISTANCE_METERS,
   maxAccuracyMeters: number = RUN_POLICY.MAX_ACCURACY_METERS,
+  maxSegmentSpeedKmh: number = RUN_POLICY.MAX_SEGMENT_SPEED_KMH,
 ) => {
   if (!hasUsableAccuracy(next, maxAccuracyMeters)) {
     return false;
@@ -64,7 +65,7 @@ export const shouldAcceptCoordinate = (
   const distanceMeters = haversineMeters(previous, next);
   const speedKmh = calculateSegmentSpeedKmh(previous, next, distanceMeters);
 
-  if (speedKmh !== null && speedKmh > RUN_POLICY.MAX_SEGMENT_SPEED_KMH) {
+  if (speedKmh !== null && speedKmh > maxSegmentSpeedKmh) {
     return false;
   }
 

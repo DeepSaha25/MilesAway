@@ -42,8 +42,34 @@ describe('LiveRunMap telemetry presentation', () => {
       .findAllByType(Text)
       .flatMap(node => node.props.children);
 
-    expect(textValues).toContain('Waiting for movement...');
+    expect(textValues).toContain('Waiting for movement');
     expect(textValues).toContain('--:-- /km');
+  });
+
+  it('maps confidence states to specific live feedback messages', () => {
+    const expectedMessages = [
+      ['ACQUIRING_GPS', 'Finding GPS...'],
+      ['LIVE_ESTIMATE', 'Tracking live estimate'],
+      ['WEAK_GPS', 'GPS signal weak'],
+      ['GPS_JUMPING', 'GPS signal jumping'],
+      ['STATIONARY', 'Waiting for movement'],
+      ['TOO_FAST_FOR_RUN', 'Too fast for a verified run'],
+    ] as const;
+
+    expectedMessages.forEach(([motionState, message]) => {
+      let tree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+      ReactTestRenderer.act(() => {
+        tree = renderLiveRunMap({motionState});
+      });
+
+      const textValues = tree?.root
+        .findAllByType(Text)
+        .flatMap(node => node.props.children);
+
+      expect(textValues).toContain(message);
+      expect(textValues).not.toContain('GPS Settling...');
+    });
   });
 
   it('marks finish controls disabled until save gates pass', () => {
@@ -58,5 +84,84 @@ describe('LiveRunMap telemetry presentation', () => {
       .filter(node => node.props.accessibilityState?.disabled === true);
 
     expect(disabledFinishButtons?.length).toBeGreaterThan(0);
+  });
+
+  it('hides settling feedback and shows pace while live movement is active', () => {
+    let tree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    ReactTestRenderer.act(() => {
+      tree = renderLiveRunMap({
+        route: [
+          {
+            latitude: 0,
+            longitude: 0,
+            timestamp: new Date(0).toISOString(),
+            accuracy: 5,
+          },
+          {
+            latitude: 0,
+            longitude: 0.001,
+            timestamp: new Date(3000).toISOString(),
+            accuracy: 5,
+          },
+        ],
+        currentPace: 0.6,
+        motionState: 'GOOD_GPS',
+      });
+    });
+
+    const textValues = tree?.root
+      .findAllByType(Text)
+      .flatMap(node => node.props.children);
+
+    expect(textValues).not.toContain('GPS Settling...');
+    expect(textValues).not.toContain('--:-- /km');
+    expect(textValues).toContain('0:36 /km');
+  });
+
+  it('shows ready to save only when good GPS passes strict save gates', () => {
+    let saveReadyTree: ReactTestRenderer.ReactTestRenderer | undefined;
+    let notReadyTree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    ReactTestRenderer.act(() => {
+      saveReadyTree = renderLiveRunMap({
+        motionState: 'GOOD_GPS',
+        canSaveRun: true,
+        gpsStatus: 'GPS locked',
+      });
+      notReadyTree = renderLiveRunMap({
+        motionState: 'GOOD_GPS',
+        canSaveRun: false,
+        gpsStatus: 'GPS locked',
+      });
+    });
+
+    const saveReadyText = saveReadyTree?.root
+      .findAllByType(Text)
+      .flatMap(node => node.props.children);
+    const notReadyText = notReadyTree?.root
+      .findAllByType(Text)
+      .flatMap(node => node.props.children);
+
+    expect(saveReadyText).toContain('Ready to save');
+    expect(notReadyText).toContain('Live GPS tracking');
+    expect(notReadyText).not.toContain('Ready to save');
+  });
+
+  it('hides pace for weak and too-fast confidence states even if pace is provided', () => {
+    (['WEAK_GPS', 'TOO_FAST_FOR_RUN'] as const).forEach(motionState => {
+      let tree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+      ReactTestRenderer.act(() => {
+        tree = renderLiveRunMap({currentPace: 0.6, motionState});
+      });
+
+      const textValues = tree?.root
+        .findAllByType(Text)
+        .flatMap(node => node.props.children);
+
+      expect(textValues).toContain('--:-- /km');
+      expect(textValues).not.toContain('0:36 /km');
+    });
   });
 });

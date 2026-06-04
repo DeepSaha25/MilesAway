@@ -20,6 +20,184 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.30 - 2026-06-04
+
+### Summary
+- Added a pure telemetry diagnostics selector for raw, preview, verified, speed, confidence, and save eligibility state.
+- Replaced per-packet run GPS debug output with throttled development-only telemetry diagnostics.
+- Expanded regression coverage around diagnostics and preview-vs-verified tracking behavior.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: added `selectTelemetryDiagnostics(...)` with point counts, latest GPS accuracy, native speed, segment speed, confidence state, save eligibility, and save-block reason.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: logs `[MilesAway][telemetry]` diagnostics in development only, throttled by time or confidence-state changes.
+- `RunSphere/__tests__/runStore.test.ts`: added diagnostics coverage for raw, preview, verified, speed, confidence, and save state.
+- `RunSphere/src/config/appVersion.ts`: bumped the visible changelog version marker.
+- `CHANGELOG.md`: documented the telemetry diagnostics and regression coverage pass.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts`
+- `cd RunSphere && npm test -- --runInBand __tests__/LiveRunMap.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Diagnostics are read-only, development-only in the UI path, and are not sent to the backend.
+- Save integrity remains verified-only.
+
+## v0.2.29 - 2026-06-04
+
+### Summary
+- Locked run persistence to verified-only coordinates and distance.
+- Added a clear save-blocking reason when live preview movement exists but verified running distance is too low.
+- Added hook coverage proving preview-only telemetry never reaches guest storage, backend submission, dashboard refresh, or rank refresh.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: added save-block reason constants and `selectSaveBlockReason(...)` while keeping `selectCanSaveRun(...)` as the hard save authority.
+- `RunSphere/src/hooks/useRunSummary.ts`: builds save payloads from explicit verified selectors and surfaces the selector-derived save-block reason.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: reuses the same save-block reason for early Finish attempts.
+- `RunSphere/__tests__/runStore.test.ts`: added save-block reason coverage for preview-only and verified-saveable runs.
+- `RunSphere/__tests__/useRunSummary.test.tsx`: verifies preview-only movement is not persisted and successful backend saves submit verified coordinates only.
+- `RunSphere/src/config/appVersion.ts`: bumped the visible changelog version marker.
+- `CHANGELOG.md`: documented the final save-integrity cleanup.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts __tests__/useRunSummary.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Preview telemetry remains live-screen-only and is never submitted as a saved run.
+- Backend validation remains strict and unchanged.
+
+## v0.2.28 - 2026-06-04
+
+### Summary
+- Wired the live tracking screen to explicit preview telemetry fields for map route and live distance.
+- Added user-friendly confidence status copy, including `Ready to save` only after verified save gates pass.
+- Preserved strict verified Finish/save gating while keeping preview movement visible during live tracking.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: exposes `previewCoordinates` and `previewDistanceKm` on derived run metrics while keeping `live*` compatibility aliases.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: passes preview route and preview distance to the live map, with `selectCanSaveRun(...)` still controlling Finish eligibility.
+- `RunSphere/src/components/LiveRunMap.tsx`: maps confidence state and save eligibility into user-facing status text and hides pace for unreliable states.
+- `RunSphere/__tests__/runStore.test.ts`: verifies preview metric fields remain distinct from verified save metrics.
+- `RunSphere/__tests__/LiveRunMap.test.tsx`: verifies confidence messages, ready-to-save behavior, hidden unreliable pace, and removal of generic settling text.
+- `RunSphere/src/config/appVersion.ts`: bumped the visible changelog version marker.
+- `CHANGELOG.md`: documented the user-friendly live tracking screen wiring.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts __tests__/LiveRunMap.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- The visible distance remains a clean `km` value; confidence status communicates when movement is preview-only.
+- Pressing Finish early still explains the save requirement, but the save action itself remains verified-gated.
+
+## v0.2.27 - 2026-06-04
+
+### Summary
+- Replaced the old three-state movement model with a richer live confidence engine.
+- Added recent telemetry issue memory so rejected weak GPS and GPS jumps can be explained in the live UI.
+- Removed generic `GPS Settling...` feedback in favor of specific confidence messages.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: added `ACQUIRING_GPS`, `LIVE_ESTIMATE`, `GOOD_GPS`, `WEAK_GPS`, `GPS_JUMPING`, `STATIONARY`, and `TOO_FAST_FOR_RUN` confidence states with recent telemetry issue metadata.
+- `RunSphere/src/components/LiveRunMap.tsx`: maps confidence states to specific live messages and hides pace for unreliable states.
+- `RunSphere/__tests__/runStore.test.ts`: added selector coverage for each confidence state and verified save gates remain strict.
+- `RunSphere/__tests__/LiveRunMap.test.tsx`: added confidence message and pace-hiding coverage.
+- `RunSphere/src/config/appVersion.ts`: bumped the visible changelog version marker.
+- `CHANGELOG.md`: documented the live confidence state engine.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts __tests__/LiveRunMap.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Save, summary, backend validation, dashboard, history, and rank behavior remain verified-only.
+- No accelerometer, step sensor, or map-matching API was added in this phase.
+
+## v0.2.26 - 2026-06-04
+
+### Summary
+- Converted active run coordinates into a raw/provisional live session ledger.
+- Added explicit preview and verified selector names so live map/distance can update without weakening saved-run math.
+- Kept final save, summary, backend submission, dashboard, history, and rank updates on verified-only distance and route data.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: stores live-sane GPS packets without jitter-gating, adds preview/verified selector aliases, and keeps save gates on strict verified selectors.
+- `RunSphere/__tests__/runStore.test.ts`: added coverage for weak live-acceptable GPS, sub-jitter packets, preview/verified alias behavior, fast provisional movement, and impossible jump storage rejection.
+- `RunSphere/src/config/appVersion.ts`: bumped the visible changelog version marker.
+- `CHANGELOG.md`: documented the raw/provisional GPS layer.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- `coordinates` is now the raw/provisional session ledger; no separate raw coordinate field or persisted-state migration was added.
+- Live preview can show provisional movement, but summary/save still use verified coordinates and distance only.
+- Richer confidence labels remain deferred to Phase 3.
+
+## v0.2.25 - 2026-06-04
+
+### Summary
+- Restored strict compatibility defaults for shared run policy values.
+- Split live preview movement tolerances into explicit live-only policy fields.
+- Replaced risky high-speed tracking language with provisional live preview wording for the next telemetry architecture pass.
+
+### Files Changed
+- `RunSphere/src/config/appVersion.ts`: bumped the visible changelog version for this policy cleanup.
+- `RunSphere/src/config/runPolicy.ts`: maps legacy `RUN_POLICY` fields back to strict ledger values and exposes live-only jitter/speed aliases.
+- `RunSphere/src/store/runStore.ts`, `RunSphere/src/screens/RunTrackingScreen.tsx`: consume the explicit live-only policy fields for preview movement and GPS diagnostics.
+- `RunSphere/__tests__/runStore.test.ts`: added policy regression coverage for strict compatibility defaults and live preview tolerances.
+- `RunSphere/__tests__/appVersion.test.ts`: updated the version label expectation to the ASCII footer label.
+- `CHANGELOG.md`: documented the Phase 1 telemetry policy cleanup.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- This phase is a safety cleanup only; the full UX fix starts when raw/provisional coordinates stop being starved by strict save filters.
+- Save thresholds, backend validation, summaries, dashboard stats, and history remain strict.
+
+## v0.2.24 - 2026-06-04
+
+### Summary
+- Split live tracking display from strict saved-run calculations.
+- Live distance, route, motion, and pace now accept broader provisional movement while final summaries remain ledger-filtered.
+- Added development GPS diagnostics for accepted samples and rejection reasons.
+
+### Files Changed
+- `RunSphere/src/config/appVersion.ts`: bumped the visible changelog version for this tracking update.
+- `RunSphere/src/config/runPolicy.ts`: widened live movement speed tolerance and made live jitter more responsive while keeping strict ledger thresholds unchanged.
+- `RunSphere/src/utils/runMetrics.ts`: lets coordinate acceptance choose the relevant speed cap.
+- `RunSphere/src/store/runStore.ts`: added live distance/route metrics, kept saved coordinates/distance/elevation strict, and moved live motion/current pace to the live policy.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: renders live approximate metrics on the running page and logs development GPS diagnostics.
+- `RunSphere/__tests__/runStore.test.ts`: added live fast-movement and impossible-jump coverage.
+- `RunSphere/__tests__/LiveRunMap.test.tsx`: verifies active movement hides settling feedback and shows live pace.
+- `CHANGELOG.md`: documented the live-approximate/final-strict tracking split.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts __tests__/LiveRunMap.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- The running page now prioritizes fast approximate feedback; saved run summaries remain strict and do not use live-only provisional distance.
+- `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
+
 ## v0.2.23 - 2026-06-04
 
 ### Summary

@@ -9,12 +9,25 @@ import {
   getCoordinateTimestampMs,
   hasUsableAccuracy,
   haversineMeters,
-  shouldAcceptCoordinate,
 } from '../utils/runMetrics';
 import {RUN_LEDGER_POLICY, RUN_LIVE_POLICY} from '../config/runPolicy';
 
 export type RunStatus = 'IDLE' | 'TRACKING' | 'PAUSED' | 'COMPLETED';
-export type MotionState = 'ACQUIRING_GPS' | 'STATIONARY' | 'MOVING';
+export type MotionState =
+  | 'ACQUIRING_GPS'
+  | 'LIVE_ESTIMATE'
+  | 'GOOD_GPS'
+  | 'WEAK_GPS'
+  | 'GPS_JUMPING'
+  | 'STATIONARY'
+  | 'TOO_FAST_FOR_RUN';
+
+export type TelemetryIssueType = 'WEAK_GPS' | 'GPS_JUMPING';
+
+export type TelemetryIssue = {
+  type: TelemetryIssueType;
+  timestamp: number;
+};
 
 export type PauseInterval = {
   pausedAt: number;
@@ -38,17 +51,36 @@ export type RunFacts = {
   pauseIntervals: PauseInterval[];
   coordinates: RunTrackPoint[];
   clientRunId: string | null;
+  lastTelemetryIssue: TelemetryIssue | null;
 };
 
 export type RunMetrics = {
   coordinates: RunCoordinate[];
+  previewCoordinates: RunCoordinate[];
+  liveCoordinates: RunCoordinate[];
   elapsedSeconds: number;
   distanceKm: number;
+  previewDistanceKm: number;
+  liveDistanceKm: number;
   elevationGain: number;
   averagePace: number;
   currentPace: number | null;
   motionState: MotionState;
   caloriesBurned: number;
+  liveCaloriesBurned: number;
+};
+
+export type TelemetryDiagnostics = {
+  rawPointCount: number;
+  previewPointCount: number;
+  verifiedPointCount: number;
+  latestAccuracyMeters: number | null;
+  nativeSpeedMps: number | null;
+  nativeSpeedKmh: number | null;
+  latestSegmentSpeedKmh: number | null;
+  confidenceState: MotionState;
+  canSaveRun: boolean;
+  saveEligibilityReason: string | null;
 };
 
 type StartRunSeed = RunTrackPoint | RunCoordinate | null;
@@ -72,6 +104,7 @@ type LegacyRunState = Partial<
     elapsedSeconds: number;
     distanceKm: number;
     elevationGain: number;
+    lastTelemetryIssue: TelemetryIssue | null;
     coordinates: Array<Partial<RunTrackPoint> & Partial<RunCoordinate>>;
   }
 >;
@@ -81,6 +114,14 @@ const MIN_SAVE_DURATION_SECONDS = RUN_LEDGER_POLICY.MIN_SAVE_DURATION_SECONDS;
 const MIN_SAVE_COORDINATES = RUN_LEDGER_POLICY.MIN_SAVE_COORDINATES;
 const STATIONARY_WINDOW_MS = 15 * 1000;
 const LIVE_PACE_WINDOW_MS = RUN_LIVE_POLICY.LIVE_PACE_WINDOW_SECONDS * 1000;
+const TELEMETRY_ISSUE_WINDOW_MS = LIVE_PACE_WINDOW_MS;
+
+export const MINIMUM_SAVE_BLOCK_REASON = `Track at least ${MIN_SAVE_DISTANCE_KM.toFixed(
+  2,
+)} km, ${MIN_SAVE_DURATION_SECONDS} seconds, and ${MIN_SAVE_COORDINATES} GPS points before saving a run.`;
+
+export const PREVIEW_SAVE_BLOCK_REASON =
+  'Live movement detected, but not enough verified running distance to save.';
 
 export const initialRunFacts: RunFacts = {
   status: 'IDLE',
@@ -89,6 +130,7 @@ export const initialRunFacts: RunFacts = {
   pauseIntervals: [],
   coordinates: [],
   clientRunId: null,
+  lastTelemetryIssue: null,
 };
 
 export class RunStateTransitionError extends Error {
@@ -121,6 +163,19 @@ const toTimestamp = (value: unknown, fallback = Date.now()): number => {
   return fallback;
 };
 
+const parseTimestamp = (value: unknown): number | null => {
+  if (isFiniteNumber(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
 const optionalNumber = (value: unknown): number | null =>
   isFiniteNumber(value) ? value : null;
 
@@ -139,10 +194,15 @@ const normalizeCoordinate = (
     return null;
   }
 
+  const timestamp = parseTimestamp(coordinate.timestamp);
+  if (timestamp === null) {
+    return null;
+  }
+
   return {
     latitude,
     longitude,
-    timestamp: toTimestamp(coordinate.timestamp),
+    timestamp,
     accuracy: optionalNumber(coordinate.accuracy),
     altitude: optionalNumber(coordinate.altitude),
     speed: optionalNumber(coordinate.speed),
@@ -221,6 +281,7 @@ export const migrateRunState = (persistedState: unknown): Partial<RunFacts> => {
     pauseIntervals,
     coordinates,
     clientRunId: legacy.clientRunId ?? null,
+    lastTelemetryIssue: legacy.lastTelemetryIssue ?? null,
   };
 };
 
@@ -248,6 +309,18 @@ type MovementSegment = {
   current: RunTrackPoint;
   distanceMeters: number;
   speedKmh: number | null;
+};
+
+type MovementPolicy = {
+  JITTER_DISTANCE_METERS: number;
+  MAX_SEGMENT_SPEED_KMH: number;
+  STATIONARY_SPEED_THRESHOLD_KMH: number;
+};
+
+const LIVE_MOVEMENT_POLICY: MovementPolicy = {
+  JITTER_DISTANCE_METERS: RUN_LIVE_POLICY.LIVE_JITTER_DISTANCE_METERS,
+  MAX_SEGMENT_SPEED_KMH: RUN_LIVE_POLICY.LIVE_MAX_SEGMENT_SPEED_KMH,
+  STATIONARY_SPEED_THRESHOLD_KMH: RUN_LIVE_POLICY.STATIONARY_SPEED_THRESHOLD_KMH,
 };
 
 const isPausedAt = (state: RunFacts, timestamp: number) =>
@@ -278,6 +351,7 @@ const selectLiveUsableCoordinates = (state: RunFacts): RunTrackPoint[] =>
 const getSegment = (
   previous: RunTrackPoint,
   current: RunTrackPoint,
+  policy: MovementPolicy = RUN_LEDGER_POLICY,
 ): MovementSegment | null => {
   const previousCoordinate = toRunCoordinate(previous);
   const currentCoordinate = toRunCoordinate(current);
@@ -290,7 +364,7 @@ const getSegment = (
 
   if (
     speedKmh !== null &&
-    speedKmh > RUN_LEDGER_POLICY.MAX_SEGMENT_SPEED_KMH
+    speedKmh > policy.MAX_SEGMENT_SPEED_KMH
   ) {
     return null;
   }
@@ -303,13 +377,14 @@ const getSegment = (
   };
 };
 
-const isMovementSegment = (segment: MovementSegment) =>
-  segment.distanceMeters >= RUN_LEDGER_POLICY.JITTER_DISTANCE_METERS &&
+const isMovementSegment = (segment: MovementSegment, policy: MovementPolicy) =>
+  segment.distanceMeters >= policy.JITTER_DISTANCE_METERS &&
   (segment.speedKmh === null ||
-    segment.speedKmh >= RUN_LEDGER_POLICY.STATIONARY_SPEED_THRESHOLD_KMH);
+    segment.speedKmh >= policy.STATIONARY_SPEED_THRESHOLD_KMH);
 
-const calculateTrustedDistanceMeters = (
+const calculateAcceptedDistanceMeters = (
   coordinates: RunTrackPoint[],
+  policy: MovementPolicy,
 ): number => {
   if (coordinates.length < 2) {
     return 0;
@@ -320,13 +395,13 @@ const calculateTrustedDistanceMeters = (
 
   for (let index = 1; index < coordinates.length; index += 1) {
     const current = coordinates[index];
-    const segment = getSegment(anchor, current);
+    const segment = getSegment(anchor, current, policy);
     if (!segment) {
       anchor = current;
       continue;
     }
 
-    if (!isMovementSegment(segment)) {
+    if (!isMovementSegment(segment, policy)) {
       anchor = current;
       continue;
     }
@@ -336,6 +411,35 @@ const calculateTrustedDistanceMeters = (
   }
 
   return totalMeters;
+};
+
+const calculateTrustedDistanceMeters = (coordinates: RunTrackPoint[]): number =>
+  calculateAcceptedDistanceMeters(coordinates, RUN_LEDGER_POLICY);
+
+const calculateLiveDistanceMeters = (coordinates: RunTrackPoint[]): number =>
+  calculateAcceptedDistanceMeters(coordinates, LIVE_MOVEMENT_POLICY);
+
+const selectPreviewUsableCoordinates = (state: RunFacts): RunTrackPoint[] => {
+  const coordinates = selectLiveUsableCoordinates(state);
+  if (coordinates.length < 2) {
+    return coordinates;
+  }
+
+  const acceptedCoordinates = [coordinates[0]];
+  let anchor = coordinates[0];
+
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const current = coordinates[index];
+    const segment = getSegment(anchor, current, LIVE_MOVEMENT_POLICY);
+    if (!segment) {
+      continue;
+    }
+
+    acceptedCoordinates.push(current);
+    anchor = current;
+  }
+
+  return acceptedCoordinates;
 };
 
 const selectLiveWindowCoordinates = (
@@ -355,11 +459,60 @@ const selectLiveWindowCoordinates = (
   });
 };
 
+const isRecentTelemetryIssue = (
+  state: RunFacts,
+  type: TelemetryIssueType,
+  now: number,
+) =>
+  state.lastTelemetryIssue?.type === type &&
+  now - state.lastTelemetryIssue.timestamp <= TELEMETRY_ISSUE_WINDOW_MS;
+
+const selectLatestCoordinate = (
+  coordinates: RunTrackPoint[],
+  state: RunFacts,
+  now: number,
+): RunTrackPoint | null => {
+  const availableCoordinates = coordinates.filter(
+    coordinate =>
+      coordinate.timestamp <= now && !isPausedAt(state, coordinate.timestamp),
+  );
+
+  return availableCoordinates[availableCoordinates.length - 1] || null;
+};
+
+const selectLatestNativeSpeedKmh = (
+  coordinates: RunTrackPoint[],
+  state: RunFacts,
+  now: number,
+) => {
+  const latest = selectLatestCoordinate(coordinates, state, now);
+  return typeof latest?.speed === 'number' && Number.isFinite(latest.speed)
+    ? latest.speed * 3.6
+    : null;
+};
+
+const calculateAverageSpeedKmh = (coordinates: RunTrackPoint[]) => {
+  if (coordinates.length < 2) {
+    return 0;
+  }
+
+  const distanceMeters = calculateLiveDistanceMeters(coordinates);
+  const elapsedSeconds =
+    (coordinates[coordinates.length - 1].timestamp - coordinates[0].timestamp) /
+    1000;
+
+  if (elapsedSeconds <= 0) {
+    return 0;
+  }
+
+  return (distanceMeters / 1000) / (elapsedSeconds / 3600);
+};
+
 const selectNativeSpeedPace = (
   state: RunFacts,
   now: number,
 ): number | null => {
-  const maxSpeedMetersPerSecond = RUN_LIVE_POLICY.MAX_SEGMENT_SPEED_KMH / 3.6;
+  const maxSpeedMetersPerSecond = RUN_LIVE_POLICY.LIVE_MAX_SEGMENT_SPEED_KMH / 3.6;
   const speedSamples = selectLiveUsableCoordinates(state)
     .filter(coordinate => {
       const timestamp = getCoordinateTimestampMs(toRunCoordinate(coordinate));
@@ -396,13 +549,13 @@ const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
 
   for (let index = 1; index < coordinates.length; index += 1) {
     const current = coordinates[index];
-    const segment = getSegment(anchor, current);
+    const segment = getSegment(anchor, current, RUN_LEDGER_POLICY);
     if (!segment) {
       anchor = current;
       continue;
     }
 
-    if (!isMovementSegment(segment)) {
+    if (!isMovementSegment(segment, RUN_LEDGER_POLICY)) {
       anchor = current;
       continue;
     }
@@ -414,55 +567,106 @@ const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
   return acceptedCoordinates;
 };
 
-export const selectRunDistance = (state: RunFacts): number => {
+export const selectVerifiedDistance = (state: RunFacts): number => {
   const meters = calculateTrustedDistanceMeters(selectLedgerUsableCoordinates(state));
 
   return Math.round((meters / 1000) * 1000) / 1000;
 };
 
+export const selectRunDistance = selectVerifiedDistance;
+
+export const selectPreviewDistance = (state: RunFacts): number => {
+  const meters = calculateLiveDistanceMeters(selectPreviewUsableCoordinates(state));
+
+  return Math.round((meters / 1000) * 1000) / 1000;
+};
+
+export const selectLiveDistance = selectPreviewDistance;
+
 export const selectMotionState = (
   state: RunFacts,
   now = state.endTime ?? Date.now(),
 ): MotionState => {
-  const coordinates = selectLiveUsableCoordinates(state);
-  if (coordinates.length < 3) {
+  if (isRecentTelemetryIssue(state, 'GPS_JUMPING', now)) {
+    return 'GPS_JUMPING';
+  }
+
+  const previewCoordinates = selectPreviewUsableCoordinates(state);
+  const latestPreviewCoordinate = selectLatestCoordinate(
+    previewCoordinates,
+    state,
+    now,
+  );
+
+  if (
+    (typeof latestPreviewCoordinate?.accuracy === 'number' &&
+      latestPreviewCoordinate.accuracy >
+        RUN_LEDGER_POLICY.CORE_SAVE_MAX_ACCURACY &&
+      latestPreviewCoordinate.accuracy <=
+        RUN_LIVE_POLICY.LIVE_DISPLAY_MAX_ACCURACY) ||
+    isRecentTelemetryIssue(state, 'WEAK_GPS', now)
+  ) {
+    return 'WEAK_GPS';
+  }
+
+  if (previewCoordinates.length < 2) {
     return 'ACQUIRING_GPS';
   }
 
-  const lastThree = coordinates.slice(-3);
-  const firstTimestamp = lastThree[0].timestamp;
-  const lastTimestamp = lastThree[lastThree.length - 1].timestamp;
-  const elapsedSeconds = Math.max(0, (lastTimestamp - firstTimestamp) / 1000);
-  const lastThreeDistanceMeters = calculateTrustedDistanceMeters(lastThree);
-  const averageSpeedKmh =
-    elapsedSeconds > 0
-      ? (lastThreeDistanceMeters / 1000) / (elapsedSeconds / 3600)
-      : 0;
-
   const windowStart = now - STATIONARY_WINDOW_MS;
-  const recentCoordinates = coordinates.filter(
+  const recentCoordinates = previewCoordinates.filter(
     coordinate =>
       coordinate.timestamp >= windowStart &&
       coordinate.timestamp <= now &&
       !isPausedAt(state, coordinate.timestamp),
   );
-  const recentDistanceMeters = calculateTrustedDistanceMeters(recentCoordinates);
+
+  if (recentCoordinates.length < 2) {
+    return 'ACQUIRING_GPS';
+  }
+
+  const recentDistanceMeters = calculateLiveDistanceMeters(recentCoordinates);
+  const averageSpeedKmh = calculateAverageSpeedKmh(recentCoordinates);
+  const latestNativeSpeedKmh = selectLatestNativeSpeedKmh(
+    previewCoordinates,
+    state,
+    now,
+  );
+  const effectiveSpeedKmh = Math.max(averageSpeedKmh, latestNativeSpeedKmh ?? 0);
 
   if (
-    averageSpeedKmh < RUN_LIVE_POLICY.STATIONARY_SPEED_THRESHOLD_KMH ||
-    recentDistanceMeters < RUN_LIVE_POLICY.JITTER_DISTANCE_METERS
+    recentDistanceMeters < RUN_LIVE_POLICY.LIVE_JITTER_DISTANCE_METERS &&
+    effectiveSpeedKmh < RUN_LIVE_POLICY.STATIONARY_SPEED_THRESHOLD_KMH
   ) {
     return 'STATIONARY';
   }
 
-  return 'MOVING';
+  if (
+    effectiveSpeedKmh > RUN_LEDGER_POLICY.MAX_SEGMENT_SPEED_KMH &&
+    effectiveSpeedKmh <= RUN_LIVE_POLICY.LIVE_MAX_SEGMENT_SPEED_KMH
+  ) {
+    return 'TOO_FAST_FOR_RUN';
+  }
+
+  const verifiedRecentDistanceKm = selectVerifiedDistance({
+    ...state,
+    coordinates: recentCoordinates,
+  });
+
+  return verifiedRecentDistanceKm > 0 ? 'GOOD_GPS' : 'LIVE_ESTIMATE';
 };
+
+export const selectLiveMotionState = selectMotionState;
 
 export const selectCurrentPace = (
   state: RunFacts,
   now = state.endTime ?? Date.now(),
 ): number | null => {
-  if (state.status !== 'TRACKING' || selectMotionState(state, now) !== 'MOVING') {
+  const motionState = selectMotionState(state, now);
+  if (
+    state.status !== 'TRACKING' ||
+    (motionState !== 'GOOD_GPS' && motionState !== 'LIVE_ESTIMATE')
+  ) {
     return null;
   }
 
@@ -481,8 +685,8 @@ export const selectCurrentPace = (
     return null;
   }
 
-  const distanceMeters = calculateTrustedDistanceMeters(windowCoordinates);
-  if (distanceMeters < RUN_LIVE_POLICY.JITTER_DISTANCE_METERS) {
+  const distanceMeters = calculateLiveDistanceMeters(windowCoordinates);
+  if (distanceMeters < RUN_LIVE_POLICY.LIVE_JITTER_DISTANCE_METERS) {
     return null;
   }
 
@@ -497,14 +701,15 @@ export const selectCurrentPace = (
 };
 
 export const selectRunElevationGain = (state: RunFacts): number => {
-  if (state.coordinates.length < 2) {
+  const coordinates = selectTrustedMovementCoordinates(state);
+  if (coordinates.length < 2) {
     return 0;
   }
 
   let meters = 0;
-  for (let index = 1; index < state.coordinates.length; index += 1) {
-    const previousAltitude = state.coordinates[index - 1].altitude;
-    const nextAltitude = state.coordinates[index].altitude;
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const previousAltitude = coordinates[index - 1].altitude;
+    const nextAltitude = coordinates[index].altitude;
     if (
       isFiniteNumber(previousAltitude) &&
       isFiniteNumber(nextAltitude) &&
@@ -517,8 +722,15 @@ export const selectRunElevationGain = (state: RunFacts): number => {
   return Math.round(meters * 100) / 100;
 };
 
-export const selectRunCoordinates = (state: RunFacts): RunCoordinate[] =>
-  state.coordinates.map(toRunCoordinate);
+export const selectVerifiedCoordinates = (state: RunFacts): RunCoordinate[] =>
+  selectTrustedMovementCoordinates(state).map(toRunCoordinate);
+
+export const selectRunCoordinates = selectVerifiedCoordinates;
+
+export const selectPreviewCoordinates = (state: RunFacts): RunCoordinate[] =>
+  selectPreviewUsableCoordinates(state).map(toRunCoordinate);
+
+export const selectLiveCoordinates = selectPreviewCoordinates;
 
 export const selectRunMetrics = (
   state: RunFacts,
@@ -527,17 +739,24 @@ export const selectRunMetrics = (
 ): RunMetrics => {
   const elapsedSeconds = selectRunDuration(state, now);
   const distanceKm = selectRunDistance(state);
+  const previewCoordinates = selectPreviewCoordinates(state);
+  const previewDistanceKm = selectPreviewDistance(state);
   const motionState = selectMotionState(state, now);
 
   return {
     coordinates: selectRunCoordinates(state),
+    previewCoordinates,
+    liveCoordinates: previewCoordinates,
     elapsedSeconds,
     distanceKm,
+    previewDistanceKm,
+    liveDistanceKm: previewDistanceKm,
     elevationGain: selectRunElevationGain(state),
     averagePace: calculatePaceMinutesPerKm(distanceKm, elapsedSeconds),
     currentPace: selectCurrentPace(state, now),
     motionState,
     caloriesBurned: estimateCalories(distanceKm, weightKg),
+    liveCaloriesBurned: estimateCalories(previewDistanceKm, weightKg),
   };
 };
 
@@ -551,6 +770,68 @@ export const selectCanSaveRun = (state: RunFacts, now = Date.now()): boolean => 
     distanceKm >= MIN_SAVE_DISTANCE_KM &&
     durationSeconds >= MIN_SAVE_DURATION_SECONDS
   );
+};
+
+export const selectSaveBlockReason = (
+  state: RunFacts,
+  now = Date.now(),
+): string | null => {
+  if (selectCanSaveRun(state, now)) {
+    return null;
+  }
+
+  if (
+    selectPreviewDistance(state) > 0 &&
+    selectVerifiedDistance(state) < MIN_SAVE_DISTANCE_KM
+  ) {
+    return PREVIEW_SAVE_BLOCK_REASON;
+  }
+
+  return MINIMUM_SAVE_BLOCK_REASON;
+};
+
+export const selectTelemetryDiagnostics = (
+  state: RunFacts,
+  now = Date.now(),
+): TelemetryDiagnostics => {
+  const rawCoordinates = sortCoordinatesByTime(state.coordinates).filter(
+    coordinate => coordinate.timestamp <= now,
+  );
+  const latest = rawCoordinates[rawCoordinates.length - 1] || null;
+  const previous =
+    rawCoordinates.length >= 2 ? rawCoordinates[rawCoordinates.length - 2] : null;
+  const distanceMeters =
+    previous && latest
+      ? haversineMeters(toRunCoordinate(previous), toRunCoordinate(latest))
+      : null;
+  const latestSegmentSpeedKmh =
+    previous && latest && distanceMeters !== null
+      ? calculateSegmentSpeedKmh(
+          toRunCoordinate(previous),
+          toRunCoordinate(latest),
+          distanceMeters,
+        )
+      : null;
+  const nativeSpeedMps =
+    typeof latest?.speed === 'number' && Number.isFinite(latest.speed)
+      ? latest.speed
+      : null;
+
+  return {
+    rawPointCount: rawCoordinates.length,
+    previewPointCount: selectPreviewCoordinates(state).length,
+    verifiedPointCount: selectVerifiedCoordinates(state).length,
+    latestAccuracyMeters:
+      typeof latest?.accuracy === 'number' && Number.isFinite(latest.accuracy)
+        ? latest.accuracy
+        : null,
+    nativeSpeedMps,
+    nativeSpeedKmh: nativeSpeedMps !== null ? nativeSpeedMps * 3.6 : null,
+    latestSegmentSpeedKmh,
+    confidenceState: selectMotionState(state, now),
+    canSaveRun: selectCanSaveRun(state, now),
+    saveEligibilityReason: selectSaveBlockReason(state, now),
+  };
 };
 
 export const selectRunTiming = (
@@ -593,19 +874,46 @@ export const useRunStore = create<RunState>()(
             return;
           }
 
-          const previous = current.coordinates[current.coordinates.length - 1] || null;
           if (
-            !shouldAcceptCoordinate(
-              previous ? toRunCoordinate(previous) : null,
+            !hasUsableAccuracy(
               toRunCoordinate(nextCoordinate),
-              RUN_LIVE_POLICY.JITTER_DISTANCE_METERS,
               RUN_LIVE_POLICY.LIVE_DISPLAY_MAX_ACCURACY,
             )
+          ) {
+            set({
+              lastTelemetryIssue: {
+                type: 'WEAK_GPS',
+                timestamp: nextCoordinate.timestamp,
+              },
+            });
+            return;
+          }
+
+          const previous = current.coordinates[current.coordinates.length - 1] || null;
+          if (
+            previous &&
+            nextCoordinate.timestamp <= previous.timestamp
           ) {
             return;
           }
 
-          set({coordinates: [...current.coordinates, nextCoordinate]});
+          if (
+            previous &&
+            getSegment(previous, nextCoordinate, LIVE_MOVEMENT_POLICY) === null
+          ) {
+            set({
+              lastTelemetryIssue: {
+                type: 'GPS_JUMPING',
+                timestamp: nextCoordinate.timestamp,
+              },
+            });
+            return;
+          }
+
+          set({
+            coordinates: [...current.coordinates, nextCoordinate],
+            lastTelemetryIssue: null,
+          });
         },
         pauseRun: () => {
           const current = get();
@@ -681,6 +989,7 @@ export const useRunStore = create<RunState>()(
         pauseIntervals: state.pauseIntervals,
         coordinates: state.coordinates,
         clientRunId: state.clientRunId,
+        lastTelemetryIssue: state.lastTelemetryIssue,
       }),
     },
   ),

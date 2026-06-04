@@ -4,13 +4,13 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import LiveRunMap from '../components/LiveRunMap';
-import {RUN_POLICY} from '../config/runPolicy';
 import {
   RunStatus,
   RunTrackPoint,
   selectCanSaveRun,
-  selectRunCoordinates,
   selectRunMetrics,
+  selectSaveBlockReason,
+  selectTelemetryDiagnostics,
   useRunStore,
 } from '../store/runStore';
 import {useUserStore} from '../store/userStore';
@@ -37,15 +37,6 @@ const toLiveRunStatus = (
   }
 };
 
-const saveRequirementToastText = `A saved run needs at least ${RUN_POLICY.MIN_SAVE_DISTANCE_KM.toFixed(
-  2,
-)} km, ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds, and ${
-  RUN_POLICY.MIN_SAVE_COORDINATES
-} GPS samples.`;
-
-const tooShortAlertMessage =
-  'Run is too short to save. Cover at least 100 meters to log this workout.';
-
 const RunTrackingScreen = ({navigation}: any) => {
   const updateBackendLocation = useUserStore(state => state.updateBackendLocation);
   const runState = useRunStore();
@@ -55,11 +46,14 @@ const RunTrackingScreen = ({navigation}: any) => {
   const completeRun = useRunStore(state => state.completeRun);
   const resetRun = useRunStore(state => state.resetRun);
   const watchRef = useRef<ReturnType<typeof startLocationWatch> | null>(null);
+  const telemetryLogRef = useRef<{
+    lastLoggedAt: number;
+    confidenceState: string | null;
+  }>({lastLoggedAt: 0, confidenceState: null});
   const [initializing, setInitializing] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [locationStatus, setLocationStatus] = useState('Acquiring GPS lock...');
   const metrics = selectRunMetrics(runState, profile?.weightKg, now);
-  const route = selectRunCoordinates(runState);
   const canSaveRun = selectCanSaveRun(runState, now);
 
   const clearTrackingArtifacts = useCallback(() => {
@@ -125,6 +119,22 @@ const RunTrackingScreen = ({navigation}: any) => {
       }
 
       setLocationStatus('Live GPS tracking');
+
+      if (__DEV__) {
+        const updatedStore = useRunStore.getState();
+        const diagnostics = selectTelemetryDiagnostics(updatedStore, Date.now());
+        const shouldLog =
+          Date.now() - telemetryLogRef.current.lastLoggedAt >= 5000 ||
+          telemetryLogRef.current.confidenceState !== diagnostics.confidenceState;
+
+        if (shouldLog) {
+          telemetryLogRef.current = {
+            lastLoggedAt: Date.now(),
+            confidenceState: diagnostics.confidenceState,
+          };
+          console.debug('[MilesAway][telemetry]', diagnostics);
+        }
+      }
 
       if (syncProfile) {
         await syncLocationToBackend(coordinate);
@@ -250,8 +260,9 @@ const RunTrackingScreen = ({navigation}: any) => {
 
   const finishRun = () => {
     const currentRun = useRunStore.getState();
-    if (!selectCanSaveRun(currentRun, Date.now())) {
-      Alert.alert('Keep moving', tooShortAlertMessage, [
+    const saveBlockReason = selectSaveBlockReason(currentRun, Date.now());
+    if (saveBlockReason) {
+      Alert.alert('Keep moving', saveBlockReason, [
         {text: 'OK', style: 'default'},
       ]);
       return;
@@ -263,14 +274,12 @@ const RunTrackingScreen = ({navigation}: any) => {
         text: 'Finish',
         onPress: () => {
           const latestRun = useRunStore.getState();
-          if (!selectCanSaveRun(latestRun, Date.now())) {
+          const latestSaveBlockReason = selectSaveBlockReason(latestRun, Date.now());
+          if (latestSaveBlockReason) {
             Toast.show({
               type: 'error',
               text1: 'Run is too short',
-              text2:
-                latestRun.coordinates.length < RUN_POLICY.MIN_SAVE_COORDINATES
-                  ? `A saved run needs at least ${RUN_POLICY.MIN_SAVE_COORDINATES} GPS samples.`
-                  : saveRequirementToastText,
+              text2: latestSaveBlockReason,
             });
             return;
           }
@@ -285,11 +294,11 @@ const RunTrackingScreen = ({navigation}: any) => {
 
   return (
     <LiveRunMap
-      route={route}
+      route={metrics.previewCoordinates}
       elapsedSeconds={metrics.elapsedSeconds}
-      distanceKm={metrics.distanceKm}
+      distanceKm={metrics.previewDistanceKm}
       elevationGain={metrics.elevationGain}
-      calories={metrics.caloriesBurned}
+      calories={metrics.liveCaloriesBurned}
       currentPace={metrics.currentPace}
       motionState={metrics.motionState}
       canSaveRun={canSaveRun}
