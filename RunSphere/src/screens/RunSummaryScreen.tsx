@@ -29,6 +29,7 @@ const RunSummaryScreen = ({navigation}: any) => {
     handleClose,
     saveRun,
     goHome,
+    discardAndGoHome,
     viewProfile,
   } = runSummary;
 
@@ -160,12 +161,12 @@ const RunSummaryScreen = ({navigation}: any) => {
           </View>
         ) : saveError ? (
           <View style={styles.retryCard}>
-            <Text style={styles.retryTitle}>Run not saved yet</Text>
+            <Text style={styles.retryTitle}>Run not saved</Text>
             <Text style={styles.retryText}>
               {saveError} Your route is still on this device.
             </Text>
             <GradientButton title="Retry Save" onPress={saveRun} style={styles.saveButton} />
-            <TouchableOpacity style={styles.secondaryButton} onPress={handleClose}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={discardAndGoHome}>
               <Text style={styles.secondaryButtonText}>Back Home</Text>
             </TouchableOpacity>
           </View>

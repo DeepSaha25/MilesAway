@@ -67,8 +67,6 @@ const LiveRunMap = ({
   const gpsNeedsAttention =
     motionState !== 'GOOD_GPS' ||
     /acquiring|search|waiting|weak|required|could/i.test(gpsStatus || '');
-  const canShowCurrentPace =
-    motionState === 'GOOD_GPS' || motionState === 'LIVE_ESTIMATE';
 
   const arrowRotation =
     typeof latest?.heading === 'number'
@@ -92,8 +90,6 @@ const LiveRunMap = ({
       ? 'GPS signal jumping'
       : motionState === 'STATIONARY'
       ? 'Waiting for movement'
-      : motionState === 'TOO_FAST_FOR_RUN'
-      ? 'Too fast for a verified run'
       : null;
   const statusText =
     motionState === 'GOOD_GPS' && canSaveRun
@@ -201,7 +197,7 @@ const LiveRunMap = ({
           <View style={styles.pacePanel}>
             <Text style={styles.paceLabel}>Pace</Text>
             <Text style={styles.paceValue}>
-              {formatPace(canShowCurrentPace ? currentPace : null)}
+              {formatPace(currentPace)}
             </Text>
           </View>
         </View>

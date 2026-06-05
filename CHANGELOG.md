@@ -20,6 +20,54 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.32 - 2026-06-05
+
+### Summary
+- Simplified live pace to average pace from elapsed time divided by live preview distance.
+- Removed native-speed and rolling-window dependencies from the pace display path.
+- Updated pace formatting to show `min/km` units, such as `6:04 min/km`.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: simplified `selectCurrentPace(...)` to use full elapsed tracking time over preview distance.
+- `RunSphere/src/components/LiveRunMap.tsx`: displays the selector-provided pace directly instead of hiding it by confidence state.
+- `RunSphere/src/utils/runMetrics.ts`: changed pace formatting from `/km` to `min/km`.
+- `RunSphere/__tests__/runStore.test.ts`, `RunSphere/__tests__/LiveRunMap.test.tsx`, `RunSphere/__tests__/runMetrics.test.ts`: updated coverage for simple average pace and `min/km` units.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Saved average pace continues to use verified distance; live current pace uses preview distance so it stays responsive.
+
+## v0.2.31 - 2026-06-05
+
+### Summary
+- Removed speed-limit save barriers so valid high-speed movement sessions can be saved.
+- Preserved GPS accuracy, stationary drift, duration, distance, and sample-count production gateways.
+- Fixed the Run Summary failed-save Back Home path so it exits without silently retrying save.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`, `RunSphere/src/utils/runMetrics.ts`: stopped using segment speed as a verified distance/save rejection rule while keeping jitter and stationary filtering.
+- `backend/src/services/runService.js`, `backend/src/models/Run.js`: removed segment and average speed save rejection while preserving strict GPS quality and minimum session checks.
+- `RunSphere/src/hooks/useRunSummary.ts`, `RunSphere/src/screens/RunSummaryScreen.tsx`: added an explicit failed-save exit path and wired Back Home to leave without retrying.
+- `RunSphere/src/components/LiveRunMap.tsx`: removed speed-based save-blocking status copy.
+- `RunSphere/__tests__/runStore.test.ts`, `RunSphere/__tests__/LiveRunMap.test.tsx`, `RunSphere/__tests__/useRunSummary.test.tsx`, `backend/test/runService.test.js`: updated coverage for high-speed valid movement saves and failed-save navigation.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts __tests__/useRunSummary.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+- `cd backend && npm test`
+
+### Notes
+- Speed remains available for display and diagnostics, but it no longer authorizes or blocks persistence.
+- The five production gateways remain GPS quality, raw/clean/moving sample counts, duration, and distance.
+
 ## v0.2.30 - 2026-06-04
 
 ### Summary

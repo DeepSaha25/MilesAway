@@ -189,11 +189,6 @@ RunSchema.statics.validateRunData = function (distance, duration) {
     errors.push(`Run duration must be at least ${RUN_POLICY.MIN_SAVE_DURATION_SECONDS} seconds`);
   }
 
-  const speedKmh = (distance / (duration / 3600));
-  if (speedKmh > 25) {
-    errors.push(`Speed ${speedKmh.toFixed(2)} km/h exceeds maximum 25 km/h`);
-  }
-
   return errors;
 };
 

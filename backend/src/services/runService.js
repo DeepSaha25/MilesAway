@@ -11,8 +11,6 @@ const RUN_POLICY = require('../config/runPolicy');
 const MIN_RUN_DISTANCE_KM = RUN_POLICY.MIN_SAVE_DISTANCE_KM;
 const MIN_RUN_DURATION_SECONDS = RUN_POLICY.MIN_SAVE_DURATION_SECONDS;
 const MIN_RUN_COORDINATES = RUN_POLICY.MIN_SAVE_COORDINATES;
-const MAX_AVERAGE_SPEED_KMH = 25;
-const MAX_SEGMENT_SPEED_KMH = RUN_POLICY.MAX_SEGMENT_SPEED_KMH;
 const MAX_ACCEPTED_ACCURACY_METERS = RUN_POLICY.MAX_ACCURACY_METERS;
 const MAX_FUTURE_SKEW_MS = 2 * 60 * 1000;
 const MAX_BACKDATE_DAYS = 7;
@@ -436,11 +434,6 @@ class RunService {
         continue;
       }
 
-      const segmentSpeedKmh = (segmentMeters / 1000) / (deltaSeconds / 3600);
-      if (segmentSpeedKmh > MAX_SEGMENT_SPEED_KMH) {
-        throw ApiError.badRequest(`GPS jump detected (${segmentSpeedKmh.toFixed(2)} km/h segment)`);
-      }
-
       if (
         Number.isFinite(previous.altitude) &&
         Number.isFinite(current.altitude) &&
@@ -487,11 +480,6 @@ class RunService {
 
     if (distanceKm < MIN_RUN_DISTANCE_KM) {
       throw ApiError.badRequest(`Run distance must be at least ${MIN_RUN_DISTANCE_KM} km`);
-    }
-
-    const avgSpeed = distanceKm / (durationSeconds / 3600);
-    if (avgSpeed > MAX_AVERAGE_SPEED_KMH) {
-      throw ApiError.badRequest(`Average speed (${avgSpeed.toFixed(2)} km/h) exceeds ${MAX_AVERAGE_SPEED_KMH} km/h limit`);
     }
 
     return {

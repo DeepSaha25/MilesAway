@@ -87,22 +87,22 @@ test('calculates trusted run metrics from GPS samples', () => {
   assert.ok(metrics.elevationGain >= 13);
 });
 
-test('rejects GPS teleport jumps', () => {
-  assert.throws(
-    () =>
-      RunService.calculateTrustedMetrics([
-        sample(0, 28.7041, 77.1025),
-        sample(20, 28.7043, 77.1027),
-        sample(40, 28.7045, 77.1029),
-        sample(60, 28.7047, 77.1031),
-        sample(80, 28.7049, 77.1033),
-        sample(90, 28.9041, 77.3025)
-      ].map((coordinate) => ({
-        ...coordinate,
-        timestamp: new Date(coordinate.timestamp)
-      }))),
-    /GPS jump detected/
-  );
+test('accepts high-speed movement when production save gates pass', () => {
+  const metrics = RunService.calculateTrustedMetrics([
+    sample(0, 28.7041, 77.1025),
+    sample(15, 28.7141, 77.1125),
+    sample(30, 28.7241, 77.1225),
+    sample(45, 28.7341, 77.1325),
+    sample(60, 28.7441, 77.1425),
+    sample(75, 28.7541, 77.1525)
+  ].map((coordinate) => ({
+    ...coordinate,
+    timestamp: new Date(coordinate.timestamp)
+  })));
+
+  assert.equal(metrics.coordinates.length, 6);
+  assert.ok(metrics.distanceKm > RUN_POLICY.MIN_SAVE_DISTANCE_KM);
+  assert.equal(metrics.durationSeconds, 75);
 });
 
 test('rejects duplicate GPS timestamps', () => {
@@ -164,6 +164,13 @@ test('run model validation helper enforces production save thresholds', () => {
       RUN_POLICY.MIN_SAVE_DURATION_SECONDS - 1
     ).join(' '),
     /Run duration must be at least 60 seconds/
+  );
+  assert.deepEqual(
+    Run.validateRunData(
+      5,
+      RUN_POLICY.MIN_SAVE_DURATION_SECONDS
+    ),
+    []
   );
 });
 

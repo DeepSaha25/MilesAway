@@ -9,7 +9,7 @@ import RunService from '../src/services/runService';
 import {useAuthStore} from '../src/store/authStore';
 import {useLeaderboardStore} from '../src/store/leaderboardStore';
 import {
-  PREVIEW_SAVE_BLOCK_REASON,
+  MINIMUM_SAVE_BLOCK_REASON,
   RunFacts,
   initialRunFacts,
   useRunStore,
@@ -91,7 +91,7 @@ describe('useRunSummary save integrity', () => {
     jest.restoreAllMocks();
   });
 
-  it('blocks preview-only movement before guest storage, refresh, or leaderboard updates', async () => {
+  it('blocks sessions that do not pass the five production save gates', async () => {
     useRunStore.setState(
       makeCompletedRun({
         coordinates: [
@@ -104,17 +104,69 @@ describe('useRunSummary save integrity', () => {
 
     await flushHook();
 
-    expect(latestHook?.saveError).toBe(PREVIEW_SAVE_BLOCK_REASON);
+    expect(latestHook?.saveError).toBe(MINIMUM_SAVE_BLOCK_REASON);
     expect(GuestRunStorage.saveRun).not.toHaveBeenCalled();
     expect(RunService.submitRun).not.toHaveBeenCalled();
     expect(refreshDashboard).not.toHaveBeenCalled();
     expect(loadLeaderboard).not.toHaveBeenCalled();
     expect(Toast.show).toHaveBeenCalledWith(
       expect.objectContaining({
-        text1: 'Run is too short',
-        text2: PREVIEW_SAVE_BLOCK_REASON,
+        text1: 'Session is too short',
+        text2: MINIMUM_SAVE_BLOCK_REASON,
       }),
     );
+  });
+
+  it('backs home after a failed save without retrying the save task', async () => {
+    const saveError = new Error('Railway is unreachable');
+    jest.spyOn(GuestRunStorage, 'saveRun').mockRejectedValue(saveError);
+    useRunStore.setState(
+      makeCompletedRun({
+        coordinates: productionSaveCoordinates(),
+      }),
+    );
+
+    await flushHook();
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(1);
+    expect(latestHook?.saveError).toBe('Railway is unreachable');
+
+    await ReactTestRenderer.act(async () => {
+      latestHook?.discardAndGoHome();
+      await Promise.resolve();
+    });
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(1);
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{name: 'Main', params: {screen: 'Home'}}],
+    });
+    expect(useRunStore.getState().status).toBe('IDLE');
+  });
+
+  it('keeps Retry Save as the only failed-state action that retries persistence', async () => {
+    jest
+      .spyOn(GuestRunStorage, 'saveRun')
+      .mockRejectedValueOnce(new Error('Temporary outage'))
+      .mockResolvedValueOnce({} as any);
+    useRunStore.setState(
+      makeCompletedRun({
+        coordinates: productionSaveCoordinates(),
+      }),
+    );
+
+    await flushHook();
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(1);
+    expect(latestHook?.saveError).toBe('Temporary outage');
+
+    await ReactTestRenderer.act(async () => {
+      await latestHook?.saveRun();
+      await Promise.resolve();
+    });
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(2);
+    expect(latestHook?.savedRun).not.toBeNull();
   });
 
   it('submits only verified coordinates to the backend on successful save', async () => {

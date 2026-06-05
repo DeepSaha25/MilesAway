@@ -19,7 +19,6 @@ import {
   selectVerifiedCoordinates,
   selectVerifiedDistance,
   useRunStore,
-  PREVIEW_SAVE_BLOCK_REASON,
   MINIMUM_SAVE_BLOCK_REASON,
 } from '../src/store/runStore';
 import {RUN_LIVE_POLICY, RUN_POLICY} from '../src/config/runPolicy';
@@ -36,6 +35,15 @@ const productionSaveCoordinates = () => [
   {latitude: 0, longitude: 0.0006, timestamp: 37_000, accuracy: 5},
   {latitude: 0, longitude: 0.0008, timestamp: 49_000, accuracy: 5},
   {latitude: 0, longitude: 0.001, timestamp: 61_000, accuracy: 5},
+];
+
+const highSpeedSaveCoordinates = () => [
+  {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5, speed: 12},
+  {latitude: 0, longitude: 0.001, timestamp: 13_000, accuracy: 5, speed: 12},
+  {latitude: 0, longitude: 0.002, timestamp: 25_000, accuracy: 5, speed: 12},
+  {latitude: 0, longitude: 0.003, timestamp: 37_000, accuracy: 5, speed: 12},
+  {latitude: 0, longitude: 0.004, timestamp: 49_000, accuracy: 5, speed: 12},
+  {latitude: 0, longitude: 0.005, timestamp: 61_000, accuracy: 5, speed: 12},
 ];
 
 describe('runStore fact-only selectors', () => {
@@ -244,35 +252,29 @@ describe('runStore fact-only selectors', () => {
     ).toBe('GPS_JUMPING');
   });
 
-  it('reports too-fast movement as preview-only and not save-trusted', () => {
+  it('allows high-speed valid movement to become verified and saveable', () => {
     const transportState = makeState({
       status: 'TRACKING',
       startTime: 1_000,
-      coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5, speed: 30},
-        {latitude: 0, longitude: 0.001, timestamp: 4_000, accuracy: 5, speed: 30},
-        {latitude: 0, longitude: 0.002, timestamp: 7_000, accuracy: 5, speed: 30},
-      ],
+      coordinates: highSpeedSaveCoordinates(),
     });
 
-    expect(selectMotionState(transportState, 7_000)).toBe('TOO_FAST_FOR_RUN');
-    expect(selectLiveDistance(transportState)).toBeGreaterThan(0.2);
-    expect(selectRunDistance(transportState)).toBe(0);
-    expect(selectCanSaveRun(transportState, 61_000)).toBe(false);
-    expect(selectSaveBlockReason(transportState, 61_000)).toBe(
-      PREVIEW_SAVE_BLOCK_REASON,
-    );
-    expect(selectTelemetryDiagnostics(transportState, 7_000)).toMatchObject({
-      rawPointCount: 3,
-      previewPointCount: 3,
-      verifiedPointCount: 1,
-      confidenceState: 'TOO_FAST_FOR_RUN',
-      canSaveRun: false,
-      saveEligibilityReason: PREVIEW_SAVE_BLOCK_REASON,
+    expect(selectMotionState(transportState, 61_000)).toBe('GOOD_GPS');
+    expect(selectLiveDistance(transportState)).toBeGreaterThan(0.5);
+    expect(selectRunDistance(transportState)).toBeGreaterThan(0.5);
+    expect(selectCanSaveRun(transportState, 61_000)).toBe(true);
+    expect(selectSaveBlockReason(transportState, 61_000)).toBeNull();
+    expect(selectTelemetryDiagnostics(transportState, 61_000)).toMatchObject({
+      rawPointCount: 6,
+      previewPointCount: 6,
+      verifiedPointCount: 6,
+      confidenceState: 'GOOD_GPS',
+      canSaveRun: true,
+      saveEligibilityReason: null,
     });
   });
 
-  it('returns null current pace until movement is confident', () => {
+  it('returns null current pace until preview distance is available', () => {
     const stationaryState = makeState({
       status: 'TRACKING',
       coordinates: [
@@ -286,46 +288,46 @@ describe('runStore fact-only selectors', () => {
     expect(selectRunMetrics(stationaryState, 70, 16_000).currentPace).toBeNull();
   });
 
-  it('derives current pace from averaged native speed samples while moving', () => {
+  it('derives current pace from total elapsed tracking time divided by preview distance', () => {
     const movingState = makeState({
       status: 'TRACKING',
+      startTime: 0,
       coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 48_000, accuracy: 5, speed: 2.5},
-        {latitude: 0, longitude: 0.00008, timestamp: 52_000, accuracy: 5, speed: 2.5},
-        {latitude: 0, longitude: 0.00016, timestamp: 56_000, accuracy: 5, speed: 2.5},
-        {latitude: 0, longitude: 0.00024, timestamp: 60_000, accuracy: 5, speed: 2.5},
+        {latitude: 0, longitude: 0, timestamp: 0, accuracy: 5, speed: null},
+        {latitude: 0, longitude: 0.003, timestamp: 182_000, accuracy: 5, speed: null},
+        {latitude: 0, longitude: 0.006, timestamp: 364_000, accuracy: 5, speed: null},
       ],
     });
 
-    const currentPace = selectCurrentPace(movingState, 60_000);
+    const currentPace = selectCurrentPace(movingState, 364_000);
 
-    expect(selectMotionState(movingState, 60_000)).toBe('GOOD_GPS');
     expect(currentPace).not.toBeNull();
-    expect(currentPace as number).toBeGreaterThan(6.6);
-    expect(currentPace as number).toBeLessThan(6.7);
+    expect(currentPace as number).toBeGreaterThan(9);
+    expect(currentPace as number).toBeLessThan(9.2);
   });
 
-  it('ignores invalid native speed samples before using rolling pace fallback', () => {
+  it('does not depend on native speed samples for current pace', () => {
     const movingState = makeState({
       status: 'TRACKING',
+      startTime: 0,
       coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 48_000, accuracy: 5, speed: null},
-        {latitude: 0, longitude: 0.00008, timestamp: 52_000, accuracy: 5, speed: 0},
-        {latitude: 0, longitude: 0.00016, timestamp: 56_000, accuracy: 5, speed: Number.NaN},
-        {latitude: 0, longitude: 0.00024, timestamp: 60_000, accuracy: 5, speed: null},
+        {latitude: 0, longitude: 0, timestamp: 0, accuracy: 5, speed: null},
+        {latitude: 0, longitude: 0.003, timestamp: 182_000, accuracy: 5, speed: 0},
+        {latitude: 0, longitude: 0.006, timestamp: 364_000, accuracy: 5, speed: Number.NaN},
       ],
     });
 
-    const currentPace = selectCurrentPace(movingState, 60_000);
+    const currentPace = selectCurrentPace(movingState, 364_000);
 
     expect(currentPace).not.toBeNull();
-    expect(currentPace as number).toBeGreaterThan(6);
-    expect(currentPace as number).toBeLessThan(8);
+    expect(currentPace as number).toBeGreaterThan(9);
+    expect(currentPace as number).toBeLessThan(9.2);
   });
 
-  it('allows relaxed accuracy points to contribute to preview while hiding weak GPS pace', () => {
+  it('allows relaxed accuracy points to contribute to preview pace', () => {
     const movingState = makeState({
       status: 'TRACKING',
+      startTime: 48_000,
       coordinates: [
         {latitude: 0, longitude: 0, timestamp: 48_000, accuracy: 45},
         {latitude: 0, longitude: 0.00008, timestamp: 52_000, accuracy: 45},
@@ -338,54 +340,49 @@ describe('runStore fact-only selectors', () => {
 
     expect(selectMotionState(movingState, 60_000)).toBe('WEAK_GPS');
     expect(selectPreviewDistance(movingState)).toBeGreaterThan(0);
-    expect(currentPace).toBeNull();
+    expect(currentPace).not.toBeNull();
   });
 
-  it('uses a 12-second current pace window and ignores older points', () => {
+  it('uses full elapsed time rather than a rolling current pace window', () => {
     const movingState = makeState({
       status: 'TRACKING',
+      startTime: 0,
       coordinates: [
         {latitude: 0, longitude: 0, timestamp: 0, accuracy: 5},
-        {latitude: 0, longitude: 0.0006, timestamp: 44_000, accuracy: 5},
-        {latitude: 0, longitude: 0.00068, timestamp: 52_000, accuracy: 5},
-        {latitude: 0, longitude: 0.00076, timestamp: 56_000, accuracy: 5},
-        {latitude: 0, longitude: 0.00084, timestamp: 60_000, accuracy: 5},
+        {latitude: 0, longitude: 0.003, timestamp: 182_000, accuracy: 5},
+        {latitude: 0, longitude: 0.006, timestamp: 364_000, accuracy: 5},
       ],
     });
 
-    const currentPace = selectCurrentPace(movingState, 60_000);
+    const currentPace = selectCurrentPace(movingState, 364_000);
 
     expect(currentPace).not.toBeNull();
-    expect(currentPace as number).toBeGreaterThan(6);
-    expect(currentPace as number).toBeLessThan(8);
+    expect(currentPace as number).toBeGreaterThan(9);
+    expect(currentPace as number).toBeLessThan(9.2);
   });
 
-  it('counts provisional fast movement for live display but not strict summary', () => {
+  it('counts high-speed valid movement for live display and verified summary', () => {
     const transportState = makeState({
       status: 'TRACKING',
       startTime: 1_000,
-      coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5, speed: 30},
-        {latitude: 0, longitude: 0.001, timestamp: 4_000, accuracy: 5, speed: 30},
-        {latitude: 0, longitude: 0.002, timestamp: 7_000, accuracy: 5, speed: 30},
-      ],
+      coordinates: highSpeedSaveCoordinates(),
     });
 
-    const metrics = selectRunMetrics(transportState, 70, 7_000);
+    const metrics = selectRunMetrics(transportState, 70, 61_000);
 
-    expect(selectMotionState(transportState, 7_000)).toBe('TOO_FAST_FOR_RUN');
-    expect(selectLiveDistance(transportState)).toBeGreaterThan(0.2);
-    expect(selectRunDistance(transportState)).toBe(0);
-    expect(selectLiveCoordinates(transportState)).toHaveLength(3);
-    expect(selectRunCoordinates(transportState)).toHaveLength(1);
-    expect(metrics.previewCoordinates).toHaveLength(3);
-    expect(metrics.previewDistanceKm).toBeGreaterThan(0.2);
-    expect(metrics.liveDistanceKm).toBeGreaterThan(0.2);
-    expect(metrics.distanceKm).toBe(0);
-    expect(metrics.currentPace).toBeNull();
+    expect(selectMotionState(transportState, 61_000)).toBe('GOOD_GPS');
+    expect(selectLiveDistance(transportState)).toBeGreaterThan(0.5);
+    expect(selectRunDistance(transportState)).toBeGreaterThan(0.5);
+    expect(selectLiveCoordinates(transportState)).toHaveLength(6);
+    expect(selectRunCoordinates(transportState)).toHaveLength(6);
+    expect(metrics.previewCoordinates).toHaveLength(6);
+    expect(metrics.previewDistanceKm).toBeGreaterThan(0.5);
+    expect(metrics.liveDistanceKm).toBeGreaterThan(0.5);
+    expect(metrics.distanceKm).toBeGreaterThan(0.5);
+    expect(metrics.currentPace).not.toBeNull();
   });
 
-  it('rejects impossible jumps before storing them in the raw provisional ledger', () => {
+  it('stores high-speed packets because speed is no longer a save barrier', () => {
     useRunStore.getState().resetRun();
     useRunStore.getState().startRun({
       latitude: 0,
@@ -400,10 +397,10 @@ describe('runStore fact-only selectors', () => {
       accuracy: 5,
     });
 
-    expect(useRunStore.getState().coordinates).toHaveLength(1);
+    expect(useRunStore.getState().coordinates).toHaveLength(2);
   });
 
-  it('rejects impossible GPS jumps from both live and strict distance', () => {
+  it('does not reject high-speed GPS transitions from live or strict distance', () => {
     const jumpState = makeState({
       status: 'TRACKING',
       coordinates: [
@@ -413,9 +410,9 @@ describe('runStore fact-only selectors', () => {
       ],
     });
 
-    expect(selectLiveDistance(jumpState)).toBe(0);
-    expect(selectRunDistance(jumpState)).toBe(0);
-    expect(selectMotionState(jumpState, 7_000)).toBe('ACQUIRING_GPS');
+    expect(selectLiveDistance(jumpState)).toBeGreaterThan(20);
+    expect(selectRunDistance(jumpState)).toBeGreaterThan(20);
+    expect(selectMotionState(jumpState, 7_000)).toBe('GOOD_GPS');
   });
 
   it('enforces save thresholds for distance, duration, and samples', () => {

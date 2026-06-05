@@ -43,7 +43,7 @@ describe('LiveRunMap telemetry presentation', () => {
       .flatMap(node => node.props.children);
 
     expect(textValues).toContain('Waiting for movement');
-    expect(textValues).toContain('--:-- /km');
+    expect(textValues).toContain('--:-- min/km');
   });
 
   it('maps confidence states to specific live feedback messages', () => {
@@ -53,7 +53,6 @@ describe('LiveRunMap telemetry presentation', () => {
       ['WEAK_GPS', 'GPS signal weak'],
       ['GPS_JUMPING', 'GPS signal jumping'],
       ['STATIONARY', 'Waiting for movement'],
-      ['TOO_FAST_FOR_RUN', 'Too fast for a verified run'],
     ] as const;
 
     expectedMessages.forEach(([motionState, message]) => {
@@ -115,8 +114,8 @@ describe('LiveRunMap telemetry presentation', () => {
       .flatMap(node => node.props.children);
 
     expect(textValues).not.toContain('GPS Settling...');
-    expect(textValues).not.toContain('--:-- /km');
-    expect(textValues).toContain('0:36 /km');
+    expect(textValues).not.toContain('--:-- min/km');
+    expect(textValues).toContain('0:36 min/km');
   });
 
   it('shows ready to save only when good GPS passes strict save gates', () => {
@@ -148,8 +147,8 @@ describe('LiveRunMap telemetry presentation', () => {
     expect(notReadyText).not.toContain('Ready to save');
   });
 
-  it('hides pace for weak and too-fast confidence states even if pace is provided', () => {
-    (['WEAK_GPS', 'TOO_FAST_FOR_RUN'] as const).forEach(motionState => {
+  it('shows simple average pace when a pace value is provided', () => {
+    (['WEAK_GPS', 'GPS_JUMPING'] as const).forEach(motionState => {
       let tree: ReactTestRenderer.ReactTestRenderer | undefined;
 
       ReactTestRenderer.act(() => {
@@ -160,8 +159,23 @@ describe('LiveRunMap telemetry presentation', () => {
         .findAllByType(Text)
         .flatMap(node => node.props.children);
 
-      expect(textValues).toContain('--:-- /km');
-      expect(textValues).not.toContain('0:36 /km');
+      expect(textValues).toContain('0:36 min/km');
+      expect(textValues).not.toContain('--:-- min/km');
     });
+  });
+
+  it('does not show speed-based save blocking copy', () => {
+    let tree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    ReactTestRenderer.act(() => {
+      tree = renderLiveRunMap({motionState: 'TOO_FAST_FOR_RUN'});
+    });
+
+    const textValues = tree?.root
+      .findAllByType(Text)
+      .flatMap(node => node.props.children);
+
+    expect(textValues).not.toContain('Too fast for a verified run');
+    expect(textValues).toContain('Live GPS tracking');
   });
 });

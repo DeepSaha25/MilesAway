@@ -278,7 +278,7 @@ const RunTrackingScreen = ({navigation}: any) => {
           if (latestSaveBlockReason) {
             Toast.show({
               type: 'error',
-              text1: 'Run is too short',
+              text1: 'Session is too short',
               text2: latestSaveBlockReason,
             });
             return;

@@ -67,6 +67,15 @@ export const useRunSummary = (navigation: any) => {
     });
   }, [navigation]);
 
+  const discardAndGoHome = useCallback(() => {
+    allowLeavingRef.current = true;
+    resetRun();
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Main', params: {screen: 'Home'}}],
+    });
+  }, [navigation, resetRun]);
+
   const viewProfile = useCallback(() => {
     allowLeavingRef.current = true;
     navigation.reset({
@@ -87,7 +96,7 @@ export const useRunSummary = (navigation: any) => {
         setSaveError(saveBlockReason);
         Toast.show({
           type: 'error',
-          text1: 'Run is too short',
+          text1: 'Session is too short',
           text2: saveBlockReason,
         });
         return false;
@@ -198,6 +207,11 @@ export const useRunSummary = (navigation: any) => {
       return;
     }
 
+    if (saveError) {
+      discardAndGoHome();
+      return;
+    }
+
     Toast.show({
       type: 'info',
       text1: saving ? 'Saving run' : 'Saving before closing',
@@ -208,7 +222,7 @@ export const useRunSummary = (navigation: any) => {
     if (didSave) {
       goHome();
     }
-  }, [goHome, saveRun, savedRun, saving]);
+  }, [discardAndGoHome, goHome, saveError, saveRun, savedRun, saving]);
 
   useEffect(() => {
     if (saveStartedRef.current || savedRun) {
@@ -250,6 +264,7 @@ export const useRunSummary = (navigation: any) => {
     handleClose,
     saveRun,
     goHome,
+    discardAndGoHome,
     viewProfile,
   };
 };
