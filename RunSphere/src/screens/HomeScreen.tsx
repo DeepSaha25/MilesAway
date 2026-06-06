@@ -93,22 +93,47 @@ const HomeScreen = ({navigation}: any) => {
             </LinearGradient>
           </TouchableOpacity>
 
-          <View style={styles.card}>
-            <View>
+          <View style={styles.lastRunCard}>
+            <View style={styles.lastRunHeader}>
               <Text style={styles.cardLabel}>LAST SAVED RUN</Text>
-              <Text style={styles.runName}>
-                {dashboard.lastRunLabel}
-              </Text>
-            </View>
-            <View style={styles.cardFooter}>
-              <View>
-                <Text style={styles.paceValue}>{dashboard.lastPace}</Text>
-                <Text style={styles.microLabel}>PACE / KM</Text>
-              </View>
-              <View style={styles.trendButton}>
-                <Ionicons name="trending-up" size={28} color={Colors.primary} />
+              <View style={styles.lastRunBadge}>
+                <Ionicons
+                  name={dashboard.lastRun ? 'trending-up' : 'flag-outline'}
+                  size={20}
+                  color={dashboard.lastRun ? Colors.primary : Colors.onSurfaceVariant}
+                />
               </View>
             </View>
+
+            {dashboard.lastRun ? (
+              <>
+                <Text
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                  style={styles.lastRunDistance}>
+                  {dashboard.lastRunLabel}
+                </Text>
+
+                <View style={styles.lastRunMetrics}>
+                  <View style={styles.lastRunMetric}>
+                    <Text style={styles.lastRunMetricLabel}>PACE</Text>
+                    <Text
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={styles.lastRunMetricValue}>
+                      {dashboard.lastPace}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View style={styles.lastRunEmpty}>
+                <Text style={styles.lastRunEmptyTitle}>No saved runs yet</Text>
+                <Text style={styles.lastRunEmptyText}>
+                  Start a run to see your latest workout here.
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.card}>
@@ -321,46 +346,88 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.8,
   },
-  runName: {
-    marginTop: 14,
-    color: Colors.onSurface,
-    fontFamily: 'Lexend-Black',
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    textShadowColor: '#000000',
-    textShadowOffset: {width: 2, height: 3},
-    textShadowRadius: 0,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  paceValue: {
-    color: Colors.primary,
-    fontFamily: 'Lexend-Black',
-    fontSize: 36,
-    lineHeight: 42,
-    fontWeight: '900',
-    textShadowColor: Colors.onSurface,
-    textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 0,
-  },
   microLabel: {
     color: Colors.onSurfaceVariant,
     fontFamily: 'Inter-Medium',
     fontSize: 10,
     letterSpacing: 0.7,
   },
-  trendButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+  lastRunCard: {
+    minHeight: 168,
+    borderRadius: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
+    marginBottom: 22,
+    backgroundColor: Colors.surfaceContainer + 'F5',
+    borderWidth: 1,
+    borderColor: Colors.primary + '18',
+  },
+  lastRunHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  lastRunBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.surfaceContainerHighest,
+    borderWidth: 1,
+    borderColor: Colors.primary + '24',
+  },
+  lastRunDistance: {
+    marginTop: 20,
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Black',
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '900',
+    fontStyle: 'italic',
+  },
+  lastRunMetrics: {
+    marginTop: 20,
+    flexDirection: 'row',
+  },
+  lastRunMetric: {
+    flex: 1,
+  },
+  lastRunMetricLabel: {
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Bold',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  lastRunMetricValue: {
+    marginTop: 5,
+    color: Colors.primary,
+    fontFamily: 'Lexend-Black',
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '900',
+  },
+  lastRunEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: 18,
+  },
+  lastRunEmptyTitle: {
+    color: Colors.onSurface,
+    fontFamily: 'Lexend-Black',
+    fontSize: 25,
+    lineHeight: 31,
+    fontWeight: '900',
+  },
+  lastRunEmptyText: {
+    marginTop: 8,
+    maxWidth: 260,
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    lineHeight: 19,
   },
   hoursValue: {
     marginTop: 12,

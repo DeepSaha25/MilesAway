@@ -20,6 +20,46 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.40 - 2026-06-06
+
+### Summary
+- Redesigned the Profile screen “This Week’s Distance” card into a tighter weekly performance summary.
+- Removed the heavy inner distance box and reduced the empty vertical space.
+- Enlarged the weekly distance metric while keeping the card aligned with the dark MilesAway visual system.
+
+### Files Changed
+- `RunSphere/src/screens/ProfileScreen.tsx`: compacted the weekly distance card, simplified the metric layout, and removed the boxed chart placeholder look.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- This is a JS/style-only UI polish change and is EAS Update safe.
+
+## v0.2.39 - 2026-06-06
+
+### Summary
+- Redesigned the Home screen “Last Saved Run” card into a tighter, more professional workout summary.
+- Makes distance the primary metric and moves pace into a smaller secondary stat tile.
+- Adds a clear empty state when no saved run exists.
+
+### Files Changed
+- `RunSphere/src/screens/HomeScreen.tsx`: replaced the oversized last-run card with a compact header, distance, pace metric tile, and empty state.
+- `RunSphere/__tests__/HomeScreen.test.tsx`: added saved-run and empty-state rendering coverage.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/HomeScreen.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- This is a JS/style-only UI polish change and is EAS Update safe.
+
 ## v0.2.38 - 2026-06-06
 
 ### Summary

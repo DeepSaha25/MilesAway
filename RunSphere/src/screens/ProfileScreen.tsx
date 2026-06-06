@@ -133,19 +133,23 @@ const ProfileScreen = () => {
           <View style={styles.chartHeader}>
             <View>
               <Text style={styles.primaryLabel}>PERFORMANCE VIEW</Text>
-              <Text style={styles.chartTitle}>THIS WEEK'S{'\n'}DISTANCE</Text>
+              <Text style={styles.chartTitle}>THIS WEEK'S DISTANCE</Text>
             </View>
-            <View style={styles.chartToggleRow}>
-              <Text style={styles.toggleActive}>KILOMETERS</Text>
-            </View>
+            
           </View>
           <View style={styles.barRow}>
             {profileData.weeklyDistance > 0 ? (
               <View style={styles.weeklyTotalBlock}>
-                <Text style={styles.weeklyTotalValue}>
-                  {formatDistance(profileData.weeklyDistance, true)}
-                </Text>
-                <Text style={styles.weeklyTotalLabel}>KM THIS WEEK</Text>
+                <View style={styles.weeklyTotalRow}>
+                  <Text
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                    style={styles.weeklyTotalValue}>
+                    {formatDistance(profileData.weeklyDistance, true)}
+                  </Text>
+                  <Text style={styles.weeklyTotalUnit}>KM</Text>
+                </View>
+                <Text style={styles.weeklyTotalLabel}>THIS WEEK</Text>
               </View>
             ) : (
               <View style={styles.weeklyEmptyBlock}>
@@ -435,15 +439,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   chartCard: {
-    minHeight: 300,
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 34,
+    minHeight: 210,
+    borderRadius: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 22,
+    marginBottom: 30,
     backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.primary + '16',
   },
   chartHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
@@ -451,8 +458,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: Colors.onSurface,
     fontFamily: 'Lexend-Black',
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 25,
+    lineHeight: 31,
     fontWeight: '900',
     fontStyle: 'italic',
   },
@@ -475,50 +482,56 @@ const styles = StyleSheet.create({
   toggleActive: {
     overflow: 'hidden',
     borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
     color: Colors.onPrimaryFixed,
     backgroundColor: Colors.primary,
     fontFamily: 'Inter-Bold',
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
   },
   barRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 170,
-    gap: 8,
-    marginTop: 26,
+    marginTop: 30,
   },
   weeklyTotalBlock: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 22,
-    backgroundColor: Colors.surfaceContainerHigh,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-end',
+  },
+  weeklyTotalRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   weeklyTotalValue: {
+    flexShrink: 1,
     color: Colors.primary,
     fontFamily: 'Lexend-Black',
-    fontSize: 56,
+    fontSize: 76,
+    lineHeight: 84,
     fontWeight: '900',
     fontStyle: 'italic',
   },
+  weeklyTotalUnit: {
+    marginLeft: 10,
+    color: Colors.onSurfaceVariant,
+    fontFamily: 'Lexend-Black',
+    fontSize: 20,
+    fontWeight: '900',
+  },
   weeklyTotalLabel: {
+    marginTop: 2,
     color: Colors.onSurfaceVariant,
     fontFamily: 'Inter-Bold',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   weeklyEmptyBlock: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
-    padding: 24,
-    backgroundColor: Colors.surfaceContainerHigh,
+    minHeight: 104,
+    borderRadius: 18,
+    padding: 20,
+    backgroundColor: Colors.surfaceContainerHigh + 'A8',
   },
   weeklyEmptyTitle: {
     color: Colors.onSurface,
