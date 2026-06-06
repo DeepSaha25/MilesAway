@@ -20,6 +20,27 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.33.2 - 2026-06-06
+
+### Summary
+- Removed the committed Google Maps API key from app source and native Android manifest config.
+- Switched Google Maps configuration to the `GOOGLE_MAPS_API_KEY` environment variable for Expo and Android builds.
+- Confirmed current MongoDB README examples use placeholders rather than credential-shaped connection strings.
+
+### Files Changed
+- `RunSphere/app.json`: removed the hardcoded Android Google Maps API key.
+- `RunSphere/app.config.js`: added environment-based Expo config injection for `GOOGLE_MAPS_API_KEY`.
+- `RunSphere/android/app/src/main/AndroidManifest.xml`, `RunSphere/android/app/build.gradle`: replaced the committed key with a Gradle manifest placeholder sourced from the environment.
+- `VERSION.md`, `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the patch version marker.
+
+### Verification
+- `rg -n "AIzaSyCcFZ09DbswR-yJNfNQKSGJhRWB0xdftJQ|AIza" RunSphere backend -g '!node_modules' -g '!dist'`
+- `cd RunSphere && npm test -- --runInBand __tests__/appVersion.test.ts`
+
+### Notes
+- Rotate or restrict the leaked Google Maps key in Google Cloud; removing it from git does not invalidate copies already exposed in history.
+- Set `GOOGLE_MAPS_API_KEY` in EAS/Railway/local build environments before creating a new APK/AAB.
+
 ## v0.33.1 - 2026-06-06
 
 ### Summary

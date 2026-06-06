@@ -33,11 +33,6 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0c0e0f"
       },
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCcFZ09DbswR-yJNfNQKSGJhRWB0xdftJQ"
-        }
-      },
       "versionCode": 12
     },
     "ios": {
@@ -62,7 +57,8 @@
         {
           "motionPermission": "MilesAway uses motion sensors to improve live run tracking confidence."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
