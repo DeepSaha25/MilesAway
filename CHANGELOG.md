@@ -20,7 +20,25 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
-## v0.2.41 - 2026-06-06
+## v0.33.1 - 2026-06-06
+
+### Summary
+- Reclassified changelog versions using the repository versioning guide.
+- Converted the old linear `v0.2.x` sequence into semantic minor and patch releases.
+- Updated project and visible app version metadata to the latest semantic patch version.
+
+### Files Changed
+- `CHANGELOG.md`: remapped historical entry headings and internal version references according to feature, behavior, bugfix, UI polish, and documentation scope.
+- `VERSION.md`: updated the current project version and last-updated date.
+- `RunSphere/src/config/appVersion.ts`: updated the visible footer version marker to the latest changelog entry.
+
+### Verification
+- `cd RunSphere && npm test -- --runInBand __tests__/appVersion.test.ts`
+
+### Notes
+- No runtime app or backend behavior changed in this entry.
+
+## v0.33.0 - 2026-06-06
 
 ### Summary
 - Relaxed save rules so weak-but-usable GPS movement can be finished and saved.
@@ -44,7 +62,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - Authenticated saves require the backend deployment too; frontend-only EAS Update cannot change Railway server validation.
 
-## v0.2.40 - 2026-06-06
+## v0.32.2 - 2026-06-06
 
 ### Summary
 - Redesigned the Profile screen “This Week’s Distance” card into a tighter weekly performance summary.
@@ -63,7 +81,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - This is a JS/style-only UI polish change and is EAS Update safe.
 
-## v0.2.39 - 2026-06-06
+## v0.32.1 - 2026-06-06
 
 ### Summary
 - Redesigned the Home screen “Last Saved Run” card into a tighter, more professional workout summary.
@@ -84,7 +102,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - This is a JS/style-only UI polish change and is EAS Update safe.
 
-## v0.2.38 - 2026-06-06
+## v0.32.0 - 2026-06-06
 
 ### Summary
 - Added Expo-first background GPS tracking ownership for active run sessions.
@@ -110,7 +128,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - This phase adds native background location/task-manager behavior and permission config, so a new APK/AAB build is required; EAS Update alone is not enough.
 - Background tracking is optional at runtime: foreground tracking still works if background permission is denied or TaskManager is unavailable.
 
-## v0.2.37 - 2026-06-06
+## v0.31.0 - 2026-06-06
 
 ### Summary
 - Added post-run cleanup for verified routes by removing duplicate timestamps and simplifying dense route points.
@@ -134,9 +152,9 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 
 ### Notes
 - Authenticated backend submissions still send full verified coordinates; the backend remains the final authority for persistence and route simplification.
-- This phase is JS-only, but the current app line still requires a rebuilt APK/AAB because `v0.2.35` added `expo-sensors`.
+- This phase is JS-only, but the current app line still requires a rebuilt APK/AAB because `v0.29.0` added `expo-sensors`.
 
-## v0.2.36 - 2026-06-06
+## v0.30.0 - 2026-06-06
 
 ### Summary
 - Upgraded live motion confidence to use fresh sensor movement alongside GPS telemetry.
@@ -158,9 +176,9 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 
 ### Notes
 - Sensor movement improves live confidence text only; it does not add distance or authorize saves.
-- Because `v0.2.35` added `expo-sensors`, this line of work still requires a rebuilt APK/AAB before it can run on installed apps.
+- Because `v0.29.0` added `expo-sensors`, this line of work still requires a rebuilt APK/AAB before it can run on installed apps.
 
-## v0.2.35 - 2026-06-06
+## v0.29.0 - 2026-06-06
 
 ### Summary
 - Added Expo sensor telemetry prep for accelerometer, pedometer, cadence, pressure, and relative altitude signals.
@@ -184,7 +202,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - This phase adds a native Expo module, so a new APK/AAB build is required; EAS Update alone is not enough.
 - Sensor telemetry is diagnostics/prep only in this phase and does not alter save authorization.
 
-## v0.2.34 - 2026-06-06
+## v0.28.0 - 2026-06-06
 
 ### Summary
 - Made the Run Summary save path recover journaled sessions before attempting automatic save.
@@ -206,7 +224,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Preview-only points still never submit to guest storage or the backend; summary saves continue using verified route selectors.
 - This phase is JS-only and should be eligible for EAS Update.
 
-## v0.2.33 - 2026-06-06
+## v0.27.0 - 2026-06-06
 
 ### Summary
 - Added a local telemetry session journal for active GPS tracking sessions.
@@ -230,7 +248,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - This phase is JS-only and should be eligible for EAS Update.
 - The journal is recovery support only; saved summaries and backend submissions still use verified route selectors.
 
-## v0.2.32 - 2026-06-05
+## v0.26.0 - 2026-06-05
 
 ### Summary
 - Simplified live pace to average pace from elapsed time divided by live preview distance.
@@ -252,7 +270,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - Saved average pace continues to use verified distance; live current pace uses preview distance so it stays responsive.
 
-## v0.2.31 - 2026-06-05
+## v0.25.0 - 2026-06-05
 
 ### Summary
 - Removed speed-limit save barriers so valid high-speed movement sessions can be saved.
@@ -278,7 +296,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Speed remains available for display and diagnostics, but it no longer authorizes or blocks persistence.
 - The five production gateways remain GPS quality, raw/clean/moving sample counts, duration, and distance.
 
-## v0.2.30 - 2026-06-04
+## v0.24.0 - 2026-06-04
 
 ### Summary
 - Added a pure telemetry diagnostics selector for raw, preview, verified, speed, confidence, and save eligibility state.
@@ -303,7 +321,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Diagnostics are read-only, development-only in the UI path, and are not sent to the backend.
 - Save integrity remains verified-only.
 
-## v0.2.29 - 2026-06-04
+## v0.23.0 - 2026-06-04
 
 ### Summary
 - Locked run persistence to verified-only coordinates and distance.
@@ -329,7 +347,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Preview telemetry remains live-screen-only and is never submitted as a saved run.
 - Backend validation remains strict and unchanged.
 
-## v0.2.28 - 2026-06-04
+## v0.22.0 - 2026-06-04
 
 ### Summary
 - Wired the live tracking screen to explicit preview telemetry fields for map route and live distance.
@@ -355,7 +373,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - The visible distance remains a clean `km` value; confidence status communicates when movement is preview-only.
 - Pressing Finish early still explains the save requirement, but the save action itself remains verified-gated.
 
-## v0.2.27 - 2026-06-04
+## v0.21.0 - 2026-06-04
 
 ### Summary
 - Replaced the old three-state movement model with a richer live confidence engine.
@@ -380,7 +398,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Save, summary, backend validation, dashboard, history, and rank behavior remain verified-only.
 - No accelerometer, step sensor, or map-matching API was added in this phase.
 
-## v0.2.26 - 2026-06-04
+## v0.20.0 - 2026-06-04
 
 ### Summary
 - Converted active run coordinates into a raw/provisional live session ledger.
@@ -404,7 +422,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Live preview can show provisional movement, but summary/save still use verified coordinates and distance only.
 - Richer confidence labels remain deferred to Phase 3.
 
-## v0.2.25 - 2026-06-04
+## v0.19.1 - 2026-06-04
 
 ### Summary
 - Restored strict compatibility defaults for shared run policy values.
@@ -429,7 +447,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - This phase is a safety cleanup only; the full UX fix starts when raw/provisional coordinates stop being starved by strict save filters.
 - Save thresholds, backend validation, summaries, dashboard stats, and history remain strict.
 
-## v0.2.24 - 2026-06-04
+## v0.19.0 - 2026-06-04
 
 ### Summary
 - Split live tracking display from strict saved-run calculations.
@@ -456,14 +474,14 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - The running page now prioritizes fast approximate feedback; saved run summaries remain strict and do not use live-only provisional distance.
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 
-## v0.2.23 - 2026-06-04
+## v0.18.2 - 2026-06-04
 
 ### Summary
 - Moved the Home version label into a fixed lower-screen badge so it remains visible without scrolling to the deepest dashboard content.
 - Bumped the visible changelog version marker to verify the latest OTA update is loaded in installed APKs.
 
 ### Files Changed
-- `RunSphere/src/config/appVersion.ts`: updated the visible app changelog version to `v0.2.23`.
+- `RunSphere/src/config/appVersion.ts`: updated the visible app changelog version to `v0.18.2`.
 - `RunSphere/src/screens/HomeScreen.tsx`: renders the version badge above the bottom navigation area instead of burying it in scroll content.
 - `CHANGELOG.md`: documented the version badge visibility fix.
 
@@ -475,7 +493,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - The badge is pointer-disabled so it never blocks Home interactions or the tab bar.
 
-## v0.2.22 - 2026-06-03
+## v0.18.1 - 2026-06-03
 
 ### Summary
 - Added a Home screen footer version label so the running app visibly reports the shipped changelog version.
@@ -495,7 +513,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - React Native bundles cannot directly read markdown at runtime without extra Metro plumbing, so the app uses a tiny version config guarded by a changelog sync test.
 
-## v0.2.21 - 2026-06-03
+## v0.18.0 - 2026-06-03
 
 ### Summary
 - Added native hardware speed support for live current pace once motion confidence is `MOVING`.
@@ -516,7 +534,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Native speed affects only live `currentPace`; final saved run distance, duration, and summary remain ledger-derived.
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 
-## v0.2.20 - 2026-06-03
+## v0.17.0 - 2026-06-03
 
 ### Summary
 - Increased foreground GPS tracking density for active run sessions.
@@ -538,7 +556,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Backend save validation and strict ledger filtering remain unchanged.
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 
-## v0.2.19 - 2026-06-03
+## v0.16.0 - 2026-06-03
 
 ### Summary
 - Split frontend run telemetry policy into strict ledger/save rules and relaxed live-display rules.
@@ -561,7 +579,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Backend save policy remains unchanged and strict.
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 
-## v0.2.18 - 2026-05-29
+## v0.15.0 - 2026-05-29
 
 ### Summary
 - Wired live run tracking UI to selector-derived motion confidence and rolling current pace.
@@ -584,7 +602,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 - Finish controls remain pressable enough to explain why saving is blocked, but the save action itself is gated by `selectCanSaveRun` immediately before completion.
 
-## v0.2.17 - 2026-05-29
+## v0.14.0 - 2026-05-29
 
 ### Summary
 - Added typed frontend motion confidence states for GPS acquisition, stationary drift, and confident movement.
@@ -606,7 +624,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 - Step 17 should wire `motionState` and `currentPace` into `RunTrackingScreen` / `LiveRunMap` so the UI stops rendering full-run average pace during stationary periods.
 
-## v0.2.16 - 2026-05-29
+## v0.13.0 - 2026-05-29
 
 ### Summary
 - Centralized running telemetry thresholds into shared frontend and backend policy modules.
@@ -633,7 +651,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 - Phase 4 follow-up work can now build movement confidence and rolling pace selectors on top of one shared policy contract.
 
-## v0.2.15 - 2026-05-29
+## v0.12.1 - 2026-05-29
 
 ### Summary
 - Replaced legacy centered loading spinners on Home and Community with shimmer-based screen skeletons.
@@ -672,7 +690,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Skeletons only render for clean initial loads; refresh controls continue to operate over already-rendered content.
 - This keeps the loading UI eligible for Expo Go and EAS Update testing without requiring a fresh native build.
 
-## v0.2.14 - 2026-05-29
+## v0.12.0 - 2026-05-29
 
 ### Summary
 - Added dedicated Home dashboard and Community feed skeleton layouts using the reusable shimmer placeholder.
@@ -693,7 +711,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - Skeletons are not connected to screen loading branches yet; Step 14 will wire them into `HomeScreen.tsx` and `CommunityFeedScreen.tsx`.
 
-## v0.2.13 - 2026-05-29
+## v0.11.0 - 2026-05-29
 
 ### Summary
 - Added a reusable native-driven shimmer placeholder component for loading skeletons.
@@ -716,7 +734,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - The component uses a soft `#E1E9EE` placeholder base with a repeating opacity sheen.
 
-## v0.2.12 - 2026-05-29
+## v0.10.1 - 2026-05-29
 
 ### Summary
 - Moved backend async error forwarding to route-level `asyncWrapper(...)` usage.
@@ -735,7 +753,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - Route middleware and validators remain explicit; only async controller handlers are wrapped.
 
-## v0.2.11 - 2026-05-29
+## v0.10.0 - 2026-05-29
 
 ### Summary
 - Added a global React Native error boundary around the root navigator.
@@ -757,7 +775,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - The boundary logs sanitized crash metadata only in development.
 - The recovery button remounts the navigator shell without forcing a physical app restart.
 
-## v0.2.10 - 2026-05-29
+## v0.9.2 - 2026-05-29
 
 ### Summary
 - Extracted dense frontend screen orchestration into domain hooks for dashboard, community feed, profile location, and run summary save flows.
@@ -781,7 +799,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - `npm run lint` still reports only the existing unused `no-console` disable warnings in `LoginScreen.tsx` and `SignupScreen.tsx`.
 - Screen layouts were intentionally preserved; this step only moved orchestration out of the screen components.
 
-## v0.2.9 - 2026-05-29
+## v0.9.1 - 2026-05-29
 
 ### Summary
 - Added a shared frontend `buildQuery` helper for safe URL query construction.
@@ -804,7 +822,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 ### Notes
 - Service method signatures remain unchanged.
 
-## v0.2.8 - 2026-05-29
+## v0.9.0 - 2026-05-29
 
 ### Summary
 - Centralized backend community/auth input validation for MongoDB ObjectIds, pagination, text bodies, and password reset flows.
@@ -826,7 +844,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Community post text is limited to 500 characters and comments to 280 characters.
 - Community pagination limits are clamped to a maximum of 50 records.
 
-## v0.2.7 - 2026-05-29
+## v0.8.0 - 2026-05-29
 
 ### Summary
 - Sanitized API client logging so development diagnostics never include authorization headers, request bodies, or raw network objects.
@@ -849,7 +867,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Existing service methods still receive raw response data to avoid a broad API shape migration.
 - UI rendering for `storageFailureError` is exposed for a later shell-level handling pass.
 
-## v0.2.6 - 2026-05-28
+## v0.7.0 - 2026-05-28
 
 ### Summary
 - Locked backend dashboard/stat responses to one explicit numeric aggregation contract including total duration, calories, and elevation.
@@ -875,7 +893,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Dashboard refresh failures no longer merge partial authenticated responses into cached state.
 - Leaderboard refresh remains isolated from dashboard stats refresh behavior.
 
-## v0.2.5 - 2026-05-28
+## v0.6.0 - 2026-05-28
 
 ### Summary
 - Refactored active run tracking into a fact-only frontend state machine with explicit `IDLE`, `TRACKING`, `PAUSED`, and `COMPLETED` transitions.
@@ -898,7 +916,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Backend run validation remains the final authority for persisted run submissions.
 - The ledger preserves optional raw GPS facts such as altitude, speed, and heading, but keeps all calculated metrics out of persisted state.
 
-## v0.2.4 - 2026-05-28
+## v0.5.0 - 2026-05-28
 
 ### Summary
 - Wrapped new run creation and user location updates in a single Mongoose transaction.
@@ -916,9 +934,9 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 
 ### Notes
 - MongoDB transactions require production MongoDB to run as a replica set or sharded cluster.
-- Dashboard/stat reads remain passive from `v0.2.3`; this entry only hardens the write path.
+- Dashboard/stat reads remain passive from `v0.4.1`; this entry only hardens the write path.
 
-## v0.2.3 - 2026-05-28
+## v0.4.1 - 2026-05-28
 
 ### Summary
 - Made backend dashboard/stat reads passive by removing aggregate rebuilds from the GET stats path.
@@ -939,7 +957,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Dashboard/stat GET requests no longer execute `DailyAggregate.deleteMany({ userId })`.
 - Transactional consistency for the write path remains deferred to the next roadmap step.
 
-## v0.2.2 - 2026-05-27
+## v0.4.0 - 2026-05-27
 
 ### Summary
 - Made the Run Summary close/back flow save-first so a valid finished run cannot be discarded by tapping X, pressing Android back, or leaving the summary before save completes.
@@ -975,7 +993,7 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - `npm run lint` passed with existing warnings only for unused `no-console` disable comments in unrelated files.
 - A fresh Expo/EAS update or app rebuild is needed before installed devices receive this fix.
 
-## v0.2.1 - 2026-05-26
+## v0.3.0 - 2026-05-26
 
 ### Summary
 - Restricted Ticketmaster running event discovery to the user's nearby location when GPS is available, with India as the country fallback instead of global/US-biased results.
