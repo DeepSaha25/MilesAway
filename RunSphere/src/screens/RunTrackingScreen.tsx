@@ -11,8 +11,19 @@ import {
   selectRunMetrics,
   selectSaveBlockReason,
   selectTelemetryDiagnostics,
+  shouldRestoreTelemetrySession,
   useRunStore,
 } from '../store/runStore';
+import {recoverActiveTelemetrySession} from '../services/telemetrySessionStorage';
+import {
+  startBackgroundLocationTracking,
+  stopBackgroundLocationTracking,
+} from '../services/backgroundLocationTracking';
+import {
+  getLatestSensorSnapshot,
+  startSensorTelemetry,
+  stopSensorTelemetry,
+} from '../services/sensorTelemetry';
 import {useUserStore} from '../store/userStore';
 import {
   getCurrentLocation,
@@ -46,6 +57,8 @@ const RunTrackingScreen = ({navigation}: any) => {
   const completeRun = useRunStore(state => state.completeRun);
   const resetRun = useRunStore(state => state.resetRun);
   const watchRef = useRef<ReturnType<typeof startLocationWatch> | null>(null);
+  const backgroundTrackingStartedRef = useRef(false);
+  const backgroundTrackingStartAttemptRef = useRef(false);
   const telemetryLogRef = useRef<{
     lastLoggedAt: number;
     confidenceState: string | null;
@@ -53,12 +66,65 @@ const RunTrackingScreen = ({navigation}: any) => {
   const [initializing, setInitializing] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [locationStatus, setLocationStatus] = useState('Acquiring GPS lock...');
-  const metrics = selectRunMetrics(runState, profile?.weightKg, now);
+  const sensorSnapshot = getLatestSensorSnapshot();
+  const metrics = selectRunMetrics(runState, profile?.weightKg, now, sensorSnapshot);
   const canSaveRun = selectCanSaveRun(runState, now);
 
-  const clearTrackingArtifacts = useCallback(() => {
+  const clearForegroundTrackingArtifacts = useCallback(() => {
     stopLocationWatch(watchRef.current);
     watchRef.current = null;
+    stopSensorTelemetry();
+  }, []);
+
+  const stopBackgroundTracking = useCallback(() => {
+    backgroundTrackingStartedRef.current = false;
+    backgroundTrackingStartAttemptRef.current = false;
+    stopBackgroundLocationTracking().catch(() => undefined);
+  }, []);
+
+  const clearTrackingArtifacts = useCallback(
+    ({includeBackground = true}: {includeBackground?: boolean} = {}) => {
+      clearForegroundTrackingArtifacts();
+      if (includeBackground) {
+        stopBackgroundTracking();
+      }
+    },
+    [clearForegroundTrackingArtifacts, stopBackgroundTracking],
+  );
+
+  const ensureBackgroundTracking = useCallback(() => {
+    if (
+      backgroundTrackingStartedRef.current ||
+      backgroundTrackingStartAttemptRef.current
+    ) {
+      return;
+    }
+
+    backgroundTrackingStartAttemptRef.current = true;
+    startBackgroundLocationTracking()
+      .then(result => {
+        backgroundTrackingStartedRef.current = result.started;
+        backgroundTrackingStartAttemptRef.current = false;
+
+        if (!result.started && __DEV__) {
+          console.debug('[MilesAway][background-location]', {
+            event: 'start-skipped',
+            reason: result.reason,
+            message: result.message,
+          });
+        }
+      })
+      .catch(error => {
+        backgroundTrackingStartedRef.current = false;
+        backgroundTrackingStartAttemptRef.current = false;
+
+        if (__DEV__) {
+          console.debug('[MilesAway][background-location]', {
+            event: 'start-failed',
+            message: error?.message || 'Unable to start background tracking',
+          });
+        }
+      });
   }, []);
 
   const syncLocationToBackend = useCallback(
@@ -122,7 +188,11 @@ const RunTrackingScreen = ({navigation}: any) => {
 
       if (__DEV__) {
         const updatedStore = useRunStore.getState();
-        const diagnostics = selectTelemetryDiagnostics(updatedStore, Date.now());
+        const diagnostics = selectTelemetryDiagnostics(
+          updatedStore,
+          Date.now(),
+          getLatestSensorSnapshot(),
+        );
         const shouldLog =
           Date.now() - telemetryLogRef.current.lastLoggedAt >= 5000 ||
           telemetryLogRef.current.confidenceState !== diagnostics.confidenceState;
@@ -147,6 +217,24 @@ const RunTrackingScreen = ({navigation}: any) => {
     let active = true;
 
     const bootstrap = async () => {
+      const recoveredSession = await recoverActiveTelemetrySession().catch(() => null);
+      if (active && recoveredSession) {
+        const currentStore = useRunStore.getState();
+        if (shouldRestoreTelemetrySession(currentStore, recoveredSession)) {
+          currentStore.restoreRunFromJournal(recoveredSession);
+          setLocationStatus('Recovered previous GPS session');
+
+          if (__DEV__) {
+            console.debug('[MilesAway][telemetry-journal]', {
+              event: 'recovered',
+              clientRunId: recoveredSession.clientRunId,
+              status: recoveredSession.status,
+              pointCount: recoveredSession.coordinates.length,
+            });
+          }
+        }
+      }
+
       const currentRun = useRunStore.getState();
       if (currentRun.status === 'COMPLETED') {
         if (currentRun.coordinates.length >= 2) {
@@ -198,7 +286,7 @@ const RunTrackingScreen = ({navigation}: any) => {
 
     return () => {
       active = false;
-      clearTrackingArtifacts();
+      clearTrackingArtifacts({includeBackground: false});
     };
   }, [clearTrackingArtifacts, ingestPosition, navigation, resetRun]);
 
@@ -229,7 +317,10 @@ const RunTrackingScreen = ({navigation}: any) => {
       return;
     }
 
+    ensureBackgroundTracking();
+
     if (watchRef.current === null) {
+      startSensorTelemetry().catch(() => undefined);
       watchRef.current = startLocationWatch(
         position => {
           ingestPosition(position);
@@ -239,7 +330,13 @@ const RunTrackingScreen = ({navigation}: any) => {
         },
       );
     }
-  }, [clearTrackingArtifacts, ingestPosition, initializing, runState.status]);
+  }, [
+    clearTrackingArtifacts,
+    ensureBackgroundTracking,
+    ingestPosition,
+    initializing,
+    runState.status,
+  ]);
 
   const pauseOrResume = () => {
     if (runState.status === 'TRACKING') {

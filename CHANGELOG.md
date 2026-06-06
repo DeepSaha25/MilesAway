@@ -20,6 +20,152 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.38 - 2026-06-06
+
+### Summary
+- Added Expo-first background GPS tracking ownership for active run sessions.
+- Registers a global background location task so GPS packets can continue feeding the run store when the screen is not mounted.
+- Keeps telemetry math, preview/verified distance, save gates, and backend submission behavior unchanged.
+
+### Files Changed
+- `RunSphere/src/services/backgroundLocationTracking.ts`: added the Expo TaskManager background location task, permission handling, start/stop helpers, and journal-aware headless ingestion.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: starts background tracking for active runs and stops it on pause, finish, discard, idle, or completed states while keeping foreground watch/sensors screen-local.
+- `RunSphere/index.js`: imports the background tracking service at bundle startup so the task is defined globally.
+- `RunSphere/app.json`: enabled Android/iOS background location configuration and Android foreground-service permissions.
+- `RunSphere/package.json`, `RunSphere/package-lock.json`: added the Expo SDK-compatible `expo-task-manager` dependency.
+- `RunSphere/jest.setup.js`, `RunSphere/__tests__/backgroundLocationTracking.test.ts`: added task-manager/location mocks and regression coverage for start, stop, background ingestion, and journal recovery.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/backgroundLocationTracking.test.ts __tests__/location.test.ts`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- This phase adds native background location/task-manager behavior and permission config, so a new APK/AAB build is required; EAS Update alone is not enough.
+- Background tracking is optional at runtime: foreground tracking still works if background permission is denied or TaskManager is unavailable.
+
+## v0.2.37 - 2026-06-06
+
+### Summary
+- Added post-run cleanup for verified routes by removing duplicate timestamps and simplifying dense route points.
+- Summary display and guest storage now use a cleaned verified route while preserving full verified coordinates.
+- Keeps save gates, backend validation, and authenticated backend submissions strict and unchanged.
+
+### Files Changed
+- `RunSphere/src/utils/routeCleanup.ts`: added verified-route dedupe and distance-based simplification with sample-count and distance-ratio guardrails.
+- `RunSphere/src/config/runPolicy.ts`: added the post-run route simplification distance policy.
+- `RunSphere/src/store/runStore.ts`: exports `selectCleanedVerifiedRoute(...)` without changing verified distance or save eligibility.
+- `RunSphere/src/hooks/useRunSummary.ts`: displays/stores the cleaned verified route while keeping save payload coordinates verified-only.
+- `RunSphere/src/services/guestRunStorage.ts`: stores the cleaned route separately from full verified coordinates.
+- `RunSphere/__tests__/routeCleanup.test.ts`, `RunSphere/__tests__/runStore.test.ts`, `RunSphere/__tests__/useRunSummary.test.tsx`: added coverage for cleanup guardrails and save-payload integrity.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/routeCleanup.test.ts __tests__/runStore.test.ts __tests__/useRunSummary.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Authenticated backend submissions still send full verified coordinates; the backend remains the final authority for persistence and route simplification.
+- This phase is JS-only, but the current app line still requires a rebuilt APK/AAB because `v0.2.35` added `expo-sensors`.
+
+## v0.2.36 - 2026-06-06
+
+### Summary
+- Upgraded live motion confidence to use fresh sensor movement alongside GPS telemetry.
+- Added `SENSOR_ONLY_MOVEMENT` and `POSSIBLE_INDOOR` states so the UI can show body movement even when GPS confidence is weak.
+- Preserved preview/verified distance, save gates, summaries, and backend persistence behavior unchanged.
+
+### Files Changed
+- `RunSphere/src/config/runPolicy.ts`: added live sensor freshness, cadence, and motion-intensity thresholds.
+- `RunSphere/src/store/runStore.ts`: lets `selectMotionState(...)` and live metrics consume optional sensor snapshots for sensor-assisted confidence.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`, `RunSphere/src/components/LiveRunMap.tsx`: passes live sensor snapshots into metrics and renders the new confidence messages.
+- `RunSphere/__tests__/runStore.test.ts`, `RunSphere/__tests__/LiveRunMap.test.tsx`: added coverage for sensor-only movement, possible indoor/weak GPS movement, and stationary protection.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts __tests__/LiveRunMap.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Sensor movement improves live confidence text only; it does not add distance or authorize saves.
+- Because `v0.2.35` added `expo-sensors`, this line of work still requires a rebuilt APK/AAB before it can run on installed apps.
+
+## v0.2.35 - 2026-06-06
+
+### Summary
+- Added Expo sensor telemetry prep for accelerometer, pedometer, cadence, pressure, and relative altitude signals.
+- Starts/stops the sensor telemetry layer with active GPS tracking and includes latest sensor values in development diagnostics.
+- Keeps live distance, verified distance, save gates, summaries, and backend payloads unchanged.
+
+### Files Changed
+- `RunSphere/src/services/sensorTelemetry.ts`: added the sensor telemetry service with availability checks, latest motion samples, step cadence, and barometer data.
+- `RunSphere/src/store/runStore.ts`, `RunSphere/src/screens/RunTrackingScreen.tsx`: added sensor fields to telemetry diagnostics and passes the latest snapshot during development logging.
+- `RunSphere/app.json`, `RunSphere/package.json`, `RunSphere/package-lock.json`: added `expo-sensors` plus motion/activity-recognition configuration for future native builds.
+- `RunSphere/__tests__/sensorTelemetry.test.ts`, `RunSphere/__tests__/runStore.test.ts`, `RunSphere/jest.setup.js`: added sensor mocks and diagnostics coverage.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/sensorTelemetry.test.ts __tests__/runStore.test.ts`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- This phase adds a native Expo module, so a new APK/AAB build is required; EAS Update alone is not enough.
+- Sensor telemetry is diagnostics/prep only in this phase and does not alter save authorization.
+
+## v0.2.34 - 2026-06-06
+
+### Summary
+- Made the Run Summary save path recover journaled sessions before attempting automatic save.
+- Keeps the local telemetry journal after failed saves so Retry Save can resubmit the verified route.
+- Clears the journal only after a successful save or explicit Back Home discard.
+
+### Files Changed
+- `RunSphere/src/hooks/useRunSummary.ts`: waits for telemetry journal recovery, restores better journal state when needed, and builds save payloads from the freshest verified store data.
+- `RunSphere/__tests__/useRunSummary.test.tsx`: added coverage for recovered summary auto-save, failed-save journal preservation, Retry Save, and Back Home discard cleanup.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/useRunSummary.test.tsx __tests__/telemetrySessionStorage.test.ts`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- Preview-only points still never submit to guest storage or the backend; summary saves continue using verified route selectors.
+- This phase is JS-only and should be eligible for EAS Update.
+
+## v0.2.33 - 2026-06-06
+
+### Summary
+- Added a local telemetry session journal for active GPS tracking sessions.
+- Snapshots accepted provisional run points to AsyncStorage so an interrupted session can be recovered.
+- Restores a journaled session before starting fresh while keeping preview/live and verified/save calculations unchanged.
+
+### Files Changed
+- `RunSphere/src/services/telemetrySessionStorage.ts`: added the AsyncStorage-backed session journal with persist, recover, and discard helpers.
+- `RunSphere/src/store/runStore.ts`: writes tracking state snapshots to the journal and can restore a recovered journal session.
+- `RunSphere/src/screens/RunTrackingScreen.tsx`: checks for a recoverable session during tracking bootstrap and logs development-only recovery diagnostics.
+- `RunSphere/__tests__/telemetrySessionStorage.test.ts`, `RunSphere/__tests__/runStore.test.ts`: added journal persistence, recovery, restore, and discard coverage.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/telemetrySessionStorage.test.ts __tests__/runStore.test.ts`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+
+### Notes
+- This phase is JS-only and should be eligible for EAS Update.
+- The journal is recovery support only; saved summaries and backend submissions still use verified route selectors.
+
 ## v0.2.32 - 2026-06-05
 
 ### Summary
