@@ -9,7 +9,14 @@ import {
   hasUsableAccuracy,
   haversineMeters,
 } from '../utils/runMetrics';
+import {cleanupVerifiedRoute} from '../utils/routeCleanup';
 import {RUN_LEDGER_POLICY, RUN_LIVE_POLICY} from '../config/runPolicy';
+import {
+  discardTelemetrySession,
+  persistTelemetrySession,
+  type TelemetryJournalSession,
+} from '../services/telemetrySessionStorage';
+import type {SensorTelemetrySnapshot} from '../services/sensorTelemetry';
 
 export type RunStatus = 'IDLE' | 'TRACKING' | 'PAUSED' | 'COMPLETED';
 export type MotionState =
@@ -19,6 +26,8 @@ export type MotionState =
   | 'WEAK_GPS'
   | 'GPS_JUMPING'
   | 'STATIONARY'
+  | 'SENSOR_ONLY_MOVEMENT'
+  | 'POSSIBLE_INDOOR'
   | 'TOO_FAST_FOR_RUN';
 
 export type TelemetryIssueType = 'WEAK_GPS' | 'GPS_JUMPING';
@@ -80,6 +89,17 @@ export type TelemetryDiagnostics = {
   confidenceState: MotionState;
   canSaveRun: boolean;
   saveEligibilityReason: string | null;
+  sensorsActive: boolean;
+  accelerometerAvailable: boolean | null;
+  pedometerAvailable: boolean | null;
+  barometerAvailable: boolean | null;
+  pedometerPermissionStatus: string | null;
+  accelerationMagnitudeG: number | null;
+  motionIntensityG: number | null;
+  stepCount: number | null;
+  cadenceSpm: number | null;
+  barometricPressureHpa: number | null;
+  relativeAltitudeMeters: number | null;
 };
 
 type StartRunSeed = RunTrackPoint | RunCoordinate | null;
@@ -90,6 +110,7 @@ interface RunState extends RunFacts {
   pauseRun: () => void;
   resumeRun: () => void;
   completeRun: () => void;
+  restoreRunFromJournal: (session: TelemetryJournalSession) => void;
   resetRun: () => void;
 }
 
@@ -144,6 +165,14 @@ export class RunStateTransitionError extends Error {
 
 const createClientRunId = () =>
   `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const persistTelemetryJournalFromState = (state: RunFacts) => {
+  persistTelemetrySession(state).catch(() => undefined);
+};
+
+const discardTelemetryJournalForRun = (clientRunId: string | null) => {
+  discardTelemetrySession(clientRunId).catch(() => undefined);
+};
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
@@ -481,6 +510,33 @@ const calculateAverageSpeedKmh = (coordinates: RunTrackPoint[]) => {
   return (distanceMeters / 1000) / (elapsedSeconds / 3600);
 };
 
+const isFreshSensorSnapshot = (
+  sensorSnapshot: SensorTelemetrySnapshot | null | undefined,
+  now: number,
+) =>
+  Boolean(
+    sensorSnapshot?.active &&
+      sensorSnapshot.updatedAt !== null &&
+      now - sensorSnapshot.updatedAt <= RUN_LIVE_POLICY.SENSOR_SNAPSHOT_STALE_MS,
+  );
+
+const hasSensorMovement = (
+  sensorSnapshot: SensorTelemetrySnapshot | null | undefined,
+  now: number,
+) => {
+  if (!isFreshSensorSnapshot(sensorSnapshot, now)) {
+    return false;
+  }
+
+  const cadenceSpm = sensorSnapshot?.cadenceSpm ?? 0;
+  const motionIntensityG = sensorSnapshot?.motionIntensityG ?? 0;
+
+  return (
+    cadenceSpm >= RUN_LIVE_POLICY.SENSOR_MOVING_CADENCE_SPM ||
+    motionIntensityG >= RUN_LIVE_POLICY.SENSOR_MOVING_MOTION_INTENSITY_G
+  );
+};
+
 const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
   const coordinates = selectLedgerUsableCoordinates(state);
   if (coordinates.length < 2) {
@@ -529,7 +585,10 @@ export const selectLiveDistance = selectPreviewDistance;
 export const selectMotionState = (
   state: RunFacts,
   now = state.endTime ?? Date.now(),
+  sensorSnapshot?: SensorTelemetrySnapshot | null,
 ): MotionState => {
+  const sensorMoving = hasSensorMovement(sensorSnapshot, now);
+
   if (isRecentTelemetryIssue(state, 'GPS_JUMPING', now)) {
     return 'GPS_JUMPING';
   }
@@ -549,11 +608,11 @@ export const selectMotionState = (
         RUN_LIVE_POLICY.LIVE_DISPLAY_MAX_ACCURACY) ||
     isRecentTelemetryIssue(state, 'WEAK_GPS', now)
   ) {
-    return 'WEAK_GPS';
+    return sensorMoving ? 'POSSIBLE_INDOOR' : 'WEAK_GPS';
   }
 
   if (previewCoordinates.length < 2) {
-    return 'ACQUIRING_GPS';
+    return sensorMoving ? 'SENSOR_ONLY_MOVEMENT' : 'ACQUIRING_GPS';
   }
 
   const windowStart = now - STATIONARY_WINDOW_MS;
@@ -565,7 +624,7 @@ export const selectMotionState = (
   );
 
   if (recentCoordinates.length < 2) {
-    return 'ACQUIRING_GPS';
+    return sensorMoving ? 'SENSOR_ONLY_MOVEMENT' : 'ACQUIRING_GPS';
   }
 
   const recentDistanceMeters = calculateLiveDistanceMeters(recentCoordinates);
@@ -581,7 +640,7 @@ export const selectMotionState = (
     recentDistanceMeters < RUN_LIVE_POLICY.LIVE_JITTER_DISTANCE_METERS &&
     effectiveSpeedKmh < RUN_LIVE_POLICY.STATIONARY_SPEED_THRESHOLD_KMH
   ) {
-    return 'STATIONARY';
+    return sensorMoving ? 'SENSOR_ONLY_MOVEMENT' : 'STATIONARY';
   }
 
   const verifiedRecentDistanceKm = selectVerifiedDistance({
@@ -636,6 +695,9 @@ export const selectRunElevationGain = (state: RunFacts): number => {
 export const selectVerifiedCoordinates = (state: RunFacts): RunCoordinate[] =>
   selectTrustedMovementCoordinates(state).map(toRunCoordinate);
 
+export const selectCleanedVerifiedRoute = (state: RunFacts): RunCoordinate[] =>
+  cleanupVerifiedRoute(selectVerifiedCoordinates(state));
+
 export const selectRunCoordinates = selectVerifiedCoordinates;
 
 export const selectPreviewCoordinates = (state: RunFacts): RunCoordinate[] =>
@@ -647,12 +709,13 @@ export const selectRunMetrics = (
   state: RunFacts,
   weightKg?: number | null,
   now = Date.now(),
+  sensorSnapshot?: SensorTelemetrySnapshot | null,
 ): RunMetrics => {
   const elapsedSeconds = selectRunDuration(state, now);
   const distanceKm = selectRunDistance(state);
   const previewCoordinates = selectPreviewCoordinates(state);
   const previewDistanceKm = selectPreviewDistance(state);
-  const motionState = selectMotionState(state, now);
+  const motionState = selectMotionState(state, now, sensorSnapshot);
 
   return {
     coordinates: selectRunCoordinates(state),
@@ -704,6 +767,7 @@ export const selectSaveBlockReason = (
 export const selectTelemetryDiagnostics = (
   state: RunFacts,
   now = Date.now(),
+  sensorSnapshot?: SensorTelemetrySnapshot | null,
 ): TelemetryDiagnostics => {
   const rawCoordinates = sortCoordinatesByTime(state.coordinates).filter(
     coordinate => coordinate.timestamp <= now,
@@ -739,9 +803,21 @@ export const selectTelemetryDiagnostics = (
     nativeSpeedMps,
     nativeSpeedKmh: nativeSpeedMps !== null ? nativeSpeedMps * 3.6 : null,
     latestSegmentSpeedKmh,
-    confidenceState: selectMotionState(state, now),
+    confidenceState: selectMotionState(state, now, sensorSnapshot),
     canSaveRun: selectCanSaveRun(state, now),
     saveEligibilityReason: selectSaveBlockReason(state, now),
+    sensorsActive: sensorSnapshot?.active ?? false,
+    accelerometerAvailable: sensorSnapshot?.accelerometerAvailable ?? null,
+    pedometerAvailable: sensorSnapshot?.pedometerAvailable ?? null,
+    barometerAvailable: sensorSnapshot?.barometerAvailable ?? null,
+    pedometerPermissionStatus:
+      sensorSnapshot?.pedometerPermissionStatus ?? null,
+    accelerationMagnitudeG: sensorSnapshot?.accelerationMagnitudeG ?? null,
+    motionIntensityG: sensorSnapshot?.motionIntensityG ?? null,
+    stepCount: sensorSnapshot?.stepCount ?? null,
+    cadenceSpm: sensorSnapshot?.cadenceSpm ?? null,
+    barometricPressureHpa: sensorSnapshot?.barometricPressureHpa ?? null,
+    relativeAltitudeMeters: sensorSnapshot?.relativeAltitudeMeters ?? null,
   };
 };
 
@@ -756,6 +832,15 @@ export const selectRunTiming = (
     : null,
 });
 
+export const shouldRestoreTelemetrySession = (
+  state: RunFacts,
+  session: TelemetryJournalSession,
+): boolean =>
+  state.status === 'IDLE' ||
+  !state.clientRunId ||
+  state.clientRunId !== session.clientRunId ||
+  session.coordinates.length > state.coordinates.length;
+
 export const useRunStore = create<RunState>()(
   persist(
     devtools(
@@ -767,14 +852,16 @@ export const useRunStore = create<RunState>()(
 
           const coordinate = seed ? normalizeCoordinate(seed) : null;
           const startTime = coordinate?.timestamp ?? Date.now();
+          const clientRunId = createClientRunId();
 
           set({
             ...initialRunFacts,
             status: 'TRACKING',
-            clientRunId: createClientRunId(),
+            clientRunId,
             startTime,
             coordinates: coordinate ? [coordinate] : [],
           });
+          persistTelemetryJournalFromState(get());
         },
         addCoordinate: coordinate => {
           const current = get();
@@ -797,6 +884,7 @@ export const useRunStore = create<RunState>()(
                 timestamp: nextCoordinate.timestamp,
               },
             });
+            persistTelemetryJournalFromState(get());
             return;
           }
 
@@ -818,6 +906,7 @@ export const useRunStore = create<RunState>()(
                 timestamp: nextCoordinate.timestamp,
               },
             });
+            persistTelemetryJournalFromState(get());
             return;
           }
 
@@ -825,6 +914,7 @@ export const useRunStore = create<RunState>()(
             coordinates: [...current.coordinates, nextCoordinate],
             lastTelemetryIssue: null,
           });
+          persistTelemetryJournalFromState(get());
         },
         pauseRun: () => {
           const current = get();
@@ -837,6 +927,7 @@ export const useRunStore = create<RunState>()(
               {pausedAt: Date.now(), resumedAt: null},
             ],
           });
+          persistTelemetryJournalFromState(get());
         },
         resumeRun: () => {
           const current = get();
@@ -866,6 +957,7 @@ export const useRunStore = create<RunState>()(
           };
 
           set({status: 'TRACKING', pauseIntervals});
+          persistTelemetryJournalFromState(get());
         },
         completeRun: () => {
           const current = get();
@@ -883,8 +975,29 @@ export const useRunStore = create<RunState>()(
             endTime,
             pauseIntervals,
           });
+          persistTelemetryJournalFromState(get());
         },
-        resetRun: () => set(initialRunFacts),
+        restoreRunFromJournal: session => {
+          const current = get();
+          if (!shouldRestoreTelemetrySession(current, session)) {
+            return;
+          }
+
+          set({
+            status: session.status,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            pauseIntervals: session.pauseIntervals,
+            coordinates: session.coordinates,
+            clientRunId: session.clientRunId,
+            lastTelemetryIssue: session.lastTelemetryIssue,
+          });
+        },
+        resetRun: () => {
+          const current = get();
+          set(initialRunFacts);
+          discardTelemetryJournalForRun(current.clientRunId);
+        },
       }),
       {name: 'milesaway-run-store'},
     ),

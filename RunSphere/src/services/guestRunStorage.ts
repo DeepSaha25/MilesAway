@@ -74,6 +74,7 @@ const GuestRunStorage = {
   async saveRun(input: {
     clientRunId: string;
     coordinates: RunCoordinate[];
+    route?: RunCoordinate[];
     distanceKm: number;
     elapsedSeconds: number;
     elevationGain: number;
@@ -95,7 +96,7 @@ const GuestRunStorage = {
       distance,
       duration,
       coordinates: input.coordinates,
-      route: input.coordinates,
+      route: input.route || input.coordinates,
       date: input.finishedAt || now,
       startTime: input.startedAt || firstCoordinate?.timestamp || now,
       endTime: input.finishedAt || lastCoordinate?.timestamp || now,

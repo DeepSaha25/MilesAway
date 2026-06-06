@@ -1,4 +1,5 @@
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {BackHandler} from 'react-native';
 import Toast from 'react-native-toast-message';
 import ReactTestRenderer from 'react-test-renderer';
@@ -6,6 +7,10 @@ import {useRunSummary} from '../src/hooks/useRunSummary';
 import GuestRunStorage from '../src/services/guestRunStorage';
 import {guestUser} from '../src/services/guestSession';
 import RunService from '../src/services/runService';
+import {
+  persistTelemetrySession,
+  recoverActiveTelemetrySession,
+} from '../src/services/telemetrySessionStorage';
 import {useAuthStore} from '../src/store/authStore';
 import {useLeaderboardStore} from '../src/store/leaderboardStore';
 import {
@@ -24,6 +29,14 @@ const productionSaveCoordinates = () => [
   {latitude: 0, longitude: 0.0008, timestamp: 49_000, accuracy: 5},
   {latitude: 0, longitude: 0.001, timestamp: 61_000, accuracy: 5},
 ];
+
+const denseSaveCoordinates = () =>
+  Array.from({length: 24}, (_, index) => ({
+    latitude: 0,
+    longitude: index * 0.00005,
+    timestamp: 1_000 + index * 3_000,
+    accuracy: 5,
+  }));
 
 const makeCompletedRun = (overrides: Partial<RunFacts>): RunFacts => ({
   ...initialRunFacts,
@@ -50,8 +63,17 @@ const HookHarness = () => {
 const flushHook = async () => {
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(<HookHarness />);
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let index = 0; index < 8; index += 1) {
+      await Promise.resolve();
+    }
+  });
+};
+
+const flushUpdates = async () => {
+  await ReactTestRenderer.act(async () => {
+    for (let index = 0; index < 8; index += 1) {
+      await Promise.resolve();
+    }
   });
 };
 
@@ -59,9 +81,10 @@ describe('useRunSummary save integrity', () => {
   const refreshDashboard = jest.fn(async () => undefined);
   const loadLeaderboard = jest.fn(async () => undefined);
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     latestHook = null;
+    await AsyncStorage.clear();
     jest
       .spyOn(BackHandler, 'addEventListener')
       .mockReturnValue({remove: jest.fn()} as any);
@@ -133,8 +156,8 @@ describe('useRunSummary save integrity', () => {
 
     await ReactTestRenderer.act(async () => {
       latestHook?.discardAndGoHome();
-      await Promise.resolve();
     });
+    await flushUpdates();
 
     expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(1);
     expect(navigation.reset).toHaveBeenCalledWith({
@@ -142,6 +165,7 @@ describe('useRunSummary save integrity', () => {
       routes: [{name: 'Main', params: {screen: 'Home'}}],
     });
     expect(useRunStore.getState().status).toBe('IDLE');
+    expect(await recoverActiveTelemetrySession()).toBeNull();
   });
 
   it('keeps Retry Save as the only failed-state action that retries persistence', async () => {
@@ -162,11 +186,97 @@ describe('useRunSummary save integrity', () => {
 
     await ReactTestRenderer.act(async () => {
       await latestHook?.saveRun();
-      await Promise.resolve();
     });
+    await flushUpdates();
 
     expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(2);
     expect(latestHook?.savedRun).not.toBeNull();
+    expect(await recoverActiveTelemetrySession()).toBeNull();
+  });
+
+  it('recovers a journaled summary session before automatic save', async () => {
+    await persistTelemetrySession(
+      makeCompletedRun({
+        clientRunId: 'journal-summary-run',
+        coordinates: productionSaveCoordinates(),
+      }),
+    );
+    useRunStore.setState(initialRunFacts);
+
+    await flushHook();
+    await flushUpdates();
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(1);
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientRunId: 'journal-summary-run',
+        coordinates: expect.arrayContaining([
+          expect.objectContaining({accuracy: 5}),
+        ]),
+      }),
+    );
+    const payload = (GuestRunStorage.saveRun as jest.Mock).mock.calls[0][0];
+    expect(payload.coordinates).toHaveLength(6);
+    expect(latestHook?.savedRun?.routePoints).toBe(6);
+    expect(await recoverActiveTelemetrySession()).toBeNull();
+  });
+
+  it('keeps a recovered journal after save failure so Retry Save can use it', async () => {
+    jest
+      .spyOn(GuestRunStorage, 'saveRun')
+      .mockRejectedValueOnce(new Error('Temporary network outage'))
+      .mockResolvedValueOnce({} as any);
+    await persistTelemetrySession(
+      makeCompletedRun({
+        clientRunId: 'journal-retry-run',
+        coordinates: productionSaveCoordinates(),
+      }),
+    );
+    useRunStore.setState(initialRunFacts);
+
+    await flushHook();
+    await flushUpdates();
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(1);
+    expect(latestHook?.saveError).toBe('Temporary network outage');
+    expect((await recoverActiveTelemetrySession())?.clientRunId).toBe(
+      'journal-retry-run',
+    );
+
+    await ReactTestRenderer.act(async () => {
+      await latestHook?.saveRun();
+    });
+    await flushUpdates();
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(2);
+    const retryPayload = (GuestRunStorage.saveRun as jest.Mock).mock.calls[1][0];
+    expect(retryPayload.clientRunId).toBe('journal-retry-run');
+    expect(retryPayload.coordinates).toHaveLength(6);
+    expect(latestHook?.savedRun?.routePoints).toBe(6);
+    expect(await recoverActiveTelemetrySession()).toBeNull();
+  });
+
+  it('guest saves retain verified coordinates and store a simplified route', async () => {
+    useRunStore.setState(
+      makeCompletedRun({
+        endTime: 80_000,
+        coordinates: denseSaveCoordinates(),
+      }),
+    );
+
+    await flushHook();
+    await flushUpdates();
+
+    expect(GuestRunStorage.saveRun).toHaveBeenCalledTimes(1);
+    const payload = (GuestRunStorage.saveRun as jest.Mock).mock.calls[0][0];
+
+    expect(payload.coordinates).toHaveLength(24);
+    expect(payload.route.length).toBeLessThan(payload.coordinates.length);
+    expect(payload.route[0]).toEqual(payload.coordinates[0]);
+    expect(payload.route[payload.route.length - 1]).toEqual(
+      payload.coordinates[payload.coordinates.length - 1],
+    );
+    expect(latestHook?.savedRun?.routePoints).toBe(payload.route.length);
   });
 
   it('submits only verified coordinates to the backend on successful save', async () => {
@@ -209,6 +319,7 @@ describe('useRunSummary save integrity', () => {
     expect(payload.coordinates.every((coordinate: any) => coordinate.accuracy === 5)).toBe(
       true,
     );
+    expect(payload.route).toBeUndefined();
     expect(refreshDashboard).toHaveBeenCalledWith(20);
     expect(loadLeaderboard).toHaveBeenCalledWith('global', 'weekly', 6);
     expect(loadLeaderboard).toHaveBeenCalledWith('city', 'weekly', 6);

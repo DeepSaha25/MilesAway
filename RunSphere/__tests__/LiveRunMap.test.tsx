@@ -53,6 +53,8 @@ describe('LiveRunMap telemetry presentation', () => {
       ['WEAK_GPS', 'GPS signal weak'],
       ['GPS_JUMPING', 'GPS signal jumping'],
       ['STATIONARY', 'Waiting for movement'],
+      ['SENSOR_ONLY_MOVEMENT', 'Movement detected'],
+      ['POSSIBLE_INDOOR', 'Movement detected, GPS weak'],
     ] as const;
 
     expectedMessages.forEach(([motionState, message]) => {

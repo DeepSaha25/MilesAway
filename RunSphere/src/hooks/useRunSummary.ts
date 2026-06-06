@@ -4,14 +4,17 @@ import Toast from 'react-native-toast-message';
 import GuestRunStorage from '../services/guestRunStorage';
 import {isGuestUser} from '../services/guestSession';
 import RunService from '../services/runService';
+import {recoverActiveTelemetrySession} from '../services/telemetrySessionStorage';
 import {useAuthStore} from '../store/authStore';
 import {useLeaderboardStore} from '../store/leaderboardStore';
 import {
+  selectCleanedVerifiedRoute,
   selectSaveBlockReason,
   selectRunMetrics,
   selectRunTiming,
   selectVerifiedCoordinates,
   selectVerifiedDistance,
+  shouldRestoreTelemetrySession,
   useRunStore,
 } from '../store/runStore';
 import {useUserStore} from '../store/userStore';
@@ -32,6 +35,7 @@ export const useRunSummary = (navigation: any) => {
   const [saving, setSaving] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedRun, setSavedRun] = useState<SavedRunResult | null>(null);
+  const [journalChecked, setJournalChecked] = useState(false);
   const saveStartedRef = useRef(false);
   const saveInFlightRef = useRef<Promise<boolean> | null>(null);
   const allowLeavingRef = useRef(false);
@@ -40,24 +44,35 @@ export const useRunSummary = (navigation: any) => {
   const refreshDashboard = useUserStore(state => state.refreshDashboard);
   const loadLeaderboard = useLeaderboardStore(state => state.loadLeaderboard);
   const resetRun = useRunStore(state => state.resetRun);
+  const restoreRunFromJournal = useRunStore(state => state.restoreRunFromJournal);
   const runState = useRunStore();
 
-  const summary = useMemo(() => {
-    const metrics = selectRunMetrics(runState, profile?.weightKg);
-    const timing = selectRunTiming(runState);
-    const verifiedCoordinates = selectVerifiedCoordinates(runState);
-    const verifiedDistanceKm = selectVerifiedDistance(runState);
+  const buildSummary = useCallback(
+    (state = useRunStore.getState()) => {
+      const metrics = selectRunMetrics(state, profile?.weightKg);
+      const timing = selectRunTiming(state);
+      const verifiedCoordinates = selectVerifiedCoordinates(state);
+      const cleanedRoute = selectCleanedVerifiedRoute(state);
+      const verifiedDistanceKm = selectVerifiedDistance(state);
 
-    return {
-      ...metrics,
-      coordinates: verifiedCoordinates,
-      distanceKm: verifiedDistanceKm,
-      startedAt: timing.startedAt,
-      finishedAt: timing.finishedAt || new Date().toISOString(),
-    };
-  }, [profile?.weightKg, runState]);
+      return {
+        ...metrics,
+        coordinates: verifiedCoordinates,
+        route: cleanedRoute,
+        distanceKm: verifiedDistanceKm,
+        startedAt: timing.startedAt,
+        finishedAt: timing.finishedAt || new Date().toISOString(),
+      };
+    },
+    [profile?.weightKg],
+  );
 
-  const route = useMemo(() => selectVerifiedCoordinates(runState), [runState]);
+  const summary = useMemo(
+    () => buildSummary(runState),
+    [buildSummary, runState],
+  );
+
+  const route = useMemo(() => selectCleanedVerifiedRoute(runState), [runState]);
 
   const goHome = useCallback(() => {
     allowLeavingRef.current = true;
@@ -84,13 +99,43 @@ export const useRunSummary = (navigation: any) => {
     });
   }, [navigation]);
 
+  useEffect(() => {
+    let active = true;
+
+    const recoverJournal = async () => {
+      const session = await recoverActiveTelemetrySession().catch(() => null);
+      if (!active) {
+        return;
+      }
+
+      if (session) {
+        const currentRun = useRunStore.getState();
+        if (shouldRestoreTelemetrySession(currentRun, session)) {
+          restoreRunFromJournal(session);
+        }
+      }
+
+      if (active) {
+        setJournalChecked(true);
+      }
+    };
+
+    recoverJournal();
+
+    return () => {
+      active = false;
+    };
+  }, [restoreRunFromJournal]);
+
   const saveRun = useCallback(async (): Promise<boolean> => {
     if (saveInFlightRef.current) {
       return saveInFlightRef.current;
     }
 
     const saveTask = (async () => {
-      const saveBlockReason = selectSaveBlockReason(runState);
+      const latestRunState = useRunStore.getState();
+      const latestSummary = buildSummary(latestRunState);
+      const saveBlockReason = selectSaveBlockReason(latestRunState);
       if (saveBlockReason) {
         setSaving(false);
         setSaveError(saveBlockReason);
@@ -107,22 +152,23 @@ export const useRunSummary = (navigation: any) => {
       try {
         if (isGuestUser(authUser)) {
           await GuestRunStorage.saveRun({
-            clientRunId: runState.clientRunId || `guest-${Date.now()}`,
-            coordinates: summary.coordinates,
-            distanceKm: summary.distanceKm,
-            elapsedSeconds: summary.elapsedSeconds,
-            elevationGain: summary.elevationGain,
+            clientRunId: latestRunState.clientRunId || `guest-${Date.now()}`,
+            coordinates: latestSummary.coordinates,
+            route: latestSummary.route,
+            distanceKm: latestSummary.distanceKm,
+            elapsedSeconds: latestSummary.elapsedSeconds,
+            elevationGain: latestSummary.elevationGain,
             weightKg: profile?.weightKg,
-            startedAt: summary.startedAt,
-            finishedAt: summary.finishedAt,
+            startedAt: latestSummary.startedAt,
+            finishedAt: latestSummary.finishedAt,
           });
         } else {
           await RunService.submitRun({
-            clientRunId: runState.clientRunId || `manual-${Date.now()}`,
-            startedAt: summary.startedAt,
-            finishedAt: summary.finishedAt,
-            elapsedSeconds: summary.elapsedSeconds,
-            coordinates: summary.coordinates,
+            clientRunId: latestRunState.clientRunId || `manual-${Date.now()}`,
+            startedAt: latestSummary.startedAt,
+            finishedAt: latestSummary.finishedAt,
+            elapsedSeconds: latestSummary.elapsedSeconds,
+            coordinates: latestSummary.coordinates,
           });
         }
 
@@ -136,15 +182,15 @@ export const useRunSummary = (navigation: any) => {
         const leaderboardState = useLeaderboardStore.getState();
 
         setSavedRun({
-          distanceKm: summary.distanceKm,
-          elapsedSeconds: summary.elapsedSeconds,
-          averagePace: summary.averagePace,
+          distanceKm: latestSummary.distanceKm,
+          elapsedSeconds: latestSummary.elapsedSeconds,
+          averagePace: latestSummary.averagePace,
           rank: leaderboardState.ranks['global:weekly'] ?? null,
           streak: userState.profile?.streak || profile?.streak || 0,
           weeklyDistance: Number(userState.weeklyStats?.totalDistance || 0),
-          caloriesBurned: summary.caloriesBurned,
-          elevationGain: summary.elevationGain,
-          routePoints: summary.coordinates.length,
+          caloriesBurned: latestSummary.caloriesBurned,
+          elevationGain: latestSummary.elevationGain,
+          routePoints: latestSummary.route.length,
         });
 
         resetRun();
@@ -180,20 +226,12 @@ export const useRunSummary = (navigation: any) => {
     return saveTask;
   }, [
     authUser,
+    buildSummary,
     loadLeaderboard,
     profile?.streak,
     profile?.weightKg,
     refreshDashboard,
     resetRun,
-    runState,
-    summary.averagePace,
-    summary.caloriesBurned,
-    summary.coordinates,
-    summary.distanceKm,
-    summary.elevationGain,
-    summary.elapsedSeconds,
-    summary.finishedAt,
-    summary.startedAt,
   ]);
 
   const handleClose = useCallback(async () => {
@@ -225,13 +263,13 @@ export const useRunSummary = (navigation: any) => {
   }, [discardAndGoHome, goHome, saveError, saveRun, savedRun, saving]);
 
   useEffect(() => {
-    if (saveStartedRef.current || savedRun) {
+    if (!journalChecked || saveStartedRef.current || savedRun) {
       return;
     }
 
     saveStartedRef.current = true;
     saveRun();
-  }, [saveRun, savedRun]);
+  }, [journalChecked, saveRun, savedRun]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -257,6 +295,7 @@ export const useRunSummary = (navigation: any) => {
 
   return {
     saving,
+    journalChecked,
     saveError,
     savedRun,
     summary,

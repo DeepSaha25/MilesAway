@@ -90,6 +90,10 @@ const LiveRunMap = ({
       ? 'GPS signal jumping'
       : motionState === 'STATIONARY'
       ? 'Waiting for movement'
+      : motionState === 'SENSOR_ONLY_MOVEMENT'
+      ? 'Movement detected'
+      : motionState === 'POSSIBLE_INDOOR'
+      ? 'Movement detected, GPS weak'
       : null;
   const statusText =
     motionState === 'GOOD_GPS' && canSaveRun
