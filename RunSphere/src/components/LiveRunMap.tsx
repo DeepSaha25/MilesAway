@@ -193,11 +193,6 @@ const LiveRunMap = ({
             <Text style={styles.primaryLabel}>km</Text>
           </View>
           <Text style={styles.timer}>{formatClock(elapsedSeconds)}</Text>
-          {motionBannerText ? (
-            <View style={styles.motionBanner}>
-              <Text style={styles.motionBannerText}>{motionBannerText}</Text>
-            </View>
-          ) : null}
           <View style={styles.pacePanel}>
             <Text style={styles.paceLabel}>Pace</Text>
             <Text style={styles.paceValue}>
@@ -417,21 +412,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     backgroundColor: Colors.surfaceContainerHigh,
     alignItems: 'center',
-  },
-  motionBanner: {
-    marginTop: 10,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: Colors.primary + '16',
-    borderWidth: 1,
-    borderColor: Colors.primary + '35',
-  },
-  motionBannerText: {
-    color: Colors.primary,
-    fontSize: 12,
-    fontWeight: '900',
-    textAlign: 'center',
   },
   paceLabel: {
     color: Colors.onSurfaceVariant,

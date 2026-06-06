@@ -43,6 +43,7 @@ describe('LiveRunMap telemetry presentation', () => {
       .flatMap(node => node.props.children);
 
     expect(textValues).toContain('Waiting for movement');
+    expect(textValues?.filter(value => value === 'Waiting for movement')).toHaveLength(1);
     expect(textValues).toContain('--:-- min/km');
   });
 
@@ -69,6 +70,7 @@ describe('LiveRunMap telemetry presentation', () => {
         .flatMap(node => node.props.children);
 
       expect(textValues).toContain(message);
+      expect(textValues?.filter(value => value === message)).toHaveLength(1);
       expect(textValues).not.toContain('GPS Settling...');
     });
   });
