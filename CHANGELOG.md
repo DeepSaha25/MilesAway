@@ -20,6 +20,30 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.2.41 - 2026-06-06
+
+### Summary
+- Relaxed save rules so weak-but-usable GPS movement can be finished and saved.
+- Kept idle drift protection by requiring meaningful 4m movement segments, duration, distance, and sample gates.
+- Made Finish controls tappable so blocked saves explain the reason instead of looking broken.
+
+### Files Changed
+- `RunSphere/src/store/runStore.ts`: save distance and coordinates now use live-usable movement with 4m jitter protection, and pace remains visible while paused.
+- `RunSphere/src/components/LiveRunMap.tsx`: removed fake-disabled Finish styling and changed weak GPS copy to communicate tracking continues.
+- `backend/src/config/runPolicy.js`: backend save validation now accepts weak-but-usable GPS up to 100m while preserving drift, duration, distance, and sample checks.
+- `RunSphere/__tests__/runStore.test.ts`, `RunSphere/__tests__/LiveRunMap.test.tsx`, `RunSphere/__tests__/useRunSummary.test.tsx`, `backend/test/runService.test.js`: updated coverage for weak GPS saving, idle drift blocking, paused pace, and tappable Finish controls.
+- `RunSphere/src/config/appVersion.ts`, `CHANGELOG.md`: bumped the visible changelog version marker.
+
+### Verification
+- `cd RunSphere && npx tsc --noEmit`
+- `cd RunSphere && npm test -- --runInBand __tests__/runStore.test.ts __tests__/LiveRunMap.test.tsx __tests__/useRunSummary.test.tsx`
+- `cd RunSphere && npm test -- --runInBand`
+- `cd RunSphere && npm run lint`
+- `cd backend && npm test`
+
+### Notes
+- Authenticated saves require the backend deployment too; frontend-only EAS Update cannot change Railway server validation.
+
 ## v0.2.40 - 2026-06-06
 
 ### Summary

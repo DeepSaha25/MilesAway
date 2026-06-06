@@ -279,7 +279,7 @@ describe('useRunSummary save integrity', () => {
     expect(latestHook?.savedRun?.routePoints).toBe(payload.route.length);
   });
 
-  it('submits only verified coordinates to the backend on successful save', async () => {
+  it('submits saveable movement coordinates to the backend on successful save', async () => {
     useAuthStore.setState({
       user: {_id: 'runner-1', isGuest: false, weightKg: 70, streak: 0},
       token: 'token',
@@ -315,8 +315,8 @@ describe('useRunSummary save integrity', () => {
       }),
     );
     const payload = (RunService.submitRun as jest.Mock).mock.calls[0][0];
-    expect(payload.coordinates).toHaveLength(6);
-    expect(payload.coordinates.every((coordinate: any) => coordinate.accuracy === 5)).toBe(
+    expect(payload.coordinates).toHaveLength(7);
+    expect(payload.coordinates.some((coordinate: any) => coordinate.accuracy === 80)).toBe(
       true,
     );
     expect(payload.route).toBeUndefined();

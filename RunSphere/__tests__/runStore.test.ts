@@ -128,14 +128,14 @@ describe('runStore fact-only selectors', () => {
         {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
         {latitude: 0, longitude: 0.00002, timestamp: 10_000, accuracy: 5},
         {latitude: 0, longitude: 0.00004, timestamp: 20_000, accuracy: 5},
-        {latitude: 0, longitude: 0.001, timestamp: 30_000, accuracy: 80},
+        {latitude: 0, longitude: 0.001, timestamp: 30_000, accuracy: 150},
       ],
     });
 
     expect(selectRunDistance(state)).toBe(0);
   });
 
-  it('keeps weak live-acceptable points in preview while excluding them from verified output', () => {
+  it('keeps weak usable points in preview and saveable movement output', () => {
     const state = makeState({
       status: 'TRACKING',
       startTime: 1_000,
@@ -148,8 +148,8 @@ describe('runStore fact-only selectors', () => {
 
     expect(selectPreviewCoordinates(state)).toHaveLength(3);
     expect(selectPreviewDistance(state)).toBeGreaterThan(0.04);
-    expect(selectVerifiedCoordinates(state)).toHaveLength(0);
-    expect(selectVerifiedDistance(state)).toBe(0);
+    expect(selectVerifiedCoordinates(state)).toHaveLength(3);
+    expect(selectVerifiedDistance(state)).toBeGreaterThan(0.04);
     expect(selectLiveCoordinates(state)).toEqual(selectPreviewCoordinates(state));
     expect(selectLiveDistance(state)).toBe(selectPreviewDistance(state));
     expect(selectRunCoordinates(state)).toEqual(selectVerifiedCoordinates(state));
@@ -336,18 +336,18 @@ describe('runStore fact-only selectors', () => {
     ).toBe('STATIONARY');
   });
 
-  it('reports live estimate when preview movement is not strict-ledger compatible yet', () => {
+  it('reports live estimate when movement is saveable but GPS is not good-quality yet', () => {
     const liveEstimateState = makeState({
       coordinates: [
-        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 5},
-        {latitude: 0, longitude: 0.00002, timestamp: 3_000, accuracy: 5},
-        {latitude: 0, longitude: 0.00004, timestamp: 5_000, accuracy: 5},
+        {latitude: 0, longitude: 0, timestamp: 1_000, accuracy: 80},
+        {latitude: 0, longitude: 0.00008, timestamp: 3_000, accuracy: 80},
+        {latitude: 0, longitude: 0.00016, timestamp: 5_000, accuracy: 80},
       ],
     });
 
     expect(selectPreviewDistance(liveEstimateState)).toBeGreaterThan(0);
-    expect(selectVerifiedDistance(liveEstimateState)).toBe(0);
-    expect(selectMotionState(liveEstimateState, 5_000)).toBe('LIVE_ESTIMATE');
+    expect(selectVerifiedDistance(liveEstimateState)).toBeGreaterThan(0);
+    expect(selectMotionState(liveEstimateState, 5_000)).toBe('WEAK_GPS');
   });
 
   it('reports weak GPS and GPS jumping from recent telemetry quality issues', () => {
@@ -475,6 +475,44 @@ describe('runStore fact-only selectors', () => {
     expect(currentPace).not.toBeNull();
   });
 
+  it('keeps pace visible while a moving run is paused', () => {
+    const pausedState = makeState({
+      status: 'PAUSED',
+      startTime: 0,
+      pauseIntervals: [{pausedAt: 320_000, resumedAt: null}],
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 0, accuracy: 80},
+        {latitude: 0, longitude: 0.001, timestamp: 80_000, accuracy: 80},
+        {latitude: 0, longitude: 0.002, timestamp: 160_000, accuracy: 80},
+        {latitude: 0, longitude: 0.003, timestamp: 240_000, accuracy: 80},
+        {latitude: 0, longitude: 0.004, timestamp: 300_000, accuracy: 80},
+        {latitude: 0, longitude: 0.0042, timestamp: 319_000, accuracy: 80},
+      ],
+    });
+
+    expect(selectCurrentPace(pausedState, 335_000)).not.toBeNull();
+  });
+
+  it('allows a weak GPS 0.462 km session over 5 minutes to finish saving', () => {
+    const weakSessionState = makeState({
+      status: 'TRACKING',
+      startTime: 0,
+      coordinates: [
+        {latitude: 0, longitude: 0, timestamp: 0, accuracy: 80},
+        {latitude: 0, longitude: 0.0007, timestamp: 64_000, accuracy: 80},
+        {latitude: 0, longitude: 0.0014, timestamp: 128_000, accuracy: 80},
+        {latitude: 0, longitude: 0.0021, timestamp: 192_000, accuracy: 80},
+        {latitude: 0, longitude: 0.0028, timestamp: 256_000, accuracy: 80},
+        {latitude: 0, longitude: 0.00415, timestamp: 320_000, accuracy: 80},
+      ],
+    });
+
+    expect(selectPreviewDistance(weakSessionState)).toBeGreaterThan(0.45);
+    expect(selectRunDistance(weakSessionState)).toBe(selectPreviewDistance(weakSessionState));
+    expect(selectCanSaveRun(weakSessionState, 320_000)).toBe(true);
+    expect(selectSaveBlockReason(weakSessionState, 320_000)).toBeNull();
+  });
+
   it('uses full elapsed time rather than a rolling current pace window', () => {
     const movingState = makeState({
       status: 'TRACKING',
@@ -592,10 +630,7 @@ describe('runStore fact-only selectors', () => {
     expect(
       selectCanSaveRun({
         ...validState,
-        coordinates: productionSaveCoordinates().map(coordinate => ({
-          ...coordinate,
-          accuracy: 45,
-        })),
+        coordinates: [],
       }),
     ).toBe(false);
     expect(

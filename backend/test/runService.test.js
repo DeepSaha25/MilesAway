@@ -105,6 +105,43 @@ test('accepts high-speed movement when production save gates pass', () => {
   assert.equal(metrics.durationSeconds, 75);
 });
 
+test('accepts weak-but-usable GPS movement up to 100m accuracy', () => {
+  const metrics = RunService.calculateTrustedMetrics([
+    sample(0, 28.7041, 77.1025, {accuracy: 80}),
+    sample(64, 28.7048, 77.1032, {accuracy: 80}),
+    sample(128, 28.7055, 77.1039, {accuracy: 80}),
+    sample(192, 28.7062, 77.1046, {accuracy: 80}),
+    sample(256, 28.7069, 77.1053, {accuracy: 80}),
+    sample(320, 28.7084, 77.1068, {accuracy: 80})
+  ].map((coordinate) => ({
+    ...coordinate,
+    timestamp: new Date(coordinate.timestamp)
+  })));
+
+  assert.equal(RUN_POLICY.MAX_ACCURACY_METERS, 100);
+  assert.equal(metrics.coordinates.length, 6);
+  assert.ok(metrics.distanceKm > RUN_POLICY.MIN_SAVE_DISTANCE_KM);
+  assert.equal(metrics.durationSeconds, 320);
+});
+
+test('still rejects accuracy above the weak GPS save ceiling', () => {
+  assert.throws(
+    () =>
+      RunService.calculateTrustedMetrics([
+        sample(0, 28.7041, 77.1025, {accuracy: 120}),
+        sample(30, 28.7045, 77.1029, {accuracy: 120}),
+        sample(60, 28.7049, 77.1033, {accuracy: 120}),
+        sample(90, 28.7053, 77.1037, {accuracy: 120}),
+        sample(120, 28.7057, 77.1041, {accuracy: 120}),
+        sample(150, 28.7061, 77.1045, {accuracy: 120})
+      ].map((coordinate) => ({
+        ...coordinate,
+        timestamp: new Date(coordinate.timestamp)
+      }))),
+    /GPS accuracy is too low/
+  );
+});
+
 test('rejects duplicate GPS timestamps', () => {
   const timestamp = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
@@ -125,7 +162,7 @@ test('rejects duplicate GPS timestamps', () => {
   );
 });
 
-test('rejects low accuracy-only tracks', () => {
+test('rejects unusable accuracy-only tracks', () => {
   assert.throws(
     () =>
       RunService.calculateTrustedMetrics([

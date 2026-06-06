@@ -140,7 +140,7 @@ export const MINIMUM_SAVE_BLOCK_REASON = `Track at least ${MIN_SAVE_DISTANCE_KM.
 )} km, ${MIN_SAVE_DURATION_SECONDS} seconds, and ${MIN_SAVE_COORDINATES} GPS points before saving a run.`;
 
 export const PREVIEW_SAVE_BLOCK_REASON =
-  'Live movement detected, but not enough verified movement distance to save.';
+  'Live movement detected, but not enough valid movement distance to save.';
 
 export const initialRunFacts: RunFacts = {
   status: 'IDLE',
@@ -345,7 +345,7 @@ type MovementPolicy = {
 };
 
 const LIVE_MOVEMENT_POLICY: MovementPolicy = {
-  JITTER_DISTANCE_METERS: RUN_LIVE_POLICY.LIVE_JITTER_DISTANCE_METERS,
+  JITTER_DISTANCE_METERS: RUN_LEDGER_POLICY.JITTER_DISTANCE_METERS,
   MAX_SEGMENT_SPEED_KMH: RUN_LIVE_POLICY.LIVE_MAX_SEGMENT_SPEED_KMH,
   STATIONARY_SPEED_THRESHOLD_KMH: RUN_LIVE_POLICY.STATIONARY_SPEED_THRESHOLD_KMH,
 };
@@ -359,7 +359,7 @@ const isPausedAt = (state: RunFacts, timestamp: number) =>
 const sortCoordinatesByTime = (coordinates: RunTrackPoint[]) =>
   [...coordinates].sort((a, b) => a.timestamp - b.timestamp);
 
-const selectLedgerUsableCoordinates = (state: RunFacts): RunTrackPoint[] =>
+const selectGoodGpsCoordinates = (state: RunFacts): RunTrackPoint[] =>
   sortCoordinatesByTime(state.coordinates).filter(coordinate =>
     hasUsableAccuracy(
       toRunCoordinate(coordinate),
@@ -431,9 +431,6 @@ const calculateAcceptedDistanceMeters = (
 
   return totalMeters;
 };
-
-const calculateTrustedDistanceMeters = (coordinates: RunTrackPoint[]): number =>
-  calculateAcceptedDistanceMeters(coordinates, RUN_LEDGER_POLICY);
 
 const calculateLiveDistanceMeters = (coordinates: RunTrackPoint[]): number =>
   calculateAcceptedDistanceMeters(coordinates, LIVE_MOVEMENT_POLICY);
@@ -538,7 +535,7 @@ const hasSensorMovement = (
 };
 
 const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
-  const coordinates = selectLedgerUsableCoordinates(state);
+  const coordinates = selectLiveUsableCoordinates(state);
   if (coordinates.length < 2) {
     return coordinates;
   }
@@ -554,7 +551,7 @@ const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
       continue;
     }
 
-    if (!isMovementSegment(segment, RUN_LEDGER_POLICY)) {
+    if (!isMovementSegment(segment, LIVE_MOVEMENT_POLICY)) {
       anchor = current;
       continue;
     }
@@ -567,7 +564,7 @@ const selectTrustedMovementCoordinates = (state: RunFacts): RunTrackPoint[] => {
 };
 
 export const selectVerifiedDistance = (state: RunFacts): number => {
-  const meters = calculateTrustedDistanceMeters(selectLedgerUsableCoordinates(state));
+  const meters = calculateLiveDistanceMeters(selectLiveUsableCoordinates(state));
 
   return Math.round((meters / 1000) * 1000) / 1000;
 };
@@ -643,12 +640,22 @@ export const selectMotionState = (
     return sensorMoving ? 'SENSOR_ONLY_MOVEMENT' : 'STATIONARY';
   }
 
+  const goodGpsRecentDistanceMeters = calculateAcceptedDistanceMeters(
+    selectGoodGpsCoordinates({
+      ...state,
+      coordinates: recentCoordinates,
+    }),
+    RUN_LEDGER_POLICY,
+  );
+
   const verifiedRecentDistanceKm = selectVerifiedDistance({
     ...state,
     coordinates: recentCoordinates,
   });
 
-  return verifiedRecentDistanceKm > 0 ? 'GOOD_GPS' : 'LIVE_ESTIMATE';
+  return goodGpsRecentDistanceMeters > 0 && verifiedRecentDistanceKm > 0
+    ? 'GOOD_GPS'
+    : 'LIVE_ESTIMATE';
 };
 
 export const selectLiveMotionState = selectMotionState;
@@ -657,7 +664,7 @@ export const selectCurrentPace = (
   state: RunFacts,
   now = state.endTime ?? Date.now(),
 ): number | null => {
-  if (state.status !== 'TRACKING') {
+  if (state.status !== 'TRACKING' && state.status !== 'PAUSED') {
     return null;
   }
 

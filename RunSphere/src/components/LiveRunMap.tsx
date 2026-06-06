@@ -85,7 +85,7 @@ const LiveRunMap = ({
       : motionState === 'LIVE_ESTIMATE'
       ? 'Tracking live estimate'
       : motionState === 'WEAK_GPS'
-      ? 'GPS signal weak'
+      ? 'GPS signal weak, tracking movement'
       : motionState === 'GPS_JUMPING'
       ? 'GPS signal jumping'
       : motionState === 'STATIONARY'
@@ -227,18 +227,10 @@ const LiveRunMap = ({
             </TouchableOpacity>
             <View style={styles.pausedSecondaryRow}>
               <TouchableOpacity
-                style={[
-                  styles.finishButton,
-                  !canSaveRun && styles.finishButtonDisabled,
-                ]}
-                activeOpacity={canSaveRun ? 0.7 : 1}
-                accessibilityState={{disabled: !canSaveRun}}
+                style={styles.finishButton}
+                activeOpacity={0.7}
                 onPress={onFinish}>
-                <Text
-                  style={[
-                    styles.finishButtonText,
-                    !canSaveRun && styles.finishButtonTextDisabled,
-                  ]}>
+                <Text style={styles.finishButtonText}>
                   Finish Run
                 </Text>
               </TouchableOpacity>
@@ -253,18 +245,10 @@ const LiveRunMap = ({
               <Text style={styles.primaryButtonText}>Pause</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.finishButton,
-                !canSaveRun && styles.finishButtonDisabled,
-              ]}
-              activeOpacity={canSaveRun ? 0.7 : 1}
-              accessibilityState={{disabled: !canSaveRun}}
+              style={styles.finishButton}
+              activeOpacity={0.7}
               onPress={onFinish}>
-              <Text
-                style={[
-                  styles.finishButtonText,
-                  !canSaveRun && styles.finishButtonTextDisabled,
-                ]}>
+              <Text style={styles.finishButtonText}>
                 Finish
               </Text>
             </TouchableOpacity>
@@ -512,17 +496,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  finishButtonDisabled: {
-    opacity: 0.45,
-  },
   finishButtonText: {
     color: Colors.onSurface,
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
-  },
-  finishButtonTextDisabled: {
-    color: Colors.onSurfaceVariant,
   },
   pausedControls: {
     marginTop: 18,

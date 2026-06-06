@@ -51,7 +51,7 @@ describe('LiveRunMap telemetry presentation', () => {
     const expectedMessages = [
       ['ACQUIRING_GPS', 'Finding GPS...'],
       ['LIVE_ESTIMATE', 'Tracking live estimate'],
-      ['WEAK_GPS', 'GPS signal weak'],
+      ['WEAK_GPS', 'GPS signal weak, tracking movement'],
       ['GPS_JUMPING', 'GPS signal jumping'],
       ['STATIONARY', 'Waiting for movement'],
       ['SENSOR_ONLY_MOVEMENT', 'Movement detected'],
@@ -75,18 +75,25 @@ describe('LiveRunMap telemetry presentation', () => {
     });
   });
 
-  it('marks finish controls disabled until save gates pass', () => {
+  it('keeps finish controls tappable so blocked saves can explain the reason', () => {
     let tree: ReactTestRenderer.ReactTestRenderer | undefined;
 
     ReactTestRenderer.act(() => {
       tree = renderLiveRunMap();
     });
 
-    const disabledFinishButtons = tree?.root
+    const disabledButtons = tree?.root
       .findAllByType(TouchableOpacity)
       .filter(node => node.props.accessibilityState?.disabled === true);
+    const finishButton = tree?.root
+      .findAllByType(TouchableOpacity)
+      .find(node => {
+        const textChildren = node.findAllByType(Text).flatMap(text => text.props.children);
+        return textChildren.includes('Finish');
+      });
 
-    expect(disabledFinishButtons?.length).toBeGreaterThan(0);
+    expect(disabledButtons).toHaveLength(0);
+    expect(finishButton?.props.onPress).toEqual(expect.any(Function));
   });
 
   it('hides settling feedback and shows pace while live movement is active', () => {
@@ -122,7 +129,7 @@ describe('LiveRunMap telemetry presentation', () => {
     expect(textValues).toContain('0:36 min/km');
   });
 
-  it('shows ready to save only when good GPS passes strict save gates', () => {
+  it('shows ready to save only when movement save gates pass', () => {
     let saveReadyTree: ReactTestRenderer.ReactTestRenderer | undefined;
     let notReadyTree: ReactTestRenderer.ReactTestRenderer | undefined;
 
