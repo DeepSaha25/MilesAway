@@ -37,7 +37,6 @@ const LoginScreen = ({navigation}: any) => {
       await login({email: email.trim(), password});
     } catch (error: any) {
       try {
-        // eslint-disable-next-line no-console
         console.error('Login error', error);
       } catch {}
 

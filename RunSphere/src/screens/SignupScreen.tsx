@@ -66,7 +66,6 @@ const SignupScreen = ({navigation}: any) => {
       });
     } catch (error: any) {
       try {
-        // eslint-disable-next-line no-console
         console.error('Signup error', error);
       } catch {}
 
