@@ -1,8 +1,8 @@
 const express = require('express');
 const authenticate = require('../middlewares/auth');
-const { validateLocationUpdate } = require('../middlewares/validators');
+const { validateLocationUpdate, validateAccountDeletion } = require('../middlewares/validators');
 const { locationLimiter } = require('../middlewares/rateLimits');
-const { getProfile, updateLocation, getStats } = require('../controllers/userController');
+const { getProfile, updateLocation, getStats, deleteAccount } = require('../controllers/userController');
 const asyncWrapper = require('../utils/asyncWrapper');
 
 const router = express.Router();
@@ -33,5 +33,11 @@ router.put('/location', locationLimiter, validateLocationUpdate, asyncWrapper(up
  * Get user stats
  */
 router.get('/stats', asyncWrapper(getStats));
+
+/**
+ * DELETE /api/user/account
+ * Delete authenticated user account
+ */
+router.delete('/account', validateAccountDeletion, asyncWrapper(deleteAccount));
 
 module.exports = router;

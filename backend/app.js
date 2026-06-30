@@ -8,6 +8,7 @@ require('./src/config/database');
 const logger = require('./src/middlewares/logger');
 const errorHandler = require('./src/middlewares/errorHandler');
 const apiRoutes = require('./src/routes');
+const { renderDeleteAccountPage } = require('./src/utils/deleteAccountPage');
 
 const app = express();
 
@@ -34,6 +35,10 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 // ==================== ROUTES ====================
+
+app.get('/delete-account-milesaway', (req, res) => {
+  res.status(200).type('html').send(renderDeleteAccountPage());
+});
 
 app.use('/api', apiRoutes);
 

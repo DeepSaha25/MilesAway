@@ -16,6 +16,10 @@ const UserService = {
   async getStats() {
     return ApiClient.get('/user/stats');
   },
+
+  async deleteAccount(currentPassword: string) {
+    return ApiClient.deleteWithBody('/user/account', {currentPassword});
+  },
 };
 
 export default UserService;

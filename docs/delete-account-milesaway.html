@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delete Account & Data | MilesAway</title>
+  
+  <!-- Typography: Lexend and Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      /* Kinetic Performance Engine Color Palette */
+      --color-bg: #0F1112;
+      --color-surface-low: #15181A;
+      --color-surface-high: #1E2124;
+      --color-surface-highest: #282D31;
+      
+      --color-primary: #00F2FF;       /* Electric Blue */
+      --color-secondary: #39FF14;     /* Neon Green */
+      --color-tertiary: #FF5F00;      /* Radiant Orange */
+      
+      --color-text-main: #FFFFFF;
+      --color-text-muted: #8E999E;
+      
+      /* Typography */
+      --font-display: 'Lexend', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      
+      /* Spacing */
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 40px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: var(--spacing-lg);
+      overflow-x: hidden;
+    }
+
+    /* Kinetic Grid Overlay Style */
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 242, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(255, 95, 0, 0.03) 0%, transparent 45%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Header styling with oversized display type */
+    header {
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--color-primary) 0%, #00A6B2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: var(--spacing-sm);
+      text-transform: uppercase;
+    }
+
+    .pill-badge {
+      display: inline-block;
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-tertiary);
+      background-color: rgba(255, 95, 0, 0.15);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      margin-bottom: var(--spacing-md);
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -2%;
+      color: var(--color-text-main);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .subtitle {
+      color: var(--color-text-muted);
+      font-size: 1.1rem;
+      font-weight: 400;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* Main Card Layout using Tonal Stepping (No Borders) */
+    .card {
+      background-color: var(--color-surface-low);
+      border-radius: 24px;
+      padding: var(--spacing-xl) var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+      position: relative;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--color-text-main);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .card-title::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 24px;
+      background-color: var(--color-primary);
+      border-radius: 99px;
+    }
+
+    /* Nested elements styling */
+    .inner-panel {
+      background-color: var(--color-surface-high);
+      border-radius: 16px;
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .inner-panel h3 {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-sm);
+      color: var(--color-primary);
+    }
+
+    p {
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+      margin-bottom: var(--spacing-md);
+      line-height: 1.7;
+    }
+
+    ul {
+      list-style: none;
+      margin-bottom: var(--spacing-md);
+    }
+
+    li {
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 12px;
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+    }
+
+    li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--color-secondary);
+      font-weight: bold;
+    }
+
+    /* Callout styling */
+    .highlight-box {
+      background-color: rgba(0, 242, 255, 0.05);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 4px 16px 16px 4px;
+      padding: var(--spacing-md);
+      margin: var(--spacing-lg) 0;
+    }
+
+    .highlight-box p {
+      color: var(--color-text-main);
+      margin-bottom: 0;
+      font-weight: 500;
+    }
+
+    /* Buttons with Kinetic triggers design */
+    .btn-gradient {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 16px 32px;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      color: #000000;
+      background: linear-gradient(135deg, var(--color-primary) 0%, #00C8D6 100%);
+      border: none;
+      border-radius: 9999px;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+      box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+    }
+
+    .btn-gradient:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 30px rgba(0, 242, 255, 0.4);
+    }
+
+    .btn-gradient:active {
+      transform: scale(0.96);
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 16px 32px;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      background-color: transparent;
+      border: 2px solid rgba(0, 242, 255, 0.15);
+      border-radius: 9999px;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease;
+      margin-top: var(--spacing-md);
+    }
+
+    .btn-outline:hover {
+      transform: scale(1.02);
+      background-color: rgba(0, 242, 255, 0.05);
+      border-color: var(--color-primary);
+    }
+
+    .btn-outline:active {
+      transform: scale(0.96);
+    }
+
+    .email-link {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.1s ease;
+    }
+
+    .email-link:hover {
+      color: #7AFAFF;
+      text-decoration: underline;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
+      margin-top: var(--spacing-xl);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    footer a {
+      color: var(--color-text-muted);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--color-text-main);
+    }
+
+    /* Small animations */
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+      }
+      50% {
+        box-shadow: 0 0 30px rgba(0, 242, 255, 0.3);
+      }
+    }
+
+    .pulse {
+      animation: pulse-glow 3s infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo">MilesAway</div>
+      <div class="pill-badge">Data Control</div>
+      <h1>Account Deletion &<br>Data Deletion Request</h1>
+      <p class="subtitle">Take control of your metrics, runs, and digital identity.</p>
+    </header>
+
+    <div class="card pulse">
+      <h2 class="card-title">How to Delete Your Account</h2>
+      
+      <div class="inner-panel">
+        <h3>Option 1: In the MilesAway App (Recommended)</h3>
+        <p>You can delete your account and associated data directly within the mobile application:</p>
+        <ul>
+          <li>Open the **MilesAway** app on your phone.</li>
+          <li>Navigate to your **Profile** screen.</li>
+          <li>Scroll down to the **ACCOUNT & DATA** section.</li>
+          <li>Tap **Delete account**.</li>
+          <li>Enter your current password in the confirmation dialog and tap **Delete permanently**.</li>
+        </ul>
+      </div>
+
+      <div class="inner-panel">
+        <h3>Option 2: Direct Email Request</h3>
+        <p>If you no longer have the app installed or cannot access your account, you can request manual deletion via email. Simply contact our support team:</p>
+        
+        <div class="highlight-box">
+          <p>📧 Email: <a href="mailto:ideepsaha25@gmail.com?subject=MilesAway%20Account%20Deletion%20Request&body=Please%20delete%20my%20MilesAway%20account%20and%20associated%20data.%20%0A%0ARegistered%20Email%20Address%3A%20%0AFull%20Name%3A%20" class="email-link">ideepsaha25@gmail.com</a></p>
+        </div>
+        
+        <p>Please send the request from the email address registered to your MilesAway account. Include your full name or username to help us process it quickly.</p>
+      </div>
+
+      <a href="mailto:ideepsaha25@gmail.com?subject=MilesAway%20Account%20Deletion%20Request&body=Please%20delete%20my%20MilesAway%20account%20and%20associated%20data.%20%0A%0ARegistered%20Email%20Address%3A%20%0AFull%20Name%3A%20" class="btn-gradient">
+        Request Data Deletion via Email
+      </a>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">What Happens to Your Data?</h2>
+      <p>When you request account deletion, all data tied to your profile is permanently purged from our databases. This is an irreversible process and includes:</p>
+      <ul>
+        <li>Your profile information, settings, and login credentials.</li>
+        <li>Your complete run history, GPS routes, metrics, and achievements.</li>
+        <li>Your shared community posts, messages, and social media feed history.</li>
+        <li>Your ranking data, leaderboards entries, and personal records.</li>
+      </ul>
+      <p>Please note that data deletion requests sent via email are typically processed within **48 to 72 hours**.</p>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 MilesAway App. All rights reserved. | <a href="privacy-policy.html">Privacy Policy</a></p>
+    </footer>
+  </div>
+
+</body>
+</html>

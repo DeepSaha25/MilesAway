@@ -20,6 +20,25 @@ This file records project changes in a simple, AI-friendly format. Every AI-assi
 - Risks, follow-ups, or decisions worth remembering.
 ```
 
+## v0.34.0 - 2026-06-19
+
+### Summary
+- Added a public MilesAway account-deletion page for Play Store compliance.
+- Added authenticated account deletion in the mobile Profile screen with password confirmation and permanent-deletion acknowledgement.
+- Added backend transaction-based account deletion that removes runs, daily aggregates, authored posts, likes/comments references, and the user record.
+
+### Files Changed
+- `backend/app.js`, `backend/src/utils/deleteAccountPage.js`: served the public deletion page at `/delete-account-milesaway`.
+- `backend/src/services/userService.js`, `backend/src/controllers/userController.js`, `backend/src/routes/user.js`, `backend/src/middlewares/validators.js`: added authenticated account deletion with current-password validation.
+- `RunSphere/src/screens/ProfileScreen.tsx`, `RunSphere/src/store/authStore.ts`, `RunSphere/src/services/apiClient.ts`, `RunSphere/src/services/userService.ts`: added the in-app deletion flow and local cleanup path.
+- `RunSphere/app.json`, `RunSphere/package.json`, `RunSphere/src/config/appVersion.ts`, `VERSION.md`: bumped the visible release version to `v0.34.0`.
+
+### Verification
+- Pending after file updates.
+
+### Notes
+- Deployment to Railway and Play Console submission still need to be completed after verification.
+
 ## v0.33.2 - 2026-06-06
 
 ### Summary

@@ -209,6 +209,10 @@ class ApiClient {
   static delete<T = any>(endpoint: string) {
     return this.request<T>('DELETE', endpoint);
   }
+
+  static deleteWithBody<T = any>(endpoint: string, body?: any) {
+    return this.request<T>('DELETE', endpoint, body);
+  }
 }
 
 class ApiError<TError = unknown> extends Error {

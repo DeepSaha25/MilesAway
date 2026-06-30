@@ -1,4 +1,9 @@
 const User = require('../models/User');
+const Run = require('../models/Run');
+const Post = require('../models/Post');
+const DailyAggregate = require('../models/DailyAggregate');
+const LeaderboardService = require('./leaderboardService');
+const mongoose = require('mongoose');
 const { getLocationFromCoordinates } = require('../utils/geocoding');
 const ApiError = require('../utils/ApiError');
 
@@ -75,6 +80,64 @@ class UserService {
       lastRunDate: user.lastRunDate,
       createdAt: user.createdAt
     };
+  }
+
+  static async deleteAccount(userId, currentPassword) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const user = await User.findById(userId).select('+password').session(session);
+      if (!user) {
+        throw ApiError.notFound('User not found');
+      }
+
+      const passwordMatches = await user.comparePassword(currentPassword);
+      if (!passwordMatches) {
+        throw ApiError.unauthorized('Current password is incorrect');
+      }
+
+      await Run.deleteMany({ userId }).session(session);
+      await DailyAggregate.deleteMany({ userId }).session(session);
+      await Post.deleteMany({ userId }).session(session);
+
+      await Post.updateMany(
+        { userId: { $ne: user._id } },
+        {
+          $pull: {
+            likes: user._id,
+            comments: { userId: user._id }
+          }
+        },
+        { session }
+      );
+
+      const deletedUser = await User.deleteOne({ _id: user._id }).session(session);
+      if (deletedUser.deletedCount !== 1) {
+        throw ApiError.notFound('User not found');
+      }
+
+      await session.commitTransaction();
+      LeaderboardService.clearCache();
+
+      return {
+        deleted: true
+      };
+    } catch (error) {
+      try {
+        await session.abortTransaction();
+      } catch (abortError) {
+        console.error('[MilesAway] Failed to abort account deletion transaction', {
+          userId: String(userId),
+          error: abortError?.message || 'Unknown transaction abort error'
+        });
+      }
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
   }
 }
 

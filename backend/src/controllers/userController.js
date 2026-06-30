@@ -43,8 +43,20 @@ const getStats = async (req, res) => {
   });
 };
 
+const deleteAccount = async (req, res) => {
+  const userId = req.userId;
+  const { currentPassword } = req.body;
+  await UserService.deleteAccount(userId, currentPassword);
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Account deleted successfully'
+  });
+};
+
 module.exports = {
   getProfile,
   updateLocation,
-  getStats
+  getStats,
+  deleteAccount
 };

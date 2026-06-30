@@ -5,6 +5,7 @@ const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const RESET_TOKEN_REGEX = /^[a-f\d]{64}$/i;
 const COMMUNITY_POST_MAX_LENGTH = 500;
 const COMMUNITY_COMMENT_MAX_LENGTH = 280;
+const MIN_PASSWORD_LENGTH = 1;
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -275,6 +276,19 @@ const validateLocationUpdate = (req, res, next) => {
   return failIfInvalid(errors, next);
 };
 
+const validateAccountDeletion = (req, res, next) => {
+  req.body = req.body || {};
+  const errors = [];
+  const currentPassword = typeof req.body.currentPassword === 'string' ? req.body.currentPassword.trim() : '';
+
+  if (currentPassword.length < MIN_PASSWORD_LENGTH) {
+    errors.push('Current password is required');
+  }
+
+  req.body.currentPassword = currentPassword;
+  return failIfInvalid(errors, next);
+};
+
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(String(email || '').trim().toLowerCase());
@@ -331,5 +345,6 @@ module.exports = {
   validateCommunityPost,
   validateCommunityComment,
   validateRunningEventsQuery,
+  validateAccountDeletion,
   isValidObjectId
 };

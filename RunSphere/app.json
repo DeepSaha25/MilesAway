@@ -2,7 +2,7 @@
   "expo": {
     "name": "MilesAway",
     "slug": "milesaway",
-    "version": "0.0.1",
+    "version": "0.34.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "milesaway",
@@ -12,7 +12,7 @@
       "android"
     ],
     "jsEngine": "hermes",
-    "runtimeVersion": "0.0.1",
+    "runtimeVersion": "0.34.0",
     "updates": {
       "url": "https://u.expo.dev/2ff0b651-54e2-4dbc-b7fc-691d97650a84"
     },

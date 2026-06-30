@@ -1,3 +1,3 @@
-export const APP_CHANGELOG_VERSION = 'v0.33.2';
-export const APP_CHANGELOG_DATE = '2026-06-06';
+export const APP_CHANGELOG_VERSION = 'v0.34.0';
+export const APP_CHANGELOG_DATE = '2026-06-19';
 export const APP_CHANGELOG_LABEL = `${APP_CHANGELOG_VERSION} - ${APP_CHANGELOG_DATE}`;

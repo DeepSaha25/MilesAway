@@ -59,8 +59,24 @@ interface AuthState {
     confirmPassword: string;
   }) => Promise<AuthResponse>;
   logout: () => Promise<void>;
+  deleteAccount: (currentPassword: string) => Promise<void>;
   setUser: (user: AuthUser) => Promise<void>;
 }
+
+const clearLocalDomainState = async () => {
+  const {useRunStore} = await import('./runStore');
+  const {useUserStore} = await import('./userStore');
+  const {useLeaderboardStore} = await import('./leaderboardStore');
+  const {useGoalStore} = await import('./goalStore');
+  const {discardTelemetrySession} = await import('../services/telemetrySessionStorage');
+
+  const activeRun = useRunStore.getState().clientRunId;
+  useRunStore.getState().resetRun();
+  useUserStore.getState().reset();
+  useLeaderboardStore.getState().reset();
+  useGoalStore.setState({weeklyHoursGoal: 6});
+  await discardTelemetrySession(activeRun);
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -229,6 +245,24 @@ export const useAuthStore = create<AuthState>()(
         logout: async () => {
           try {
             await AuthService.logout();
+            set({
+              token: null,
+              user: null,
+              hydrated: true,
+              storageFailureError: null,
+            });
+          } catch (error) {
+            if (isStorageFailure(error)) {
+              set({storageFailureError: getStorageFailureMessage(error)});
+            }
+            throw error;
+          }
+        },
+        deleteAccount: async currentPassword => {
+          try {
+            await UserService.deleteAccount(currentPassword);
+            await clearLocalDomainState();
+            await ApiClient.clearAuth();
             set({
               token: null,
               user: null,

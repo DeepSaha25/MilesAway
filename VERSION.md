@@ -1,8 +1,8 @@
 # Version
 
-Current project version: `0.33.2`
+Current project version: `0.34.0`
 
-Last updated: `2026-06-06`
+Last updated: `2026-06-19`
 
 ## AI Change Rules
 
